@@ -20,8 +20,12 @@ public struct GhostDashboardView: View {
     @ObservedObject private var vaultManager: LocaVaultAuthManager = LocaVaultAuthManager.shared
     @Environment(\.modelContext) private var modelContext
 
-    @Query(filter: #Predicate<JournalNote> { !$0.isArchived }, sort: \JournalNote.date, order: .reverse)
-    private var recentJournalNotes: [JournalNote]
+    @Query(sort: [SortDescriptor(\JournalNote.date, order: .reverse)])
+    private var allJournalNotes: [JournalNote]
+
+    private var recentJournalNotes: [JournalNote] {
+        allJournalNotes.filter { !$0.isArchived }
+    }
 
     public init() {}
 
