@@ -1,38 +1,39 @@
-# 🪐 PLUTO for macOS — Local-First Sovereign Operating System
+# 🪐 PLUTO for macOS — Local-First Sovereign Personal Operating System
 
 > **"Does it let me *see* my life, or does it just *show me data* about my life?"**  
 > — *The Central Question, PLUTO Engineering Manifesto*
 
-[![Platform: macOS Only](https://img.shields.io/badge/Platform-macOS%2014.0%2B%20(Sonoma%20%2F%20Sequoia)-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com/macos)
-[![Swift: 6.0](https://img.shields.io/badge/Swift-6.0%20Strict%20Concurrency-F05138?style=for-the-badge&logo=swift&logoColor=white)](https://swift.org)
-[![Storage: SwiftData + SQLite](https://img.shields.io/badge/Storage-Local--First%20SwiftData%20%2B%20SQLite%20(CRDT)-4A90E2?style=for-the-badge)](https://developer.apple.com/xcode/swiftdata/)
-[![Security: E2EE Vault](https://img.shields.io/badge/Security-ChaCha20--Poly1305%20E2EE-00C853?style=for-the-badge)](https://developer.apple.com/documentation/cryptokit)
-[![AI Protocol: MCP Enabled](https://img.shields.io/badge/AI%20Protocol-Model%20Context%20Protocol%20(MCP)-8A2BE2?style=for-the-badge)](https://modelcontextprotocol.io)
+[![Platform: macOS Exclusive](https://img.shields.io/badge/Platform-macOS%2014.0%2B%20(Sonoma%20%2F%20Sequoia)-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apple.com/macos)
+[![Swift: 6.0 Strict Concurrency](https://img.shields.io/badge/Swift-6.0%20Strict%20Concurrency-F05138?style=for-the-badge&logo=swift&logoColor=white)](https://swift.org)
+[![Storage: SwiftData + SQLite CRDT](https://img.shields.io/badge/Storage-Local--First%20SwiftData%20%2B%20SQLite%20(CRDT)-4A90E2?style=for-the-badge)](https://developer.apple.com/xcode/swiftdata/)
+[![Security: E2EE ChaCha20-Poly1305](https://img.shields.io/badge/Security-ChaCha20--Poly1305%20E2EE-00C853?style=for-the-badge)](https://developer.apple.com/documentation/cryptokit)
+[![AI Protocol: Model Context Protocol](https://img.shields.io/badge/AI%20Protocol-Model%20Context%20Protocol%20(MCP)-8A2BE2?style=for-the-badge)](https://modelcontextprotocol.io)
 
-**PLUTO** is a sovereign, local-first personal operating system built **exclusively for macOS**. Engineered to take full advantage of Apple Silicon, AppKit, TextKit 2, and macOS Sonoma/Sequoia system capabilities, Pluto unifies daily time execution, GTD task management, keystone habits, mathematical CRDT note synthesis, deep focus sessions with procedural spatial audio DSP, and long-term life horizons into a single fluid, Apple-native desktop canvas.
+**PLUTO** is a sovereign, local-first personal operating system engineered **exclusively for macOS**. Designed from the ground up for Apple Silicon, AppKit, TextKit 2, and macOS Sonoma/Sequoia, Pluto unifies daily time execution, high-velocity GTD task inventory, keystone habit tracking, mathematical CRDT note synthesis, deep focus sessions with procedural spatial audio DSP, and high-altitude life exploration atlases into a single cohesive, Apple-native desktop canvas.
 
 ---
 
 ## 📑 Table of Contents
 
-1. [Architectural Overview: The 3 Primary macOS Domains](#-1-the-3-primary-desktop-domains)
-2. [Dual-Tier Workspaces: Hero Mode vs. Architect Mode](#-2-dual-tier-workspace-architecture)
-3. [TODAY: Diurnal Execution Engine (Plan / List / Time)](#-3-today-the-living-day-execution-engine)
-4. [STUDIO: Sovereign Knowledge & Synthesis (One Engine, Three Memories)](#-4-studio-sovereign-knowledge--synthesis)
-5. [LIFE: Horizons, Mountain Atlas & Adventure Atlases](#-5-life-horizons--adventure-atlases)
-6. [Focus Studio & Procedural Spatial Audio Engine](#-6-focus-room--spatial-audio-dsp-engine)
-7. [Model Context Protocol (MCP) Server for Local AI Agents](#-7-model-context-protocol-mcp-server)
-8. [Private Alpha Telemetry & Creator Web Dossier](#-8-private-alpha-telemetry--creator-web-dossier)
-9. [macOS Repository Architecture](#-9-macos-repository-architecture)
-10. [Building & Packaging Pluto for Mac](#-10-building--running-pluto-for-mac)
-11. [Master Keyboard Shortcut Matrix](#-11-master-keyboard-shortcut-matrix)
-12. [Core Engineering Invariants](#-12-core-engineering-invariants)
+1. [Architectural Overview: The 3 Primary macOS Domains](#1-architectural-overview-the-3-primary-macos-domains)
+2. [Dual-Tier Workspaces: Hero Mode vs. Architect Mode](#2-dual-tier-workspace-architecture)
+3. [TODAY: Diurnal Execution Engine (Plan / List / Time)](#3-today-the-living-day-execution-engine)
+4. [STUDIO: Sovereign Knowledge & Synthesis (One Engine, Three Memories)](#4-studio-sovereign-knowledge--synthesis)
+5. [LIFE: Horizons, Mountain Trek Atlas & Travel Atlases](#5-life-horizons--adventure-atlases)
+6. [Focus Studio & Procedural Spatial Audio DSP Engine](#6-focus-room--spatial-audio-dsp-engine)
+7. [On-Device Intelligence: Apple Neural Engine & Sentiment Analytics](#7-on-device-intelligence-apple-neural-engine)
+8. [Model Context Protocol (MCP) Server for Local AI Agents](#8-model-context-protocol-mcp-server)
+9. [Private Alpha Telemetry & Creator Web Dossier](#9-private-alpha-telemetry--creator-web-dossier)
+10. [Detailed macOS Codebase Architecture](#10-detailed-macos-codebase-architecture)
+11. [Building, Running & Packaging Pluto for Mac](#11-building-running--packaging-pluto-for-mac)
+12. [Master Keyboard Shortcut & Gesture Matrix](#12-master-keyboard-shortcut--gesture-matrix)
+13. [Core Mathematical & Engineering Invariants](#13-core-mathematical--engineering-invariants)
 
 ---
 
-## 🏛 1. The 3 Primary Desktop Domains
+## 1. Architectural Overview: The 3 Primary macOS Domains
 
-PLUTO organizes all intentional living and productivity into 3 primary desktop domains, navigated via a native macOS `NavigationSplitView` with Liquid Glass interactive controls:
+Pluto organizes all human intentionality into three distinct structural domains, fluidly orchestrated through a native AppKit/SwiftUI `NavigationSplitView` with Liquid Glass interactive controls:
 
 ```
                       ┌────────────────────────────────────────────────────────┐
@@ -63,20 +64,38 @@ PLUTO organizes all intentional living and productivity into 3 primary desktop d
 
 ---
 
-## ⚔️ 2. Dual-Tier Workspace Architecture
+## 2. Dual-Tier Workspace Architecture
 
-PLUTO provides two distinct workspace environments tailored to cognitive flow and context depth on macOS:
+Pluto accommodates different cognitive modes throughout the day by providing two distinct desktop workspace environments:
 
-| Workspace | Mode Name | Visual Layout | Capabilities & Cognitive Target |
+```
+                  ┌──────────────────────────────────────────────────┐
+                  │              PRESS  ⌘ + ⇧ + P                     │
+                  │   Toggle Hero Cockpit <-> Architect Matrix       │
+                  └──────────────┬───────────────────┬───────────────┘
+                                 │                   │
+                 ┌───────────────┘                   └───────────────┐
+                 ▼                                                   ▼
+   ┌───────────────────────────┐                       ┌───────────────────────────┐
+   │       ⚔️ HERO MODE        │                       │     👑 ARCHITECT MODE     │
+   │  2-Column Daily Cockpit   │                       │  3-Column Sovereign Desk  │
+   ├───────────────────────────┤                       ├───────────────────────────┤
+   │ • Tri-Diurnal Timeline    │                       │ • Proportional Day Plan   │
+   │ • Rule of 3 Top Missions  │                       │ • Sovereign CRDT Canvas   │
+   │ • Circadian Battery Dial  │                       │ • PM Project Workspaces   │
+   │ • Habit Streaks & Streaks │                       │ • Interactive Map Atlases │
+   │ • Ambient Audio Soundscape│                       │ • Strategic Life Audits   │
+   └───────────────────────────┘                       └───────────────────────────┘
+```
+
+| Workspace | Mode Name | Layout | Capabilities & Cognitive Objective |
 |---|---|---|---|
-| **⚔️ Tier 1** | **Hero Mode** | **2-Column Focus Engine** | **Left Column**: Tri-Diurnal Horizontal Timeline (Morning 🌅, Afternoon ☀️, Evening 🌙) + Rule of 3 Active Mission Objectives.<br>**Right Column**: Circadian Energy Battery dial, Keystone Habit consistency list & flame streaks, Weekly Momentum trends, Ambient Focus Soundscape player (Rain, Drone, White Noise, Campfire), Daily Reflection check-in. |
+| **⚔️ Tier 1** | **Hero Mode** | **2-Column Focus Engine** | **Left Column**: Tri-Diurnal Horizontal Timeline (Morning 🌅, Afternoon ☀️, Evening 🌙) + Rule of 3 Active Mission Objectives.<br>**Right Column**: Circadian Energy Battery dial (calculating wake time, sleep debt, and schedule density), Keystone Habit consistency list with live flame streaks, Weekly Momentum index, Ambient Focus Soundscape player, and Quick Check-in drawer. |
 | **👑 Tier 2** | **Architect Mode** | **3-Column Sovereign OS** | Full 3-column `NavigationSplitView` with proportional Day Planner timeline, CRDT Notes canvas, Projects management, Mountain Trek Atlas, GeoJSON Travel Atlas, Life Audit matrix, and local Model Context Protocol (MCP) AI agent integration. |
-
-> **Mode Switch Shortcut**: Press **`⌘ + ⇧ + P`** from anywhere in the app to toggle between **Hero Mode** and **Architect Mode**.
 
 ---
 
-## ☀️ 3. TODAY: The Living Day Execution Engine
+## 3. TODAY: The Living Day Execution Engine
 
 The `Today` workspace (`⌘1`) governs immediate diurnal execution through three specialized sub-modes:
 
@@ -99,9 +118,9 @@ The `Today` workspace (`⌘1`) governs immediate diurnal execution through three
 
 ---
 
-## ✨ 4. STUDIO: Sovereign Knowledge & Synthesis
+## 4. STUDIO: Sovereign Knowledge & Synthesis
 
-The `Studio` workspace (`⌘2`) unites document drafting, daily reflection, and project execution under **One Unified Presentation Engine (`PlutoDocumentEditor`)** backed by **Three Mathematically Isolated Memories**:
+The `Studio` workspace (`⌘2`) unifies document drafting, daily reflection, and project execution under **One Unified Presentation Engine (`PlutoDocumentEditor`)** backed by **Three Mathematically Isolated Memories**:
 
 ```
                                ┌─────────────────────────────┐
@@ -149,7 +168,7 @@ The `Studio` workspace (`⌘2`) unites document drafting, daily reflection, and 
 
 ---
 
-## 🏔️ 5. LIFE: Horizons & Adventure Atlases
+## 5. LIFE: Horizons & Adventure Atlases
 
 The `Life` workspace (`⌘3`) provides high-altitude perspective across long-term goals and physical explorations:
 
@@ -165,7 +184,7 @@ The `Life` workspace (`⌘3`) provides high-altitude perspective across long-ter
 
 ---
 
-## 🎧 6. Focus Room & Spatial Audio DSP Engine
+## 6. Focus Room & Spatial Audio DSP Engine
 
 PLUTO contains an embedded, non-blocking digital signal processing (DSP) spatial audio engine (`SpatialAudioEngine.swift`):
 
@@ -179,7 +198,24 @@ PLUTO contains an embedded, non-blocking digital signal processing (DSP) spatial
 
 ---
 
-## ⚡️ 7. Model Context Protocol (MCP) Server
+## 7. On-Device Intelligence: Apple Neural Engine
+
+Pluto includes an embedded on-device natural language analysis pipeline (`LocaNeuralEngine.swift`):
+
+```
+ ┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
+ │   Journal Reflections &   │     │    Apple Neural Engine    │     │   Executive Tone Brief &  │
+ │     Daily Check-ins       │ ──► │  NaturalLanguage (NLTagger│ ──► │   Circadian Sentiment     │
+ │                           │     │    + Sentiment Analysis)  │     │      Trajectory Map       │
+ └───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
+```
+
+* **Zero Cloud Dependence**: 100% of sentiment analysis, keyword scoring, and executive synthesis executes on the Apple Silicon Neural Engine (NPU).
+* **Circadian Mood Correlation**: Cross-references sleep logs with afternoon task velocity and journal valence to generate actionable lifestyle feedback.
+
+---
+
+## 8. Model Context Protocol (MCP) Server
 
 PLUTO ships with a built-in **Model Context Protocol (MCP)** server (`mcp-server/`), allowing local macOS AI agents (**Claude Desktop, Cursor, Antigravity IDE, Windsurf**) to read and write to your local Pluto operating system:
 
@@ -214,7 +250,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ---
 
-## 🛰 8. Private Alpha Telemetry & Creator Web Dossier
+## 9. Private Alpha Telemetry & Creator Web Dossier
 
 For private alpha testing, Pluto includes an invisible background telemetry pipeline that streams tester interactions to a real-time Creator Web Dossier:
 
@@ -225,7 +261,7 @@ For private alpha testing, Pluto includes an invisible background telemetry pipe
 
 ---
 
-## 📁 9. macOS Repository Architecture
+## 10. Detailed macOS Codebase Architecture
 
 ```
 Plut0-main/
@@ -271,7 +307,7 @@ Plut0-main/
 
 ---
 
-## 💻 10. Building & Running Pluto for Mac
+## 11. Building, Running & Packaging Pluto for Mac
 
 ### System Requirements
 * **macOS 14.0+** (Sonoma / Sequoia)
@@ -294,7 +330,7 @@ Run the bundled release script to package a signed distribution DMG:
 
 ---
 
-## ⌨️ 11. Master Keyboard Shortcut Matrix
+## 12. Master Keyboard Shortcut & Gesture Matrix
 
 | Shortcut | Action | Scope |
 | :--- | :--- | :--- |
@@ -313,7 +349,7 @@ Run the bundled release script to package a signed distribution DMG:
 
 ---
 
-## 🏛️ 12. Core Engineering Invariants
+## 13. Core Mathematical & Engineering Invariants
 
 * **Mathematical CRDT Ground Truth**: Character-level vector clocks and tombstone handling guarantee deterministic conflict resolution across concurrent edits.
 * **Memory Isolation**: Notes (E2EE synced), Project Briefs (sovereign SQLite `project_briefs`), and Journal entries run on independent memory layers without cross-search leakage.
