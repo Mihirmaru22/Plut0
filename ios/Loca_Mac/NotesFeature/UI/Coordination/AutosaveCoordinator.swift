@@ -40,7 +40,7 @@ public actor AutosaveCoordinator {
         repository: any DocumentCoreRepository
     ) {
         scheduleMaterialization(for: noteID) {
-            try? await repository.apply(.updateContent(noteID, content))
+            try? await repository.apply(.updateContent(noteID: noteID, content: content))
         }
     }
     
