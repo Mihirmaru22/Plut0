@@ -11,6 +11,7 @@
 // 3. Return key triggers a custom block split and synchronous re-render with cursor placement.
 // 4. Remote CRDT merges update textStorage only on remote deltas, preventing local render loops.
 // 5. Checklist and bullet glyphs are drawn exclusively in the margin via custom draw(_:); storage string is untouched.
+// 6. Bridge owns undo/redo history (allowsUndo = false) for deterministic state restoration.
 
 import Foundation
 import Combine
@@ -24,6 +25,8 @@ public final class NoteCanvasTextView: NSTextView {
     public var onGutterClicked: ((NSPoint) -> Bool)?
     public var onToggleBold: (() -> Void)?
     public var onToggleItalic: (() -> Void)?
+    public var onUndo: (() -> Void)?
+    public var onRedo: (() -> Void)?
     
     public override var acceptsFirstResponder: Bool { true }
     public override var canBecomeKeyView: Bool { true }
@@ -38,15 +41,24 @@ public final class NoteCanvasTextView: NSTextView {
         if flags == .command {
             if let chars = event.charactersIgnoringModifiers?.lowercased() {
                 if chars == "b" {
-                    if let toggleBold = onToggleBold {
-                        toggleBold()
-                        return true
-                    }
+                    onToggleBold?()
+                    return true
                 } else if chars == "i" {
-                    if let toggleItalic = onToggleItalic {
-                        toggleItalic()
-                        return true
-                    }
+                    onToggleItalic?()
+                    return true
+                } else if chars == "z" {
+                    onUndo?()
+                    return true
+                } else if chars == "y" {
+                    onRedo?()
+                    return true
+                }
+            }
+        } else if flags == [.command, .shift] {
+            if let chars = event.charactersIgnoringModifiers?.lowercased() {
+                if chars == "z" {
+                    onRedo?()
+                    return true
                 }
             }
         }
@@ -161,7 +173,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
         textView.isEditable = true
         textView.isSelectable = true
         textView.isRichText = true
-        textView.allowsUndo = true
+        textView.allowsUndo = false // Bridge owns undo/redo history
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.drawsBackground = false
@@ -220,6 +232,63 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             guard let state = state else { return }
             DispatchQueue.main.async {
                 state.toggleItalic()
+            }
+        }
+        
+        // Wire Bridge-Owned Undo / Redo
+        textView.onUndo = { [weak textView, weak state, weak coordinator = context.coordinator] in
+            guard let tv = textView, let storage = tv.textStorage, let state = state else { return }
+            let curSel = state.bridge.lastKnownSelection
+            if let restoredSelection = state.bridge.undo(currentSelection: curSel) {
+                coordinator?.isProgrammaticEdit = true
+                let rendered = state.bridge.renderAttributedString()
+                storage.setAttributedString(rendered)
+                let validCursor = min(restoredSelection.location, rendered.length)
+                let targetSel = NSRange(location: validCursor, length: min(restoredSelection.length, rendered.length - validCursor))
+                tv.setSelectedRange(targetSel)
+                state.bridge.updateLastKnownSelection(targetSel)
+                coordinator?.isProgrammaticEdit = false
+                tv.setNeedsDisplay(tv.bounds)
+                
+                let bType = state.bridge.blockType(at: targetSel.location)
+                var isChecked = false
+                if let target = state.bridge.resolveLocation(targetSel.location) {
+                    isChecked = target.block.attributes["isChecked"] == "true"
+                }
+                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked)
+                
+                self.onKeystroke(state.bridge.doc)
+                DispatchQueue.main.async {
+                    state.refreshFormattingState()
+                }
+            }
+        }
+        
+        textView.onRedo = { [weak textView, weak state, weak coordinator = context.coordinator] in
+            guard let tv = textView, let storage = tv.textStorage, let state = state else { return }
+            let curSel = state.bridge.lastKnownSelection
+            if let restoredSelection = state.bridge.redo(currentSelection: curSel) {
+                coordinator?.isProgrammaticEdit = true
+                let rendered = state.bridge.renderAttributedString()
+                storage.setAttributedString(rendered)
+                let validCursor = min(restoredSelection.location, rendered.length)
+                let targetSel = NSRange(location: validCursor, length: min(restoredSelection.length, rendered.length - validCursor))
+                tv.setSelectedRange(targetSel)
+                state.bridge.updateLastKnownSelection(targetSel)
+                coordinator?.isProgrammaticEdit = false
+                tv.setNeedsDisplay(tv.bounds)
+                
+                let bType = state.bridge.blockType(at: targetSel.location)
+                var isChecked = false
+                if let target = state.bridge.resolveLocation(targetSel.location) {
+                    isChecked = target.block.attributes["isChecked"] == "true"
+                }
+                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked)
+                
+                self.onKeystroke(state.bridge.doc)
+                DispatchQueue.main.async {
+                    state.refreshFormattingState()
+                }
             }
         }
         
@@ -433,10 +502,64 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 }
             }
             
-            // Standard Typing / Deletion / Replacement:
+            // Structured Multi-Line Paste (e.g. Cmd+V)
+            if replacement.contains("\n") || replacement.contains("\r") {
+                let newCursor = parent.state.bridge.insertStructuredText(replacement, at: affectedCharRange.location, replacingLength: affectedCharRange.length)
+                if let storage = textView.textStorage {
+                    isProgrammaticEdit = true
+                    let updatedAttributed = parent.state.bridge.renderAttributedString()
+                    storage.setAttributedString(updatedAttributed)
+                    let intendedCursor = NSRange(location: min(newCursor, updatedAttributed.length), length: 0)
+                    textView.setSelectedRange(intendedCursor)
+                    parent.state.bridge.updateLastKnownSelection(intendedCursor)
+                    textView.scrollRangeToVisible(intendedCursor)
+                    isProgrammaticEdit = false
+                    textView.setNeedsDisplay(textView.bounds)
+                }
+                let bType = parent.state.bridge.blockType(at: newCursor)
+                var isChecked = false
+                if let target = parent.state.bridge.resolveLocation(newCursor) {
+                    isChecked = target.block.attributes["isChecked"] == "true"
+                }
+                syncTypingAttributes(for: bType, isChecked: isChecked)
+                
+                parent.onKeystroke(parent.state.bridge.doc)
+                DispatchQueue.main.async {
+                    self.parent.state.refreshFormattingState()
+                }
+                return false
+            }
+            
+            // Multi-Block Deletion (e.g. Cmd+A + Delete, Backspace, or Selection Cut)
             if replacement.isEmpty && affectedCharRange.length > 0 {
-                parent.state.bridge.deleteText(at: affectedCharRange.location, length: affectedCharRange.length)
+                parent.state.bridge.deleteRange(at: affectedCharRange.location, length: affectedCharRange.length)
+                if let storage = textView.textStorage {
+                    isProgrammaticEdit = true
+                    let updatedAttributed = parent.state.bridge.renderAttributedString()
+                    storage.setAttributedString(updatedAttributed)
+                    let intendedCursor = NSRange(location: min(affectedCharRange.location, updatedAttributed.length), length: 0)
+                    textView.setSelectedRange(intendedCursor)
+                    parent.state.bridge.updateLastKnownSelection(intendedCursor)
+                    isProgrammaticEdit = false
+                    textView.setNeedsDisplay(textView.bounds)
+                }
+                let bType = parent.state.bridge.blockType(at: affectedCharRange.location)
+                var isChecked = false
+                if let target = parent.state.bridge.resolveLocation(affectedCharRange.location) {
+                    isChecked = target.block.attributes["isChecked"] == "true"
+                }
+                syncTypingAttributes(for: bType, isChecked: isChecked)
+                
+                parent.onKeystroke(parent.state.bridge.doc)
+                DispatchQueue.main.async {
+                    self.parent.state.refreshFormattingState()
+                }
+                return false
             } else if !replacement.isEmpty {
+                // If replacing a selection range before typing, delete the range first:
+                if affectedCharRange.length > 0 {
+                    parent.state.bridge.deleteRange(at: affectedCharRange.location, length: affectedCharRange.length)
+                }
                 parent.state.bridge.insertText(replacement, at: affectedCharRange.location)
             }
             
@@ -519,6 +642,7 @@ public final class EditorBridgeState: ObservableObject {
     
     public func updateDocFromRemote(_ newDoc: CRDTDoc) {
         bridge.doc = newDoc
+        bridge.clearUndoHistory()
         needsRemoteRefresh = true
         refreshFormattingState()
     }

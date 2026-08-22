@@ -613,5 +613,119 @@ struct TextKitBridgeTests {
         #expect(style?.headIndent == 24)
         #expect(style?.firstLineHeadIndent == 24)
     }
+    
+    @Test func testSelectAllDeletePersistsOneEmptyParagraph() {
+        let noteID = NoteID()
+        let b1ID = UUID()
+        let b2ID = UUID()
+        let b3ID = UUID()
+        
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1ID, type: "heading", text: CRDTText(string: "Title", deviceID: "test-device"), attributes: ["level": "1"]))
+        doc.addBlock(CRDTBlock(id: b2ID, type: "paragraph", text: CRDTText(string: "Middle content", deviceID: "test-device")))
+        doc.addBlock(CRDTBlock(id: b3ID, type: "checklistItem", text: CRDTText(string: "Last item", deviceID: "test-device")))
+        
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        let totalLen = bridge.renderAttributedString().length
+        
+        // Select All (0..<totalLen) and Delete
+        bridge.deleteRange(at: 0, length: totalLen)
+        
+        let activeBlocks = bridge.doc.blocks.filter { !$0.isDeleted }
+        #expect(activeBlocks.count == 1)
+        #expect(activeBlocks.first?.type == "paragraph")
+        #expect(activeBlocks.first?.text.string == "")
+        #expect(bridge.renderAttributedString().string == "")
+    }
+    
+    @Test func testMultiLinePasteIntoChecklistCreatesItems() {
+        let noteID = NoteID()
+        let b1ID = UUID()
+        
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1ID, type: "checklistItem", text: CRDTText(string: "Item 1", deviceID: "test-device"), attributes: ["isChecked": "false"]))
+        
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // Paste 2 lines at end of "Item 1" (loc 6)
+        let pasteString = "\nItem 2\nItem 3"
+        let newCursor = bridge.insertStructuredText(pasteString, at: 6)
+        
+        let activeBlocks = bridge.doc.blocks.filter { !$0.isDeleted }
+        #expect(activeBlocks.count == 3)
+        #expect(activeBlocks[0].type == "checklistItem")
+        #expect(activeBlocks[0].text.string == "Item 1")
+        #expect(activeBlocks[1].type == "checklistItem")
+        #expect(activeBlocks[1].text.string == "Item 2")
+        #expect(activeBlocks[2].type == "checklistItem")
+        #expect(activeBlocks[2].text.string == "Item 3")
+        
+        let rendered = bridge.renderAttributedString().string
+        #expect(rendered == "Item 1\nItem 2\nItem 3")
+        #expect(newCursor == 20)
+    }
+    
+    @Test func testUndoRedoTypingSplitAndToggle() {
+        let noteID = NoteID()
+        let b1ID = UUID()
+        
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1ID, type: "paragraph", text: CRDTText(string: "", deviceID: "test-device")))
+        
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // 1. Type "hello"
+        bridge.insertText("hello", at: 0)
+        #expect(bridge.doc.blocks.first?.text.string == "hello")
+        
+        // 2. Split (Enter)
+        let split = bridge.splitBlock(at: 5)
+        #expect(split != nil)
+        #expect(bridge.doc.blocks.filter { !$0.isDeleted }.count == 2)
+        
+        // 3. Type "world"
+        bridge.insertText("world", at: split!.newCursor)
+        #expect(bridge.renderAttributedString().string == "hello\nworld")
+        
+        // 4. Undo typing "world"
+        let undo1 = bridge.undo(currentSelection: NSRange(location: 11, length: 0))
+        #expect(undo1 != nil)
+        #expect(bridge.renderAttributedString().string == "hello\n")
+        
+        // 5. Undo split
+        let undo2 = bridge.undo(currentSelection: undo1!)
+        #expect(undo2 != nil)
+        #expect(bridge.renderAttributedString().string == "hello")
+        #expect(bridge.doc.blocks.filter { !$0.isDeleted }.count == 1)
+        
+        // 6. Redo split
+        let redo1 = bridge.redo(currentSelection: undo2!)
+        #expect(redo1 != nil)
+        #expect(bridge.doc.blocks.filter { !$0.isDeleted }.count == 2)
+        
+        // 7. Redo typing
+        let redo2 = bridge.redo(currentSelection: redo1!)
+        #expect(redo2 != nil)
+        #expect(bridge.renderAttributedString().string == "hello\nworld")
+    }
+    
+    @Test func testCutPasteRoundTrip() {
+        let noteID = NoteID()
+        let b1ID = UUID()
+        
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1ID, type: "paragraph", text: CRDTText(string: "CutThisKeepThis", deviceID: "test-device")))
+        
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // Cut "CutThis" (0..<7)
+        let cutText = "CutThis"
+        bridge.deleteRange(at: 0, length: 7)
+        #expect(bridge.renderAttributedString().string == "KeepThis")
+        
+        // Paste "CutThis" at end (index 8)
+        _ = bridge.insertStructuredText(cutText, at: 8)
+        #expect(bridge.renderAttributedString().string == "KeepThisCutThis")
+    }
 }
 #endif

@@ -50,6 +50,23 @@ public struct SplitResult: Sendable {
     }
 }
 
+/// Snapshot representation for bridge-owned Undo and Redo operations.
+public struct UndoRecord: Sendable {
+    public let doc: CRDTDoc
+    public let selection: NSRange
+    public let timestamp: Date
+    public let isTyping: Bool
+    public let blockID: UUID?
+    
+    public init(doc: CRDTDoc, selection: NSRange, timestamp: Date = Date(), isTyping: Bool = false, blockID: UUID? = nil) {
+        self.doc = doc
+        self.selection = selection
+        self.timestamp = timestamp
+        self.isTyping = isTyping
+        self.blockID = blockID
+    }
+}
+
 /// Bidirectional bridging engine translating TextKit layout offsets and mouse events to granular CRDT operations.
 public final class TextKitCRDTBridge: @unchecked Sendable {
     
@@ -69,9 +86,75 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     private var lastInsertionTime: Date = Date.distantPast
     private var stickyArmTime: Date = Date.distantPast
     
+    // Bridge-owned Undo / Redo History Stacks
+    private var undoStack: [UndoRecord] = []
+    private var redoStack: [UndoRecord] = []
+    private var lastTypingTime: Date = Date.distantPast
+    private var lastTypingBlockID: UUID? = nil
+    
     public init(doc: CRDTDoc, deviceID: String = "local-device") {
         self.doc = doc
         self.deviceID = deviceID
+    }
+    
+    // MARK: - Undo / Redo History Management
+    
+    private func recordUndo(beforeSelection: NSRange, isTyping: Bool = false, blockID: UUID? = nil) {
+        let now = Date()
+        if isTyping,
+           let lastBlock = lastTypingBlockID,
+           lastBlock == blockID,
+           now.timeIntervalSince(lastTypingTime) < 0.8,
+           !undoStack.isEmpty,
+           undoStack.last?.isTyping == true {
+            lastTypingTime = now
+            return
+        }
+        
+        let record = UndoRecord(doc: self.doc, selection: beforeSelection, timestamp: now, isTyping: isTyping, blockID: blockID)
+        undoStack.append(record)
+        redoStack.removeAll()
+        
+        lastTypingTime = now
+        lastTypingBlockID = blockID
+    }
+    
+    public func undo(currentSelection: NSRange) -> NSRange? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let record = undoStack.popLast() else { return nil }
+        
+        let redoRecord = UndoRecord(doc: self.doc, selection: currentSelection, timestamp: Date(), isTyping: false, blockID: nil)
+        redoStack.append(redoRecord)
+        
+        self.doc = record.doc
+        self.stickyMarks.removeAll()
+        self.lastKnownSelection = record.selection
+        return record.selection
+    }
+    
+    public func redo(currentSelection: NSRange) -> NSRange? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let record = redoStack.popLast() else { return nil }
+        
+        let undoRecord = UndoRecord(doc: self.doc, selection: currentSelection, timestamp: Date(), isTyping: false, blockID: nil)
+        undoStack.append(undoRecord)
+        
+        self.doc = record.doc
+        self.stickyMarks.removeAll()
+        self.lastKnownSelection = record.selection
+        return record.selection
+    }
+    
+    public func clearUndoHistory() {
+        lock.lock()
+        defer { lock.unlock() }
+        undoStack.removeAll()
+        redoStack.removeAll()
+        lastTypingBlockID = nil
     }
     
     // MARK: - Selection & Sticky Marks Tracking
@@ -134,11 +217,19 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     
     // MARK: - Keystroke to CRDT Translation
     
-    /// Inserts text at a global character location.
+    /// Inserts text at a global character location with undo tracking.
     public func insertText(_ text: String, at globalLocation: Int) {
         lock.lock()
         defer { lock.unlock() }
         
+        let beforeSel = NSRange(location: globalLocation, length: 0)
+        let target = resolveLocationInternal(globalLocation)
+        recordUndo(beforeSelection: beforeSel, isTyping: true, blockID: target?.block.id)
+        
+        insertTextInternal(text, at: globalLocation)
+    }
+    
+    private func insertTextInternal(_ text: String, at globalLocation: Int) {
         guard let target = resolveLocationInternal(globalLocation) else {
             let newBlock = CRDTBlock(id: UUID(), type: "paragraph", text: CRDTText(string: text, deviceID: deviceID))
             doc.addBlock(newBlock)
@@ -165,21 +256,198 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     
     /// Deletes text at a global character location.
     public func deleteText(at globalLocation: Int, length: Int = 1) {
+        deleteRange(at: globalLocation, length: length)
+    }
+    
+    /// Multi-block range deletion handling arbitrary selection spans (Cmd+A + Delete, Backspace, etc.).
+    public func deleteRange(at globalLocation: Int, length: Int) {
         lock.lock()
         defer { lock.unlock() }
         
-        guard let target = resolveLocationInternal(globalLocation) else { return }
+        guard length > 0 else { return }
+        let beforeSel = NSRange(location: globalLocation, length: length)
+        recordUndo(beforeSelection: beforeSel, isTyping: false)
         
-        if target.relativeIndex == 0 && target.blockIndex > 0 && length == 1 {
-            mergeBlockWithPreceding(targetBlockIndex: target.blockIndex)
-        } else {
-            if let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) {
-                doc.blocks[idx].adjustMarksForDeletion(at: target.relativeIndex, length: length)
+        deleteRangeInternal(at: globalLocation, length: length)
+    }
+    
+    private func deleteRangeInternal(at globalLocation: Int, length: Int) {
+        guard length > 0 else { return }
+        
+        let activeBlocks = doc.blocks.filter { !$0.isDeleted }
+        guard !activeBlocks.isEmpty else {
+            ensureNonEmptyDocument()
+            return
+        }
+        
+        let startLocation = globalLocation
+        let endLocation = globalLocation + length
+        
+        guard let startTarget = resolveLocationInternal(startLocation),
+              let endTarget = resolveLocationInternal(endLocation) else {
+            ensureNonEmptyDocument()
+            return
+        }
+        
+        if startTarget.block.id == endTarget.block.id {
+            // Within single block
+            let deleteLen = endTarget.relativeIndex - startTarget.relativeIndex
+            if deleteLen > 0 {
+                if startTarget.relativeIndex == 0 && deleteLen == 1 && startTarget.blockIndex > 0 {
+                    mergeBlockWithPreceding(targetBlockIndex: startTarget.blockIndex)
+                } else {
+                    if let idx = doc.blocks.firstIndex(where: { $0.id == startTarget.block.id }) {
+                        doc.blocks[idx].adjustMarksForDeletion(at: startTarget.relativeIndex, length: deleteLen)
+                    }
+                    doc.deleteText(at: startTarget.relativeIndex, length: deleteLen, in: startTarget.block.id)
+                }
             }
-            doc.deleteText(at: target.relativeIndex, length: length, in: target.block.id)
+        } else {
+            // Cross-block deletion
+            let startIdx = startTarget.blockIndex
+            let endIdx = endTarget.blockIndex
+            
+            let startBlock = activeBlocks[startIdx]
+            let endBlock = activeBlocks[endIdx]
+            
+            // 1. Truncate start block at startTarget.relativeIndex
+            let startOrigLen = startBlock.text.string.count
+            let startKeepLen = startTarget.relativeIndex
+            if startKeepLen < startOrigLen {
+                let delLen = startOrigLen - startKeepLen
+                if let idx = doc.blocks.firstIndex(where: { $0.id == startBlock.id }) {
+                    doc.blocks[idx].adjustMarksForDeletion(at: startKeepLen, length: delLen)
+                }
+                doc.deleteText(at: startKeepLen, length: delLen, in: startBlock.id)
+            }
+            
+            // 2. Remove all middle blocks strictly between startIdx and endIdx
+            if endIdx > startIdx + 1 {
+                for i in (startIdx + 1)..<endIdx {
+                    doc.removeBlock(blockID: activeBlocks[i].id)
+                }
+            }
+            
+            // 3. Splice end block tail onto start block
+            let endTail = String(endBlock.text.string.dropFirst(endTarget.relativeIndex))
+            if !endTail.isEmpty {
+                let startOffset = startKeepLen
+                if let idx = doc.blocks.firstIndex(where: { $0.id == startBlock.id }) {
+                    for mark in endBlock.marks {
+                        if mark.endIndex > endTarget.relativeIndex {
+                            let adjStart = max(0, mark.startIndex - endTarget.relativeIndex) + startOffset
+                            let adjEnd = (mark.endIndex - endTarget.relativeIndex) + startOffset
+                            doc.blocks[idx].marks.append(CRDTTextMark(type: mark.type, startIndex: adjStart, endIndex: adjEnd))
+                        }
+                    }
+                }
+                doc.insertText(endTail, at: startKeepLen, in: startBlock.id)
+            }
+            
+            // 4. Remove end block
+            doc.removeBlock(blockID: endBlock.id)
+        }
+        
+        let remaining = doc.blocks.filter { !$0.isDeleted }
+        if remaining.isEmpty {
+            ensureNonEmptyDocument()
         }
         
         lastInsertionLocation = globalLocation
+    }
+    
+    private func ensureNonEmptyDocument() {
+        for i in doc.blocks.indices {
+            doc.blocks[i].isDeleted = true
+        }
+        let empty = CRDTBlock(id: UUID(), type: "paragraph", text: CRDTText(string: "", deviceID: deviceID))
+        doc.addBlock(empty)
+        lastInsertionLocation = 0
+    }
+    
+    /// Structured multi-line paste inserting distinct blocks across newlines (Cmd+V).
+    public func insertStructuredText(_ text: String, at globalLocation: Int, replacingLength: Int = 0) -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let beforeSel = NSRange(location: globalLocation, length: replacingLength)
+        recordUndo(beforeSelection: beforeSel, isTyping: false)
+        
+        if replacingLength > 0 {
+            deleteRangeInternal(at: globalLocation, length: replacingLength)
+        }
+        
+        return insertStructuredTextInternal(text, at: globalLocation)
+    }
+    
+    private func insertStructuredTextInternal(_ text: String, at globalLocation: Int) -> Int {
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalized.components(separatedBy: "\n")
+        guard !lines.isEmpty else { return globalLocation }
+        
+        if lines.count == 1 {
+            insertTextInternal(lines[0], at: globalLocation)
+            return globalLocation + lines[0].count
+        }
+        
+        guard let target = resolveLocationInternal(globalLocation) else {
+            var currentID: UUID? = nil
+            var totalLen = 0
+            for line in lines {
+                let block = CRDTBlock(id: UUID(), type: "paragraph", text: CRDTText(string: line, deviceID: deviceID))
+                doc.insertBlock(block, afterBlockID: currentID)
+                currentID = block.id
+                totalLen += line.count + 1
+            }
+            return max(0, totalLen - 1)
+        }
+        
+        let currentString = target.block.text.string
+        let textBefore = String(currentString.prefix(target.relativeIndex))
+        let textAfter = String(currentString.dropFirst(target.relativeIndex))
+        
+        // 1. Truncate current block and append first line
+        let firstLine = lines[0]
+        let currentBlockNewText = textBefore + firstLine
+        
+        if let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) {
+            doc.blocks[idx].text = CRDTText(string: currentBlockNewText, deviceID: deviceID)
+            doc.blocks[idx].lastModified = Date().timeIntervalSince1970
+        }
+        
+        let subType = (target.block.type == "checklistItem" || target.block.type == "bullet") ? target.block.type : "paragraph"
+        let subAttrs = (target.block.type == "checklistItem") ? ["isChecked": "false"] : [:]
+        
+        var prevBlockID = target.block.id
+        var lastInsertedBlockID = target.block.id
+        var lastLineLen = 0
+        
+        // 2. Insert intermediate lines as distinct CRDT blocks
+        for (idx, line) in lines.dropFirst().enumerated() {
+            let isLast = (idx == lines.count - 2)
+            let blockContent = isLast ? (line + textAfter) : line
+            lastLineLen = line.count
+            
+            let newBlockID = UUID()
+            let newBlock = CRDTBlock(
+                id: newBlockID,
+                type: subType,
+                text: CRDTText(string: blockContent, deviceID: deviceID),
+                attributes: subAttrs,
+                lastModified: Date().timeIntervalSince1970
+            )
+            doc.insertBlock(newBlock, afterBlockID: prevBlockID)
+            prevBlockID = newBlockID
+            lastInsertedBlockID = newBlockID
+        }
+        
+        _ = doc.vectorClock.increment(for: deviceID)
+        
+        _ = renderAttributedString() // Refresh block ranges
+        let lastBlockRange = blockRanges[lastInsertedBlockID] ?? NSRange(location: 0, length: 0)
+        let newCursor = lastBlockRange.location + lastLineLen
+        lastInsertionLocation = newCursor
+        return newCursor
     }
     
     /// Splits the current block on Return keypress with Apple Notes semantics.
@@ -187,6 +455,9 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     public func splitBlock(at globalLocation: Int) -> SplitResult? {
         lock.lock()
         defer { lock.unlock() }
+        
+        let beforeSel = NSRange(location: globalLocation, length: 0)
+        recordUndo(beforeSelection: beforeSel, isTyping: false)
         
         // Sticky marks must NOT leak across Enter / block splits
         self.stickyMarks.removeAll()
@@ -231,7 +502,6 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
             newType = "bullet"
             newAttributes = [:]
         } else {
-            // Heading or Paragraph -> new block is paragraph
             newType = "paragraph"
             newAttributes = [:]
         }
@@ -283,12 +553,14 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     public func applyInlineMark(type: String, in globalRange: NSRange) {
         lock.lock()
         defer { lock.unlock() }
+        recordUndo(beforeSelection: globalRange, isTyping: false)
         applyInlineMarkInternal(type: type, in: globalRange)
     }
     
     public func removeInlineMark(type: String, in globalRange: NSRange) {
         lock.lock()
         defer { lock.unlock() }
+        recordUndo(beforeSelection: globalRange, isTyping: false)
         removeInlineMarkInternal(type: type, in: globalRange)
     }
     
@@ -297,6 +569,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         defer { lock.unlock() }
         
         if globalRange.length > 0 {
+            recordUndo(beforeSelection: globalRange, isTyping: false)
             let active = activeInlineMarksInternal(at: globalRange)
             if active.contains(type) {
                 removeInlineMarkInternal(type: type, in: globalRange)
@@ -363,6 +636,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         
+        recordUndo(beforeSelection: NSRange(location: globalLocation, length: 0), isTyping: false)
         guard let target = resolveLocationInternal(globalLocation) else { return }
         if let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) {
             doc.blocks[idx].type = type
@@ -379,14 +653,12 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         
-        guard let target = resolveLocationInternal(globalLocation) else {
-            return
-        }
-        
+        recordUndo(beforeSelection: NSRange(location: globalLocation, length: 0), isTyping: false)
+        guard let target = resolveLocationInternal(globalLocation) else { return }
         guard let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) else { return }
+        
         let currentBlock = doc.blocks[idx]
         let currentType = blockType(for: currentBlock)
-        
         let (rawType, rawAttributes) = targetType.rawBlockType
         
         if currentType == targetType {
@@ -405,6 +677,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         
+        recordUndo(beforeSelection: NSRange(location: globalLocation, length: 0), isTyping: false)
         guard let target = resolveLocationInternal(globalLocation) else { return }
         doc.toggleChecklist(blockID: target.block.id)
     }
@@ -412,6 +685,8 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     public func toggleChecklist(blockID: UUID) {
         lock.lock()
         defer { lock.unlock() }
+        
+        recordUndo(beforeSelection: lastKnownSelection, isTyping: false)
         doc.toggleChecklist(blockID: blockID)
     }
     
