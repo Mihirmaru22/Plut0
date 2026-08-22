@@ -27,6 +27,12 @@ public enum NotesMigrations {
         
         // 3. Migration v2: CRDT States and Outbound Sync Queue
         try CRDTSQLiteMigrations.runMigrationV2(on: db)
+        
+        // 4. Migration v3: Project Briefs Table
+        if !applied.contains(3) {
+            try runMigrationV3(on: db)
+            try recordMigration(version: 3, on: db)
+        }
     }
     
     // MARK: - Migration Version Gating & Inspection
@@ -141,6 +147,23 @@ public enum NotesMigrations {
         CREATE INDEX IF NOT EXISTS idx_notes_sort ON notes(sort_key);
         """
         
+        try execute(sql: sql, on: db)
+    }
+    
+    private static func runMigrationV3(on db: OpaquePointer?) throws {
+        let sql = """
+        CREATE TABLE IF NOT EXISTS project_briefs (
+            id TEXT PRIMARY KEY,
+            content_json TEXT NOT NULL,
+            plain_text_cache TEXT NOT NULL DEFAULT '',
+            preview TEXT NOT NULL DEFAULT '',
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL,
+            schema_version INTEGER NOT NULL DEFAULT 1,
+            client_updated_at REAL NOT NULL,
+            device_id TEXT NOT NULL
+        );
+        """
         try execute(sql: sql, on: db)
     }
     

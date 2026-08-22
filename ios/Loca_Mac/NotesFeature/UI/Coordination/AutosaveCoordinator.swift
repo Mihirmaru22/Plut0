@@ -33,6 +33,17 @@ public actor AutosaveCoordinator {
         }
     }
     
+    /// Schedules a debounced autosave write using any DocumentCoreRepository.
+    public func scheduleAutosave(
+        noteID: NoteID,
+        content: NoteContent,
+        repository: any DocumentCoreRepository
+    ) {
+        scheduleMaterialization(for: noteID) {
+            try? await repository.apply(.updateContent(noteID, content))
+        }
+    }
+    
     /// Debounces the materialization of a CRDT document into the SQLite read-view.
     public func scheduleMaterialization(
         for noteID: NoteID,
