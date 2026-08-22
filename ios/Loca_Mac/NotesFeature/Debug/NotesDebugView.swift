@@ -204,10 +204,12 @@ public struct NotesDebugView: View {
                                 .foregroundStyle(.secondary)
                         }
                         
-                        Text(summary.preview.isEmpty ? "No additional text" : summary.preview)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
+                        if !summary.preview.isEmpty {
+                            Text(summary.preview)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
                     }
                     .padding(.vertical, 4)
                     .tag(summary.id)

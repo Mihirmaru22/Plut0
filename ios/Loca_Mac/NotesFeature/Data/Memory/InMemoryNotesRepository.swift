@@ -397,6 +397,11 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
     public func deleteFolder(id: FolderID) async throws {
         lock.lock()
         folders.removeValue(forKey: id)
+        for (noteID, note) in notes where note.folderID == id {
+            var updated = note
+            updated.folderID = nil
+            notes[noteID] = updated
+        }
         lock.unlock()
         eventBus.publish(.folderDeleted(id))
     }

@@ -573,6 +573,12 @@ public actor LocalNotesStore {
     
     public func deleteFolderRow(id: String) throws {
         try database.write { db in
+            let detachSql = "UPDATE notes SET folder_id = NULL WHERE folder_id = ?;"
+            let detachStmt = try SQLiteHelper.prepare(sql: detachSql, on: db)
+            SQLiteHelper.bind(text: id, at: 1, statement: detachStmt)
+            _ = sqlite3_step(detachStmt)
+            sqlite3_finalize(detachStmt)
+            
             let sql = "DELETE FROM folders WHERE id = ?;"
             let statement = try SQLiteHelper.prepare(sql: sql, on: db)
             defer { sqlite3_finalize(statement) }
