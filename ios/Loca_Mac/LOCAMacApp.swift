@@ -58,6 +58,9 @@ struct LOCAMacApp: App {
                         // Seed calm initial workspace notes & projects if first launch
                         EmptyStateSeeder.shared.seedInitialDataIfNeeded(context: container.mainContext)
 
+                        // Start dynamic Light/Dark Dock App Icon manager
+                        PlutoDynamicAppIconManager.shared.startMonitoring()
+
                         // Start invisible alpha telemetry engine
                         PlutoTelemetryEngine.shared.start()
 
