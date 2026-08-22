@@ -11,7 +11,7 @@ struct ProjectBriefTests {
         let briefID = NoteID()
         
         // 1. Create empty brief
-        try await repo.apply(.createNote(id: briefID, folderID: nil))
+        try await repo.apply(.createNote(noteID: briefID, folderID: nil))
         let initial = try await repo.fetchDocument(id: briefID)
         #expect(initial != nil)
         #expect(initial?.id == briefID)
@@ -22,7 +22,7 @@ struct ProjectBriefTests {
             .paragraph(ParagraphBlock(text: "CRDT-backed sovereign brief engine."))
         ]
         let content = NoteContent(version: 1, blocks: blocks)
-        try await repo.apply(.updateContent(briefID, content))
+        try await repo.apply(.updateContent(noteID: briefID, content: content))
         
         let updated = try await repo.fetchDocument(id: briefID)
         #expect(updated?.content.blocks.count == 2)
@@ -35,7 +35,7 @@ struct ProjectBriefTests {
         #expect(searchResults.first?.id == briefID)
         
         // 4. Delete brief
-        try await repo.apply(.delete(briefID))
+        try await repo.apply(.permanentlyDelete(noteID: briefID))
         let deleted = try await repo.fetchDocument(id: briefID)
         #expect(deleted == nil)
     }
@@ -51,15 +51,15 @@ struct ProjectBriefTests {
         let noteContent = NoteContent(version: 1, blocks: [
             .paragraph(ParagraphBlock(text: "Secret Note Alpha"))
         ])
-        try await notesRepo.apply(.createNote(id: noteID, folderID: nil))
-        try await notesRepo.apply(.updateContent(noteID, noteContent))
+        try await notesRepo.apply(.createNote(noteID: noteID, folderID: nil))
+        try await notesRepo.apply(.updateContent(noteID: noteID, content: noteContent))
         
         // 2. Write brief to briefRepo
         let briefContent = NoteContent(version: 1, blocks: [
             .paragraph(ParagraphBlock(text: "Confidential Project Brief Beta"))
         ])
-        try await briefRepo.apply(.createNote(id: briefID, folderID: nil))
-        try await briefRepo.apply(.updateContent(briefID, briefContent))
+        try await briefRepo.apply(.createNote(noteID: briefID, folderID: nil))
+        try await briefRepo.apply(.updateContent(noteID: briefID, content: briefContent))
         
         // 3. Verify Notes Repository only contains Notes
         let notesSearchForNote = try await notesRepo.searchNotes(term: "Secret")
@@ -94,8 +94,8 @@ struct ProjectBriefTests {
         ])
         
         // Create & Update
-        try await repo.apply(.createNote(id: briefID, folderID: nil))
-        try await repo.apply(.updateContent(briefID, content))
+        try await repo.apply(.createNote(noteID: briefID, folderID: nil))
+        try await repo.apply(.updateContent(noteID: briefID, content: content))
         
         // Fetch
         let fetched = try await repo.fetchDocument(id: briefID)
@@ -145,14 +145,14 @@ struct ProjectBriefTests {
         ])
         
         // Write to all 3 isolated repositories
-        try await notesRepo.apply(.createNote(id: id1, folderID: nil))
-        try await notesRepo.apply(.updateContent(id1, testContent))
+        try await notesRepo.apply(.createNote(noteID: id1, folderID: nil))
+        try await notesRepo.apply(.updateContent(noteID: id1, content: testContent))
         
-        try await briefRepo.apply(.createNote(id: id2, folderID: nil))
-        try await briefRepo.apply(.updateContent(id2, testContent))
+        try await briefRepo.apply(.createNote(noteID: id2, folderID: nil))
+        try await briefRepo.apply(.updateContent(noteID: id2, content: testContent))
         
-        try await journalRepo.apply(.createNote(id: id3, folderID: nil))
-        try await journalRepo.apply(.updateContent(id3, testContent))
+        try await journalRepo.apply(.createNote(noteID: id3, folderID: nil))
+        try await journalRepo.apply(.updateContent(noteID: id3, content: testContent))
         
         // Assert all 3 successfully fetched identical CRDT content through DocumentCoreRepository interface
         let d1 = try await notesRepo.fetchDocument(id: id1)

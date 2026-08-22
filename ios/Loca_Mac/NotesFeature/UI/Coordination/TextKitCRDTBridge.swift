@@ -26,11 +26,21 @@ public enum EditorBlockType: String, Equatable, CaseIterable, Sendable {
 public struct FormattingState: Equatable, Sendable {
     public var isBold: Bool
     public var isItalic: Bool
+    public var isUnderline: Bool
+    public var isStrikethrough: Bool
     public var blockType: EditorBlockType
     
-    public init(isBold: Bool = false, isItalic: Bool = false, blockType: EditorBlockType = .paragraph) {
+    public init(
+        isBold: Bool = false,
+        isItalic: Bool = false,
+        isUnderline: Bool = false,
+        isStrikethrough: Bool = false,
+        blockType: EditorBlockType = .paragraph
+    ) {
         self.isBold = isBold
         self.isItalic = isItalic
+        self.isUnderline = isUnderline
+        self.isStrikethrough = isStrikethrough
         self.blockType = blockType
     }
 }
@@ -736,6 +746,8 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         let marks = activeInlineMarksInternal(at: selection)
         let isBold = stickyMarks.contains("bold") || marks.contains("bold")
         let isItalic = stickyMarks.contains("italic") || marks.contains("italic")
+        let isUnderline = stickyMarks.contains("underline") || marks.contains("underline")
+        let isStrikethrough = stickyMarks.contains("strikethrough") || marks.contains("strikethrough")
         
         let bType: EditorBlockType
         if let target = resolveLocationInternal(selection.location) {
@@ -744,7 +756,13 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
             bType = .paragraph
         }
         
-        return FormattingState(isBold: isBold, isItalic: isItalic, blockType: bType)
+        return FormattingState(
+            isBold: isBold,
+            isItalic: isItalic,
+            isUnderline: isUnderline,
+            isStrikethrough: isStrikethrough,
+            blockType: bType
+        )
     }
     
     private func blockType(for block: CRDTBlock) -> EditorBlockType {

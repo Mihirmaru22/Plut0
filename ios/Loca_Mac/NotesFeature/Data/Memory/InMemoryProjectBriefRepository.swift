@@ -45,7 +45,7 @@ public final class InMemoryProjectBriefRepository: DocumentCoreRepository, @unch
             briefs[id] = note
             eventBus.publish(.noteUpdated(id))
             
-        case .delete(let id), .permanentlyDelete(let id):
+        case .markDeleted(let id), .permanentlyDelete(let id):
             briefs.removeValue(forKey: id)
             eventBus.publish(.noteDeleted(id))
             

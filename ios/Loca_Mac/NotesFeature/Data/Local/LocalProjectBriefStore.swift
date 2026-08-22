@@ -43,7 +43,7 @@ public actor LocalProjectBriefStore {
             
             var summaries: [NoteSummary] = []
             while sqlite3_step(statement) == SQLITE_ROW {
-                let row = SQLiteHelper.extractNoteRow(from: statement)
+                let row = readBriefRow(from: statement)
                 summaries.append(NotesMappers.noteSummary(from: row))
             }
             return summaries
@@ -69,7 +69,7 @@ public actor LocalProjectBriefStore {
         }
     }
     
-    private func applySingleMutation(_ mutation: NoteMutation, on db: OpaquePointer?) throws -> NotesEvent {
+    private func applySingleMutation(_ mutation: NoteMutation, on db: OpaquePointer) throws -> NotesEvent {
         switch mutation {
         case .createNote(let noteID, _):
             let now = Date().timeIntervalSince1970
@@ -81,7 +81,7 @@ public actor LocalProjectBriefStore {
                 id: noteID.raw.uuidString,
                 folderID: nil,
                 title: "",
-                contentJSON: try NotesMappers.jsonString(from: content),
+                contentJSON: encodeJSON(content),
                 plainTextCache: plainText,
                 preview: preview,
                 isPinned: 0,
@@ -102,7 +102,7 @@ public actor LocalProjectBriefStore {
             let now = Date().timeIntervalSince1970
             let plainText = NoteTextExtractor.plainText(from: content)
             let preview = NotePreviewGenerator.derivePreview(from: content)
-            let contentJSON = try NotesMappers.jsonString(from: content)
+            let contentJSON = encodeJSON(content)
             
             if var row = try fetchBriefRow(id: noteID.raw.uuidString, on: db) {
                 row.contentJSON = contentJSON
@@ -134,7 +134,7 @@ public actor LocalProjectBriefStore {
             }
             return .noteUpdated(noteID)
             
-        case .delete(let noteID):
+        case .markDeleted(let noteID):
             try deleteBriefRow(id: noteID.raw.uuidString, on: db)
             return .noteDeleted(noteID)
             
@@ -149,7 +149,7 @@ public actor LocalProjectBriefStore {
     
     // MARK: - Row Level CRUD
     
-    private func fetchBriefRow(id: String, on db: OpaquePointer?) throws -> NoteRow? {
+    private func fetchBriefRow(id: String, on db: OpaquePointer) throws -> NoteRow? {
         let sql = """
         SELECT id, NULL, '', content_json, plain_text_cache, preview, 0, 0, 0,
                created_at, updated_at, NULL, '', schema_version, client_updated_at, device_id
@@ -161,12 +161,12 @@ public actor LocalProjectBriefStore {
         
         SQLiteHelper.bind(text: id, at: 1, statement: statement)
         if sqlite3_step(statement) == SQLITE_ROW {
-            return SQLiteHelper.extractNoteRow(from: statement)
+            return readBriefRow(from: statement)
         }
         return nil
     }
     
-    private func insertBriefRow(_ row: NoteRow, on db: OpaquePointer?) throws {
+    private func insertBriefRow(_ row: NoteRow, on db: OpaquePointer) throws {
         let sql = """
         INSERT OR REPLACE INTO project_briefs (
             id, content_json, plain_text_cache, preview,
@@ -192,7 +192,7 @@ public actor LocalProjectBriefStore {
         }
     }
     
-    private func updateBriefRow(_ row: NoteRow, on db: OpaquePointer?) throws {
+    private func updateBriefRow(_ row: NoteRow, on db: OpaquePointer) throws {
         let sql = """
         UPDATE project_briefs
         SET content_json = ?, plain_text_cache = ?, preview = ?,
@@ -215,7 +215,7 @@ public actor LocalProjectBriefStore {
         }
     }
     
-    private func deleteBriefRow(id: String, on db: OpaquePointer?) throws {
+    private func deleteBriefRow(id: String, on db: OpaquePointer) throws {
         let sql = "DELETE FROM project_briefs WHERE id = ?;"
         let statement = try SQLiteHelper.prepare(sql: sql, on: db)
         defer { sqlite3_finalize(statement) }
@@ -225,5 +225,30 @@ public actor LocalProjectBriefStore {
             let msg = String(cString: sqlite3_errmsg(db))
             throw NotesError.persistenceFailure("Failed to delete brief: \(msg)")
         }
+    }
+    
+    private func readBriefRow(from statement: OpaquePointer) -> NoteRow {
+        NoteRow(
+            id: SQLiteHelper.nonNullText(at: 0, statement: statement),
+            folderID: SQLiteHelper.text(at: 1, statement: statement),
+            title: SQLiteHelper.nonNullText(at: 2, statement: statement),
+            contentJSON: SQLiteHelper.nonNullText(at: 3, statement: statement),
+            plainTextCache: SQLiteHelper.nonNullText(at: 4, statement: statement),
+            preview: SQLiteHelper.nonNullText(at: 5, statement: statement),
+            isPinned: SQLiteHelper.int(at: 6, statement: statement),
+            isLocked: SQLiteHelper.int(at: 7, statement: statement),
+            isDeleted: SQLiteHelper.int(at: 8, statement: statement),
+            createdAt: SQLiteHelper.nonNullDouble(at: 9, statement: statement),
+            updatedAt: SQLiteHelper.nonNullDouble(at: 10, statement: statement),
+            deletedAt: SQLiteHelper.double(at: 11, statement: statement),
+            sortKey: SQLiteHelper.nonNullText(at: 12, statement: statement),
+            schemaVersion: SQLiteHelper.int(at: 13, statement: statement),
+            clientUpdatedAt: SQLiteHelper.nonNullDouble(at: 14, statement: statement),
+            deviceID: SQLiteHelper.nonNullText(at: 15, statement: statement)
+        )
+    }
+    
+    private func encodeJSON(_ content: NoteContent) -> String {
+        (try? JSONEncoder().encode(content)).flatMap { String(data: $0, encoding: .utf8) } ?? "{\"version\":1,\"blocks\":[]}"
     }
 }

@@ -13,4 +13,20 @@ public enum NoteMutation: Sendable {
     case permanentlyDelete(noteID: NoteID)
     case toggleChecklistItem(noteID: NoteID, blockID: UUID)
     case materializeFromSync(noteID: NoteID, title: String, content: NoteContent, plainTextCache: String, preview: String)
+    
+    public var noteID: NoteID {
+        switch self {
+        case .createNote(let id, _): return id
+        case .setTitle(let id, _): return id
+        case .updateContent(let id, _): return id
+        case .move(let id, _): return id
+        case .setPinned(let id, _): return id
+        case .setLocked(let id, _): return id
+        case .markDeleted(let id): return id
+        case .restore(let id): return id
+        case .permanentlyDelete(let id): return id
+        case .toggleChecklistItem(let id, _): return id
+        case .materializeFromSync(let id, _, _, _, _): return id
+        }
+    }
 }
