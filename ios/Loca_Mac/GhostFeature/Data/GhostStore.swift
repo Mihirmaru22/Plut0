@@ -163,6 +163,94 @@ public actor GhostStore {
         }
     }
 
+    // MARK: - Receipts CRUD (Migration v5)
+
+    public func saveReceipt(_ receipt: GhostReceipt) throws {
+        try database.write { db in
+            let sql = """
+            INSERT OR REPLACE INTO ghost_receipts (
+                id, day_id, rule_id, kind, value_real, photo_path, logged_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?);
+            """
+
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: receipt.id, at: 1, statement: statement)
+            SQLiteHelper.bind(text: receipt.dayID, at: 2, statement: statement)
+            SQLiteHelper.bind(text: receipt.ruleID, at: 3, statement: statement)
+            SQLiteHelper.bind(text: receipt.kind.rawValue, at: 4, statement: statement)
+            SQLiteHelper.bind(double: receipt.valueReal, at: 5, statement: statement)
+            SQLiteHelper.bind(text: receipt.photoPath, at: 6, statement: statement)
+            SQLiteHelper.bind(double: receipt.loggedAt.timeIntervalSince1970, at: 7, statement: statement)
+
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw NotesError.persistenceFailure("Failed to save ghost receipt: \(msg)")
+            }
+        }
+    }
+
+    public func fetchReceipts(dayID: String) throws -> [GhostReceipt] {
+        try database.read { db in
+            let sql = """
+            SELECT id, day_id, rule_id, kind, value_real, photo_path, logged_at
+            FROM ghost_receipts
+            WHERE day_id = ?
+            ORDER BY logged_at ASC;
+            """
+
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: dayID, at: 1, statement: statement)
+
+            var receipts: [GhostReceipt] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let receipt = extractReceipt(from: statement) {
+                    receipts.append(receipt)
+                }
+            }
+            return receipts
+        }
+    }
+
+    public func fetchAllReceipts(seasonID: String) throws -> [GhostReceipt] {
+        try database.read { db in
+            let sql = """
+            SELECT r.id, r.day_id, r.rule_id, r.kind, r.value_real, r.photo_path, r.logged_at
+            FROM ghost_receipts r
+            INNER JOIN ghost_days d ON r.day_id = d.id
+            WHERE d.season_id = ?
+            ORDER BY r.logged_at ASC;
+            """
+
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
+
+            var receipts: [GhostReceipt] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let receipt = extractReceipt(from: statement) {
+                    receipts.append(receipt)
+                }
+            }
+            return receipts
+        }
+    }
+
+    public func deleteReceipt(id: String) throws {
+        try database.write { db in
+            let sql = "DELETE FROM ghost_receipts WHERE id = ?;"
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: id, at: 1, statement: statement)
+            _ = sqlite3_step(statement)
+        }
+    }
+
     // MARK: - Mappers
 
     private func extractSeason(from statement: OpaquePointer) -> GhostSeason? {
@@ -222,6 +310,28 @@ public actor GhostStore {
             offlineIntervals: intervals,
             reflectionNoteID: noteID,
             createdAt: createdAt
+        )
+    }
+
+    private func extractReceipt(from statement: OpaquePointer) -> GhostReceipt? {
+        let id = SQLiteHelper.nonNullText(at: 0, statement: statement)
+        let dayID = SQLiteHelper.nonNullText(at: 1, statement: statement)
+        let ruleID = SQLiteHelper.nonNullText(at: 2, statement: statement)
+        let kindRaw = SQLiteHelper.nonNullText(at: 3, statement: statement)
+        let valueReal = SQLiteHelper.nonNullDouble(at: 4, statement: statement)
+        let photoPath = SQLiteHelper.text(at: 5, statement: statement)
+        let loggedAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 6, statement: statement))
+
+        let kind = GhostProofKind(rawValue: kindRaw) ?? .binary
+
+        return GhostReceipt(
+            id: id,
+            dayID: dayID,
+            ruleID: ruleID,
+            kind: kind,
+            valueReal: valueReal,
+            photoPath: photoPath,
+            loggedAt: loggedAt
         )
     }
 }

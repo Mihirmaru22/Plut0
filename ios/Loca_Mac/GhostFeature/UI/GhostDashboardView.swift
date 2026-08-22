@@ -2,18 +2,29 @@ import SwiftUI
 import SwiftData
 
 /// Master Ghost Mode / Winter Arc Dashboard Canvas.
-/// Sovereign personal operating surface for 120-day silence and discipline.
+/// Sovereign personal operating surface for 120-day silence, Protocol Board receipts, and chain execution.
 public struct GhostDashboardView: View {
 
     @State private var activeSeason: GhostSeason? = nil
     @State private var todayRecord: GhostDay? = nil
-    @State private var streakStatus: GhostEngine.StreakStatus = GhostEngine.StreakStatus(
-        currentStreak: 0, bestStreak: 0, rank: .uninitiated, isDented: false, totalGhostDays: 0
-    )
+    @State private var streakStatus: GhostEngine.StreakStatus = GhostEngine.StreakStatus()
     @State private var ridgePoints: [GhostRidgePoint] = []
+    @State private var protocolRules: [GhostProtocolRule] = []
+    @State private var todayReceipts: [GhostReceipt] = []
+    @State private var chainCells: [GhostEngine.GhostChainCell] = []
+    @State private var darkHoursSummary: GhostEngine.DarkHoursSummary = GhostEngine.DarkHoursSummary(
+        todayMinutes: 0, weekMinutes: 0, longestStretchMinutes: 0, recentIntervals: []
+    )
+    @State private var evolutionReport: GhostEngine.GhostEvolutionReport = GhostEngine.GhostEvolutionReport(
+        weeklyGhostRate: 0, bodyAdherence: 0, mindAdherence: 0, silenceAdherence: 0, ruleAdherences: [], suggestion: ""
+    )
+    @State private var photoArtifacts: [GhostEngine.GhostPhotoArtifact] = []
+
     @State private var isLoading: Bool = true
     @State private var showOnboardingModal: Bool = false
     @State private var showCheckInSheet: Bool = false
+    @State private var showPhotoWallModal: Bool = false
+    @State private var selectedLedgerCell: GhostEngine.GhostChainCell? = nil
     @State private var isOfflineDark: Bool = false
     @State private var darkStartTime: Date? = nil
 
@@ -54,6 +65,12 @@ public struct GhostDashboardView: View {
                 loadData()
             }
         }
+        .sheet(isPresented: $showPhotoWallModal) {
+            GhostPhotoWallView(photos: photoArtifacts)
+        }
+        .sheet(item: $selectedLedgerCell) { cell in
+            dayLedgerSheet(cell: cell)
+        }
         .onAppear {
             loadData()
         }
@@ -64,7 +81,7 @@ public struct GhostDashboardView: View {
     private func dashboardContent(season: GhostSeason) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header: Season Title, Doctrine Tag, Streak Rank Badge & Check-In Action
+                // Top Master Header
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
@@ -84,16 +101,26 @@ public struct GhostDashboardView: View {
                                 .foregroundStyle(Color.white.opacity(0.6))
                         }
 
-                        Text("Day \(season.elapsedDays) of \(season.totalDays)")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(Color.white)
+                        if streakStatus.isRestarted && season.doctrine == .hard {
+                            HStack(spacing: 8) {
+                                Text("Day \(streakStatus.effectiveDayNumber)")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundStyle(Color.white)
+                                Text("• Back to Day 1 (Season Day \(season.elapsedDays) of \(season.totalDays))")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.white.opacity(0.55))
+                            }
+                        } else {
+                            Text("Day \(season.elapsedDays) of \(season.totalDays)")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundStyle(Color.white)
+                        }
                     }
 
                     Spacer()
 
                     // Ghost Streak & Rank Badge
                     HStack(spacing: 12) {
-                        // Ghost Glyph with Opacity Matched to Streak
                         ZStack {
                             Circle()
                                 .fill(Color.white.opacity(0.04))
@@ -124,6 +151,23 @@ public struct GhostDashboardView: View {
                     .padding(.vertical, 8)
                     .background(Color(red: 0.08, green: 0.08, blue: 0.11), in: RoundedRectangle(cornerRadius: 10))
 
+                    // Photo Wall Button
+                    Button {
+                        showPhotoWallModal = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "photo.stack.fill")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Photo Wall")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+                    }
+                    .buttonStyle(.plain)
+
                     // Evening Check-In Button
                     Button {
                         showCheckInSheet = true
@@ -142,48 +186,69 @@ public struct GhostDashboardView: View {
                     .buttonStyle(.plain)
                 }
 
-                // Three Rings Header
+                // Three Rings Header (Dynamic Next Task Name)
                 HStack(spacing: 14) {
+                    let nextBody = GhostEngine.shared.nextPendingRule(for: .body, receipts: todayReceipts, rules: protocolRules)
                     ringCard(
                         ring: .body,
                         isClosed: todayRecord?.bodyClosed ?? false,
                         title: "Body Ring",
                         subtitle: "Physical Forge",
-                        statusText: (todayRecord?.bodyClosed ?? false) ? "Sealed Today" : "Pending Action"
+                        statusText: (todayRecord?.bodyClosed ?? false) ? "Sealed Today" : (nextBody ?? "Pending Task")
                     ) {
                         toggleRingAction(.body)
                     }
 
+                    let nextMind = GhostEngine.shared.nextPendingRule(for: .mind, receipts: todayReceipts, rules: protocolRules)
                     ringCard(
                         ring: .mind,
                         isClosed: todayRecord?.mindClosed ?? false,
                         title: "Mind Ring",
                         subtitle: "Mental Synthesis",
-                        statusText: (todayRecord?.mindClosed ?? false) ? "Sealed Today" : "Pending Reflection"
+                        statusText: (todayRecord?.mindClosed ?? false) ? "Sealed Today" : (nextMind ?? "Pending Reflection")
                     ) {
                         toggleRingAction(.mind)
                     }
 
+                    let nextSilence = GhostEngine.shared.nextPendingRule(for: .silence, receipts: todayReceipts, rules: protocolRules)
                     ringCard(
                         ring: .silence,
                         isClosed: todayRecord?.silenceClosed ?? false,
                         title: "Silence Ring",
                         subtitle: "Focus Silence",
-                        statusText: "\(todayRecord?.totalSilenceMinutes ?? 0)m Logged"
+                        statusText: (todayRecord?.silenceClosed ?? false) ? "\(todayRecord?.totalSilenceMinutes ?? 0)m Logged" : (nextSilence ?? "45m Focus")
                     ) {
                         toggleRingAction(.silence)
                     }
                 }
 
-                // Season Ridge Elevation Profile Chart
+                // Daily Protocol Board
+                GhostProtocolBoardView(
+                    rules: protocolRules,
+                    receipts: todayReceipts
+                ) { rule, proofKind, value, photoPath in
+                    handleLogReceipt(rule: rule, proofKind: proofKind, value: value, photoPath: photoPath)
+                }
+
+                // 120-Day Discipline Chain Grid
+                GhostChainGridView(cells: chainCells) { cell in
+                    selectedLedgerCell = cell
+                }
+
+                // Season Ridge Mountain Elevation Profile Chart
                 GhostRidgeProfileChart(points: ridgePoints)
 
-                // Burnout Risk & Neural Tone Insight
+                // Dark Hours Silence Strip
+                GhostDarkHoursStrip(summary: darkHoursSummary)
+
+                // Weekly Evolution Card
+                GhostEvolutionCard(report: evolutionReport)
+
+                // Neural Tone Insight
                 neuralValenceInsightCard
 
-                // Offline Dark Mode & Actions Row
+                // Offline Dark Mode & PDF Actions Row
                 HStack(spacing: 14) {
-                    // Went Dark Button
                     Button {
                         toggleWentDark()
                     } label: {
@@ -214,7 +279,6 @@ public struct GhostDashboardView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Export Passport PDF
                     Button {
                         WinterArcPassportPDFGenerator.exportCertificatePDF(
                             season: season,
@@ -292,7 +356,8 @@ public struct GhostDashboardView: View {
                         .foregroundStyle(Color.white.opacity(0.5))
                     Text(statusText)
                         .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(isClosed ? Color(hex: ring.accentHex) ?? Color.white : Color.white.opacity(0.4))
+                        .foregroundStyle(isClosed ? Color(hex: ring.accentHex) ?? Color.white : Color.white.opacity(0.6))
+                        .lineLimit(1)
                 }
 
                 Spacer()
@@ -341,6 +406,59 @@ public struct GhostDashboardView: View {
                         .stroke(isBurnoutRisk ? Color.orange.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1)
                 )
         )
+    }
+
+    // MARK: - Day Ledger Sheet
+
+    private func dayLedgerSheet(cell: GhostEngine.GhostChainCell) -> some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("DAY LEDGER • DAY \(cell.dayIndex)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+                        .tracking(1.0)
+                    Text(cell.dateString)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.white)
+                }
+                Spacer()
+                Button("Done") {
+                    selectedLedgerCell = nil
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+            }
+
+            Divider().opacity(0.12)
+
+            HStack(spacing: 12) {
+                ledgerBadge(label: "Body Ring", isClosed: cell.bodyClosed, color: Color(hex: "#E54D2E") ?? .red)
+                ledgerBadge(label: "Mind Ring", isClosed: cell.mindClosed, color: Color(hex: "#3E63DD") ?? .blue)
+                ledgerBadge(label: "Silence Ring", isClosed: cell.silenceClosed, color: Color(hex: "#0091FF") ?? .cyan)
+            }
+
+            Text("Daily Score: \(cell.score)/100 • \(cell.ghostDay ? "🔥 Ghost Day Achieved" : "Unsealed")")
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundStyle(cell.ghostDay ? Color(red: 0.0, green: 0.85, blue: 1.0) : Color.white.opacity(0.6))
+        }
+        .padding(20)
+        .frame(width: 400, height: 200)
+        .background(Color(red: 0.07, green: 0.07, blue: 0.10))
+    }
+
+    private func ledgerBadge(label: String, isClosed: Bool, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Circle()
+                .fill(isClosed ? color : Color.white.opacity(0.1))
+                .frame(width: 10, height: 10)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(isClosed ? Color.white : Color.white.opacity(0.4))
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 6))
     }
 
     // MARK: - Empty State
@@ -406,13 +524,50 @@ public struct GhostDashboardView: View {
             let day = try? await GhostEngine.shared.getOrCreateDayRecord(for: Date())
             let streak = (try? await GhostEngine.shared.computeStreakStatus()) ?? streakStatus
             let ridge = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
+            let rules = GhostEngine.shared.fetchRules(for: season)
+            let receipts = (try? await GhostEngine.shared.fetchReceipts(for: Date())) ?? []
+            let grid = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
+            let dark = (try? await GhostEngine.shared.fetchDarkHoursSummary()) ?? darkHoursSummary
+            let evo = (try? await GhostEngine.shared.fetchEvolutionReport()) ?? evolutionReport
+            let photos = (try? await GhostEngine.shared.fetchAllPhotoArtifacts()) ?? []
 
             await MainActor.run {
                 self.activeSeason = season
                 self.todayRecord = day
                 self.streakStatus = streak
                 self.ridgePoints = ridge
+                self.protocolRules = rules
+                self.todayReceipts = receipts
+                self.chainCells = grid
+                self.darkHoursSummary = dark
+                self.evolutionReport = evo
+                self.photoArtifacts = photos
                 self.isLoading = false
+            }
+        }
+    }
+
+    private func handleLogReceipt(rule: GhostProtocolRule, proofKind: GhostProofKind, value: Double, photoPath: String?) {
+        Task {
+            if let result = try? await GhostEngine.shared.logReceipt(
+                ruleID: rule.id,
+                proofKind: proofKind,
+                value: value,
+                photoPath: photoPath
+            ) {
+                let streak = (try? await GhostEngine.shared.computeStreakStatus()) ?? streakStatus
+                let ridge = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
+                let grid = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
+                let photos = (try? await GhostEngine.shared.fetchAllPhotoArtifacts()) ?? []
+
+                await MainActor.run {
+                    self.todayRecord = result.day
+                    self.todayReceipts = result.receipts
+                    self.streakStatus = streak
+                    self.ridgePoints = ridge
+                    self.chainCells = grid
+                    self.photoArtifacts = photos
+                }
             }
         }
     }
@@ -431,10 +586,12 @@ public struct GhostDashboardView: View {
             let updated = try? await GhostEngine.shared.toggleRing(ring: ring, isClosed: !isCurrentlyClosed)
             let streak = try? await GhostEngine.shared.computeStreakStatus()
             let ridge = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
+            let grid = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
             await MainActor.run {
                 if let updated = updated { self.todayRecord = updated }
                 if let streak = streak { self.streakStatus = streak }
                 self.ridgePoints = ridge
+                self.chainCells = grid
             }
         }
     }

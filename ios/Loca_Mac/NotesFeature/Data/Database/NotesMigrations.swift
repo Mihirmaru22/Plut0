@@ -39,6 +39,12 @@ public enum NotesMigrations {
             try runMigrationV4(on: db)
             try recordMigration(version: 4, on: db)
         }
+
+        // 6. Migration v5: Ghost Protocol Receipts
+        if !applied.contains(5) {
+            try runMigrationV5(on: db)
+            try recordMigration(version: 5, on: db)
+        }
     }
     
     // MARK: - Migration Version Gating & Inspection
@@ -205,6 +211,25 @@ public enum NotesMigrations {
 
         CREATE UNIQUE INDEX IF NOT EXISTS idx_ghost_days_season_date ON ghost_days(season_id, date);
         CREATE INDEX IF NOT EXISTS idx_ghost_days_date ON ghost_days(date);
+        """
+        try execute(sql: sql, on: db)
+    }
+
+    private static func runMigrationV5(on db: OpaquePointer?) throws {
+        let sql = """
+        CREATE TABLE IF NOT EXISTS ghost_receipts (
+            id TEXT PRIMARY KEY,
+            day_id TEXT NOT NULL,
+            rule_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            value_real REAL NOT NULL DEFAULT 0.0,
+            photo_path TEXT,
+            logged_at REAL NOT NULL,
+            FOREIGN KEY(day_id) REFERENCES ghost_days(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ghost_receipts_day_rule ON ghost_receipts(day_id, rule_id);
+        CREATE INDEX IF NOT EXISTS idx_ghost_receipts_rule ON ghost_receipts(rule_id);
         """
         try execute(sql: sql, on: db)
     }

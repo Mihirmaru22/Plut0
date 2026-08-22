@@ -95,9 +95,13 @@ final class HabitBoard {
     /// See `archive(in:)` for the canonical mutation and ADR-001 for the rationale.
     var archivedAt: Date? = nil
 
-    /// Ghost Mode link properties (Migration v4 / Ghost Sprint)
+    /// Ghost Mode link properties (Migration v4 / v5 Ghost Depth Sprint)
     var ghostRuleID: String? = nil
     var ghostRingRaw: String? = nil // "body", "mind", "silence"
+    var ghostProofKindRaw: String? = nil // "binary", "quantity", "duration", "artifact"
+    var ghostTargetValue: Double = 1.0
+    var ghostPhaseRaw: String? = nil // "morning", "day", "night"
+    var ghostUnitLabel: String? = nil // e.g. "glasses", "pages", "mins"
 
     // MARK: - Cached Streak Properties
 

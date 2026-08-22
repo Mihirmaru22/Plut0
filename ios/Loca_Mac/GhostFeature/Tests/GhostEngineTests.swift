@@ -3,14 +3,14 @@ import Foundation
 import Testing
 import SwiftData
 
-/// Exhaustive unit tests for Ghost Mode / Winter Arc engine, ring calculations, streak doctrines, and isolation.
+/// Exhaustive unit tests for Ghost Mode / Winter Arc engine, receipts, ring calculations, streak doctrines, chain grid, and isolation.
 @Suite("Ghost Mode - Winter Arc Engine Tests")
 struct GhostEngineTests {
 
     // MARK: - 1. Ring Closures & Score Math
 
     @Test func testRingClosuresAndGhostDayScore() {
-        // Test partial closures
+        // Partial closures
         let (ghost1, score1) = GhostDay.computeScore(
             body: true, mind: false, silence: false,
             verifiedMinutes: 0, attestedMinutes: 0
@@ -78,13 +78,45 @@ struct GhostEngineTests {
         #expect(!missedPt.isGhostDay)
     }
 
-    // MARK: - 4. Habit Regression (Non-Ghost Habits Untouched)
+    // MARK: - 4. Protocol Rule Templates & Receipts
+
+    @Test func test75HardProtocolDefaults() {
+        let rules = GhostProtocolRule.defaultRules(for: .seventyFiveHard)
+        #expect(rules.count == 6)
+
+        let waterRule = rules.first { $0.id == "75h_water" }
+        #expect(waterRule != nil)
+        #expect(waterRule?.targetValue == 8.0)
+        #expect(waterRule?.unitLabel == "glasses")
+
+        let readingRule = rules.first { $0.id == "75h_reading" }
+        #expect(readingRule != nil)
+        #expect(readingRule?.ring == .mind)
+        #expect(readingRule?.targetValue == 10.0)
+
+        let photoRule = rules.first { $0.id == "75h_photo" }
+        #expect(photoRule != nil)
+        #expect(photoRule?.proofKind == .artifact)
+    }
+
+    @Test func testThe120ProtocolDefaults() {
+        let rules = GhostProtocolRule.defaultRules(for: .the120)
+        #expect(rules.count == 5)
+
+        let silenceRule = rules.first { $0.id == "120_silence_focus" }
+        #expect(silenceRule != nil)
+        #expect(silenceRule?.ring == .silence)
+        #expect(silenceRule?.targetValue == 45.0)
+    }
+
+    // MARK: - 5. Habit Regression (Non-Ghost Habits Untouched)
 
     @Test func testNonGhostHabitsUntouched() {
         let habit = HabitBoard()
         habit.name = "Morning Water"
         #expect(habit.ghostRuleID == nil)
         #expect(habit.ghostRingRaw == nil)
+        #expect(habit.ghostProofKindRaw == nil)
     }
 }
 #endif
