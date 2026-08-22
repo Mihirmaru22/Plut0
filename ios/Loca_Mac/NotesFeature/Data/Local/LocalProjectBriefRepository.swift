@@ -33,7 +33,7 @@ public final class LocalProjectBriefRepository: DocumentCoreRepository, @uncheck
                 let initial = try? await self.fetchDocument(id: id)
                 continuation.yield(initial)
                 
-                for await event in self.eventBus.events {
+                for await event in self.eventBus.events() {
                     guard !Task.isCancelled else { break }
                     switch event {
                     case .noteUpdated(let eventID) where eventID == id:
