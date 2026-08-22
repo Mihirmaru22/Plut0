@@ -3,7 +3,7 @@ import Foundation
 import Testing
 import SwiftData
 
-/// Exhaustive unit tests for Ghost Mode / Winter Arc engine, receipts, ring calculations, streak doctrines, chain grid, and isolation.
+/// Exhaustive unit tests for Ghost Mode / Winter Arc engine, receipts, ring calculations, streak doctrines, chain grid, and vector passport.
 @Suite("Ghost Mode - Winter Arc Engine Tests")
 struct GhostEngineTests {
 
@@ -109,7 +109,51 @@ struct GhostEngineTests {
         #expect(silenceRule?.targetValue == 45.0)
     }
 
-    // MARK: - 5. Habit Regression (Non-Ghost Habits Untouched)
+    // MARK: - 5. MRZ Round-Trip Encoding & Decoding
+
+    @Test func testMRZRoundTripEncodingAndDecoding() {
+        let callsign = "SPIDERMAN"
+        let serial = "WA26-MAC1-9A3F"
+        let doctrine = GhostDoctrine.hard
+        let expiry = Date(timeIntervalSince1970: 1798761600) // 2026-12-31
+        let ghostDays = 42
+
+        let (line1, line2) = WinterArcMRZEngine.encode(
+            callsign: callsign,
+            serial: serial,
+            doctrine: doctrine,
+            expiryDate: expiry,
+            ghostDays: ghostDays
+        )
+
+        #expect(line1.count == 44)
+        #expect(line2.count == 44)
+        #expect(line1.hasPrefix("P<PLTSPIDERMAN"))
+
+        let decoded = WinterArcMRZEngine.decode(line1: line1, line2: line2)
+        #expect(decoded != nil)
+        #expect(decoded?.callsign == "SPIDERMAN")
+        #expect(decoded?.doctrine == "HARD")
+        #expect(decoded?.ghostDays == 42)
+    }
+
+    // MARK: - 6. Vector Passport PDF Generation
+
+    @Test @MainActor func testPassportPDFGenerationDayZero() {
+        let season = GhostSeason(name: "The Winter Arc 2026")
+        let streak = GhostEngine.StreakStatus(currentStreak: 0, bestStreak: 0, effectiveDayNumber: 1, isRestarted: false, rank: .uninitiated, isDented: false, totalGhostDays: 0)
+        let passportData = WinterArcPassportData(season: season, streakStatus: streak, callsign: "NEO")
+
+        let pdfData = WinterArcPassportPDFGenerator.generatePDFData(data: passportData)
+        #expect(!pdfData.isEmpty)
+        #expect(pdfData.count > 1000)
+
+        // Check PDF Header Magic
+        let header = String(data: pdfData.prefix(5), encoding: .ascii)
+        #expect(header == "%PDF-")
+    }
+
+    // MARK: - 7. Habit Regression (Non-Ghost Habits Untouched)
 
     @Test func testNonGhostHabitsUntouched() {
         let habit = HabitBoard()

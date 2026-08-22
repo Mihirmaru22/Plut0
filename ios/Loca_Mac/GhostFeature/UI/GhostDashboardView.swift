@@ -280,12 +280,7 @@ public struct GhostDashboardView: View {
                     .buttonStyle(.plain)
 
                     Button {
-                        WinterArcPassportPDFGenerator.exportCertificatePDF(
-                            season: season,
-                            streak: streakStatus.currentStreak,
-                            rank: streakStatus.rank,
-                            totalGhostDays: streakStatus.totalGhostDays
-                        )
+                        handlePassportExport(season: season)
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.down.doc.fill")
@@ -293,10 +288,10 @@ public struct GhostDashboardView: View {
                                 .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
 
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("Export Sovereign Passport PDF")
+                                Text("Export Sovereign Passport Booklet")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundStyle(Color.white)
-                                Text("Authenticated certificate with streak rank")
+                                Text("4-page vector A4 booklet with MRZ & Visas")
                                     .font(.system(size: 10))
                                     .foregroundStyle(Color.white.opacity(0.55))
                             }
@@ -612,5 +607,26 @@ public struct GhostDashboardView: View {
             }
             darkStartTime = nil
         }
+    }
+
+    private func handlePassportExport(season: GhostSeason) {
+        let isCompleted = streakStatus.totalGhostDays >= season.totalDays || streakStatus.rank == .sovereign
+        if isCompleted {
+            Haptics.notification(.success)
+        }
+
+        let passportData = WinterArcPassportData(
+            season: season,
+            streakStatus: streakStatus,
+            ridgePoints: ridgePoints,
+            days: [],
+            receipts: todayReceipts,
+            photos: photoArtifacts,
+            darkHours: darkHoursSummary,
+            evolution: evolutionReport,
+            callsign: season.name
+        )
+
+        WinterArcPassportPDFGenerator.exportBookletPDF(data: passportData)
     }
 }
