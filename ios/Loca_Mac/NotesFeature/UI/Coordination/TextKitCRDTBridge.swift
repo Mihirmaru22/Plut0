@@ -106,6 +106,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     private var undoStack: [UndoRecord] = []
     private var redoStack: [UndoRecord] = []
     private var lastTypingTime: Date = Date.distantPast
+    private var lastTypingBlockID: UUID? = nil
     // Auto-Format Revert Snapshot
     public private(set) var lastAutoFormatRevert: AutoFormatRevertState? = nil
     

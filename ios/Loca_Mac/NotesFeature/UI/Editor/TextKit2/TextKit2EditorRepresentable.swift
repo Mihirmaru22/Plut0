@@ -138,7 +138,7 @@ public final class NoteCanvasTextView: NSTextView {
         
         guard let bridge = bridge,
               let layoutManager = self.layoutManager,
-              let textContainer = self.textContainer,
+              self.textContainer != nil,
               let storage = self.textStorage else { return }
         
         let activeBlocks = bridge.doc.blocks.filter { !$0.isDeleted }
@@ -264,9 +264,10 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             }
         }
         
-        textView.onIndentChanged = { [weak state, weak self] in
-            guard let state = state, let self = self else { return }
-            self.onKeystroke(state.bridge.doc)
+        let keystrokeHandler = self.onKeystroke
+        textView.onIndentChanged = { [weak state] in
+            guard let state = state else { return }
+            keystrokeHandler(state.bridge.doc)
             DispatchQueue.main.async {
                 state.refreshFormattingState()
             }
