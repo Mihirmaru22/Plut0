@@ -8,6 +8,9 @@ public enum TextKit2BlockAttributes {
         var attrs: [NSAttributedString.Key: Any] = [:]
         let style = NSMutableParagraphStyle()
         
+        let indentLevel = min(3, max(0, Int(attributes["indentLevel", default: "0"]) ?? 0))
+        let indentOffset = CGFloat(indentLevel) * 18.0
+        
         switch type {
         case "heading":
             let level = Int(attributes["level", default: "1"]) ?? 1
@@ -43,16 +46,16 @@ public enum TextKit2BlockAttributes {
                 attrs[.foregroundColor] = NSColor.labelColor
             }
             
-            style.headIndent = 24
-            style.firstLineHeadIndent = 24
+            style.headIndent = 24 + indentOffset
+            style.firstLineHeadIndent = 24 + indentOffset
             style.paragraphSpacing = 4
             style.lineHeightMultiple = 1.2
             
         case "bullet":
             attrs[.font] = NSFont.systemFont(ofSize: 14, weight: .regular)
             attrs[.foregroundColor] = NSColor.labelColor
-            style.headIndent = 18
-            style.firstLineHeadIndent = 18
+            style.headIndent = 18 + indentOffset
+            style.firstLineHeadIndent = 18 + indentOffset
             style.paragraphSpacing = 4
             style.lineHeightMultiple = 1.2
             

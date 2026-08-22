@@ -25,6 +25,9 @@ public struct NotesCanvasView: View {
     @State private var lastLocalContentHash: Int = 0
     @State private var isToolbarHovered: Bool = false
     
+    // Quick Switcher (Cmd+K)
+    @State private var isQuickSwitcherPresented: Bool = false
+    
     // Caret Memory Map per note for continuity
     @State private var caretMemory: [UUID: NSRange] = [:]
     
@@ -43,7 +46,7 @@ public struct NotesCanvasView: View {
                     selectedNoteID: $selectedNoteID,
                     notes: notes,
                     folders: folders,
-                    onCreateNote: createNewNote,
+                    onCreateNote: { createNewNote() },
                     onDeleteNote: deleteNote,
                     onTogglePinNote: togglePinNote,
                     onCreateFolderWithName: createFolder,
@@ -67,8 +70,34 @@ public struct NotesCanvasView: View {
             editorColumn
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .overlay {
+            if isQuickSwitcherPresented {
+                QuickSwitcherView(
+                    isPresented: $isQuickSwitcherPresented,
+                    notes: notes,
+                    onSelectNote: { id in
+                        self.selectedNoteID = id
+                    },
+                    onCreateNoteWithTitle: { title in
+                        createNewNote(withTitle: title)
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+        .background {
+            Button("") {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isQuickSwitcherPresented.toggle()
+                }
+            }
+            .keyboardShortcut("k", modifiers: .command)
+            .opacity(0)
+            .allowsHitTesting(false)
+        }
         .task {
             await reloadFolders()
+            NotesSpotlightIndexer.shared.startObserving(engine: engine)
         }
         .task(id: queryKey) {
             await observeNotesList()
@@ -84,6 +113,11 @@ public struct NotesCanvasView: View {
                 if let uuid = UUID(uuidString: lastOpenedNoteIDString) {
                     selectedNoteID = NoteID(raw: uuid)
                 }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .plutoOpenNote)) { note in
+            if let noteID = note.object as? NoteID {
+                self.selectedNoteID = noteID
             }
         }
     }
@@ -194,10 +228,12 @@ public struct NotesCanvasView: View {
                 Image(systemName: "note.text")
                     .font(.system(size: 48))
                     .foregroundStyle(.tertiary)
-                Button("Create Note", action: createNewNote)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
-                    .keyboardShortcut("n", modifiers: .command)
+                Button("Create Note") {
+                    createNewNote()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .keyboardShortcut("n", modifiers: .command)
             }
             
             Spacer()
@@ -211,8 +247,11 @@ public struct NotesCanvasView: View {
         let serialized = CRDTTranslator.materializeContent(from: doc)
         self.lastLocalContentHash = serialized.hashValue
         let derivedTitle = NotePreviewGenerator.deriveTitle(from: serialized)
+        let derivedPreview = NotePreviewGenerator.derivePreview(from: serialized)
+        
         Task {
             await autosave.scheduleAutosave(noteID: doc.id, title: derivedTitle, content: serialized, engine: engine)
+            NotesSpotlightIndexer.shared.indexNote(id: doc.id, title: derivedTitle, preview: derivedPreview, content: serialized)
         }
     }
     
@@ -242,10 +281,14 @@ public struct NotesCanvasView: View {
     
     // MARK: - CRUD Helpers
     
-    private func createNewNote() {
+    private func createNewNote(withTitle title: String = "") {
         Task {
             do {
-                let note = try await engine.createNote(title: "", folderID: selectedFolderID)
+                let note = try await engine.createNote(title: title, folderID: selectedFolderID)
+                if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let initialContent = NoteContent(version: 1, blocks: [.paragraph(ParagraphBlock(text: title))])
+                    try await engine.updateContent(initialContent, for: note.id)
+                }
                 self.selectedNoteID = note.id
                 await reloadNotes()
             } catch {
@@ -258,6 +301,7 @@ public struct NotesCanvasView: View {
         Task {
             do {
                 try await engine.deleteNote(id: noteID)
+                NotesSpotlightIndexer.shared.deindexNote(id: noteID)
                 if selectedNoteID == noteID {
                     selectedNoteID = nil
                     editorState = nil

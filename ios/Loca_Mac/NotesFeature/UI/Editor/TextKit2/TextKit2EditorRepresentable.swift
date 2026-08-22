@@ -13,6 +13,7 @@
 // 5. Checklist and bullet glyphs are drawn exclusively in the margin via custom draw(_:); storage string is untouched.
 // 6. Bridge owns undo/redo history (allowsUndo = false) for deterministic state restoration.
 // 7. Calm Surface Protocol: First block renders as title affordance (22pt bold); toolbar is contextual.
+// 8. Phase 5 Native Hooks: Markdown prefix auto-formatting, instant backspace revert, tab indentation, rich pasteboard interop.
 
 import Foundation
 import Combine
@@ -29,6 +30,7 @@ public final class NoteCanvasTextView: NSTextView {
     public var onUndo: (() -> Void)?
     public var onRedo: (() -> Void)?
     public var onFocusChanged: ((Bool) -> Void)?
+    public var onIndentChanged: (() -> Void)?
     
     public override var acceptsFirstResponder: Bool { true }
     public override var canBecomeKeyView: Bool { true }
@@ -52,6 +54,24 @@ public final class NoteCanvasTextView: NSTextView {
     
     public override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        
+        // Tab / Shift-Tab List Indentation
+        if event.keyCode == 48 { // Tab key
+            let isShift = event.modifierFlags.contains(.shift)
+            let sel = self.selectedRange()
+            if let bridge = self.bridge,
+               let _ = bridge.indentBlock(at: sel.location, direction: isShift ? -1 : 1) {
+                if let storage = self.textStorage {
+                    let updated = bridge.renderAttributedString()
+                    storage.setAttributedString(updated)
+                    self.setSelectedRange(sel)
+                    self.setNeedsDisplay(self.bounds)
+                }
+                onIndentChanged?()
+                return true
+            }
+        }
+        
         if flags == .command {
             if let chars = event.charactersIgnoringModifiers?.lowercased() {
                 if chars == "b" {
@@ -65,6 +85,28 @@ public final class NoteCanvasTextView: NSTextView {
                     return true
                 } else if chars == "y" {
                     onRedo?()
+                    return true
+                } else if chars == "c" {
+                    let sel = self.selectedRange()
+                    self.bridge?.writeToPasteboard(selection: sel)
+                    return true
+                } else if chars == "x" {
+                    let sel = self.selectedRange()
+                    if let bridge = self.bridge {
+                        bridge.writeToPasteboard(selection: sel)
+                        if sel.length > 0 {
+                            bridge.deleteRange(at: sel.location, length: sel.length)
+                            if let storage = self.textStorage {
+                                let updated = bridge.renderAttributedString()
+                                storage.setAttributedString(updated)
+                                let newSel = NSRange(location: sel.location, length: 0)
+                                self.setSelectedRange(newSel)
+                                bridge.updateLastKnownSelection(newSel)
+                                self.setNeedsDisplay(self.bounds)
+                            }
+                            onIndentChanged?()
+                        }
+                    }
                     return true
                 }
             }
@@ -121,6 +163,9 @@ public final class NoteCanvasTextView: NSTextView {
                 height: lineRect.height
             )
             
+            let indentLevel = min(3, max(0, Int(block.attributes["indentLevel", default: "0"]) ?? 0))
+            let indentOffset = CGFloat(indentLevel) * 18.0
+            
             if block.type == "checklistItem" {
                 let isChecked = block.attributes["isChecked"] == "true"
                 let symbolName = isChecked ? "checkmark.circle.fill" : "circle"
@@ -136,7 +181,7 @@ public final class NoteCanvasTextView: NSTextView {
                     tinted.unlockFocus()
                     
                     let boxSize: CGFloat = 14
-                    let boxX: CGFloat = origin.x + 4
+                    let boxX: CGFloat = origin.x + 4 + indentOffset
                     let boxY: CGFloat = viewLineRect.origin.y + max(0, (viewLineRect.height - boxSize) / 2)
                     let targetRect = NSRect(x: boxX, y: boxY, width: boxSize, height: boxSize)
                     
@@ -149,7 +194,7 @@ public final class NoteCanvasTextView: NSTextView {
                     .foregroundColor: NSColor.secondaryLabelColor
                 ]
                 let bulletSize = bulletStr.size(withAttributes: attrs)
-                let bulletX: CGFloat = origin.x + 6
+                let bulletX: CGFloat = origin.x + 6 + indentOffset
                 let bulletY: CGFloat = viewLineRect.origin.y + max(0, (viewLineRect.height - bulletSize.height) / 2)
                 bulletStr.draw(at: NSPoint(x: bulletX, y: bulletY), withAttributes: attrs)
             }
@@ -216,6 +261,14 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
         textView.onFocusChanged = { [weak state] isFocused in
             DispatchQueue.main.async {
                 state?.isFocused = isFocused
+            }
+        }
+        
+        textView.onIndentChanged = { [weak state, weak self] in
+            guard let state = state, let self = self else { return }
+            self.onKeystroke(state.bridge.doc)
+            DispatchQueue.main.async {
+                state.refreshFormattingState()
             }
         }
         
@@ -319,18 +372,20 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             }
         }
         
-        // Gutter Click Handler (x < 24 over checklist margin)
+        // Gutter Click Handler
         textView.onGutterClicked = { [weak textView, weak coordinator = context.coordinator] clickPoint in
             guard let tv = textView, let storage = tv.textStorage else { return false }
             
             let relativeX = clickPoint.x - tv.textContainerOrigin.x
-            guard relativeX >= 0 && relativeX < 24 else { return false }
-            
             let charIndex = tv.characterIndexForInsertion(at: clickPoint)
             guard let target = self.state.bridge.resolveLocation(charIndex),
                   target.block.type == "checklistItem" else {
                 return false
             }
+            
+            let indentLevel = min(3, max(0, Int(target.block.attributes["indentLevel", default: "0"]) ?? 0))
+            let indentOffset = CGFloat(indentLevel) * 18.0
+            guard relativeX >= indentOffset && relativeX < indentOffset + 24 else { return false }
             
             // Toggle checklist state
             self.state.bridge.toggleChecklist(blockID: target.block.id)
@@ -508,8 +563,73 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             let replacement = replacementString ?? ""
             parent.state.bridge.updateLastKnownSelection(affectedCharRange)
             
+            // 1. Markdown Auto-Formatting Prefix on Spacebar
+            if replacement == " " {
+                if let autoFormatted = parent.state.bridge.convertMarkdownPrefix(at: affectedCharRange.location) {
+                    if let storage = textView.textStorage {
+                        isProgrammaticEdit = true
+                        let updatedAttributed = parent.state.bridge.renderAttributedString()
+                        storage.setAttributedString(updatedAttributed)
+                        let intendedCursor = NSRange(location: min(autoFormatted.newCursor, updatedAttributed.length), length: 0)
+                        textView.setSelectedRange(intendedCursor)
+                        parent.state.bridge.updateLastKnownSelection(intendedCursor)
+                        isProgrammaticEdit = false
+                        textView.setNeedsDisplay(textView.bounds)
+                    }
+                    
+                    var isChecked = false
+                    var isFirstBlock = false
+                    if let target = parent.state.bridge.resolveLocation(autoFormatted.newCursor) {
+                        isChecked = target.block.attributes["isChecked"] == "true"
+                        isFirstBlock = (target.blockIndex == 0)
+                    }
+                    syncTypingAttributes(for: autoFormatted.blockType, isChecked: isChecked, isFirstBlock: isFirstBlock)
+                    
+                    parent.onKeystroke(parent.state.bridge.doc)
+                    DispatchQueue.main.async {
+                        self.parent.state.refreshFormattingState()
+                    }
+                    return false
+                }
+            }
+            
+            // 2. Instant Backspace Revert
+            if replacement.isEmpty && (affectedCharRange.length == 1 || affectedCharRange.length == 0) {
+                if let reverted = parent.state.bridge.revertAutoFormat() {
+                    if let storage = textView.textStorage {
+                        isProgrammaticEdit = true
+                        let updatedAttributed = parent.state.bridge.renderAttributedString()
+                        storage.setAttributedString(updatedAttributed)
+                        let intendedCursor = NSRange(location: min(reverted.restoredCursor, updatedAttributed.length), length: 0)
+                        textView.setSelectedRange(intendedCursor)
+                        parent.state.bridge.updateLastKnownSelection(intendedCursor)
+                        isProgrammaticEdit = false
+                        textView.setNeedsDisplay(textView.bounds)
+                    }
+                    
+                    var isChecked = false
+                    var isFirstBlock = false
+                    if let target = parent.state.bridge.resolveLocation(reverted.restoredCursor) {
+                        isChecked = target.block.attributes["isChecked"] == "true"
+                        isFirstBlock = (target.blockIndex == 0)
+                    }
+                    syncTypingAttributes(for: reverted.blockType, isChecked: isChecked, isFirstBlock: isFirstBlock)
+                    
+                    parent.onKeystroke(parent.state.bridge.doc)
+                    DispatchQueue.main.async {
+                        self.parent.state.refreshFormattingState()
+                    }
+                    return false
+                }
+            }
+            
+            // Clear auto-format revert state on other typing
+            if replacement != " " && !replacement.isEmpty {
+                parent.state.bridge.clearAutoFormatRevert()
+            }
+            
+            // 3. Return key: Split block in-place with Apple Notes semantics
             if replacement == "\n" {
-                // Return key: Split block in-place with Apple Notes semantics & Programmatic Guard
                 if let split = parent.state.bridge.splitBlock(at: affectedCharRange.location) {
                     if let storage = textView.textStorage {
                         isProgrammaticEdit = true
@@ -541,7 +661,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 }
             }
             
-            // Structured Multi-Line Paste (e.g. Cmd+V)
+            // 4. Structured Multi-Line Paste (e.g. Cmd+V)
             if replacement.contains("\n") || replacement.contains("\r") {
                 let newCursor = parent.state.bridge.insertStructuredText(replacement, at: affectedCharRange.location, replacingLength: affectedCharRange.length)
                 if let storage = textView.textStorage {
@@ -571,7 +691,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 return false
             }
             
-            // Multi-Block Deletion (e.g. Cmd+A + Delete, Backspace, or Selection Cut)
+            // 5. Multi-Block Deletion (e.g. Cmd+A + Delete, Backspace, or Selection Cut)
             if replacement.isEmpty && affectedCharRange.length > 0 {
                 parent.state.bridge.deleteRange(at: affectedCharRange.location, length: affectedCharRange.length)
                 if let storage = textView.textStorage {

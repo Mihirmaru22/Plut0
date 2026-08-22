@@ -727,5 +727,114 @@ struct TextKitBridgeTests {
         _ = bridge.insertStructuredText(cutText, at: 8)
         #expect(bridge.renderAttributedString().string == "KeepThisCutThis")
     }
+    
+    // MARK: - Phase 5 Tests: Markdown Auto-Formatting, Revert, Indentation, Rich Pasteboard
+    
+    @Test func testMarkdownPrefixAutoFormatting() {
+        let noteID = NoteID()
+        let b1 = UUID()
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1, type: "paragraph", text: CRDTText(string: "#", deviceID: "test-device")))
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // Typing space after '#' at index 1 -> converts to H1
+        let result1 = bridge.convertMarkdownPrefix(at: 1)
+        #expect(result1?.blockType == .h1)
+        #expect(result1?.newCursor == 0)
+        #expect(bridge.doc.blocks.first?.type == "heading")
+        #expect(bridge.doc.blocks.first?.attributes["level"] == "1")
+        #expect(bridge.doc.blocks.first?.text.string == "")
+        
+        // Reset to bullet prefix
+        bridge.setBlockType("paragraph", at: 0)
+        bridge.insertText("-", at: 0)
+        let result2 = bridge.convertMarkdownPrefix(at: 1)
+        #expect(result2?.blockType == .bullet)
+        #expect(bridge.doc.blocks.first?.type == "bullet")
+        #expect(bridge.doc.blocks.first?.text.string == "")
+        
+        // Reset to checklist prefix
+        bridge.setBlockType("paragraph", at: 0)
+        bridge.insertText("[]", at: 0)
+        let result3 = bridge.convertMarkdownPrefix(at: 2)
+        #expect(result3?.blockType == .checklist)
+        #expect(bridge.doc.blocks.first?.type == "checklistItem")
+        #expect(bridge.doc.blocks.first?.text.string == "")
+    }
+    
+    @Test func testMarkdownPrefixInstantBackspaceRevert() {
+        let noteID = NoteID()
+        let b1 = UUID()
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1, type: "paragraph", text: CRDTText(string: "##", deviceID: "test-device")))
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // Convert '##' to H2
+        let converted = bridge.convertMarkdownPrefix(at: 2)
+        #expect(converted?.blockType == .h2)
+        #expect(bridge.doc.blocks.first?.type == "heading")
+        #expect(bridge.doc.blocks.first?.attributes["level"] == "2")
+        #expect(bridge.doc.blocks.first?.text.string == "")
+        
+        // Instant backspace revert
+        let reverted = bridge.revertAutoFormat()
+        #expect(reverted != nil)
+        #expect(reverted?.blockType == .paragraph)
+        #expect(bridge.doc.blocks.first?.type == "paragraph")
+        #expect(bridge.doc.blocks.first?.text.string == "## ")
+        #expect(reverted?.restoredCursor == 3)
+    }
+    
+    @Test func testListIndentationLevels() {
+        let noteID = NoteID()
+        let b1 = UUID()
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1, type: "bullet", text: CRDTText(string: "Indented Item", deviceID: "test-device")))
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        
+        // Level 0 -> 1
+        let ind1 = bridge.indentBlock(at: 5, direction: 1)
+        #expect(ind1?.newLevel == 1)
+        #expect(bridge.doc.blocks.first?.attributes["indentLevel"] == "1")
+        
+        // Level 1 -> 2
+        let ind2 = bridge.indentBlock(at: 5, direction: 1)
+        #expect(ind2?.newLevel == 2)
+        #expect(bridge.doc.blocks.first?.attributes["indentLevel"] == "2")
+        
+        // Level 2 -> 3 (Max)
+        let ind3 = bridge.indentBlock(at: 5, direction: 1)
+        #expect(ind3?.newLevel == 3)
+        
+        // Level 3 -> 3 (Clamped)
+        let ind4 = bridge.indentBlock(at: 5, direction: 1)
+        #expect(ind4 == nil)
+        
+        // Level 3 -> 2 (Outdent)
+        let out1 = bridge.indentBlock(at: 5, direction: -1)
+        #expect(out1?.newLevel == 2)
+        #expect(bridge.doc.blocks.first?.attributes["indentLevel"] == "2")
+    }
+    
+    @Test func testRichPasteboardHTMLAndRTFExport() {
+        let noteID = NoteID()
+        let b1 = UUID()
+        let b2 = UUID()
+        var doc = CRDTDoc(id: noteID, deviceID: "test-device")
+        doc.addBlock(CRDTBlock(id: b1, type: "heading", attributes: ["level": "1"], text: CRDTText(string: "Roadmap", deviceID: "test-device")))
+        doc.addBlock(CRDTBlock(id: b2, type: "bullet", text: CRDTText(string: "Milestone Alpha", deviceID: "test-device")))
+        
+        let bridge = TextKitCRDTBridge(doc: doc, deviceID: "test-device")
+        bridge.applyInlineMark(type: "bold", in: NSRange(location: 0, length: 7)) // Bold "Roadmap"
+        
+        let html = bridge.exportHTML(for: NSRange(location: 0, length: 24))
+        #expect(html.contains("<h1>"))
+        #expect(html.contains("<strong>Roadmap</strong>"))
+        #expect(html.contains("<ul><li>Milestone Alpha</li></ul>"))
+        
+        let rtfData = bridge.exportRTF(for: NSRange(location: 0, length: 24))
+        #expect(rtfData != nil)
+        #expect((rtfData?.count ?? 0) > 0)
+    }
 }
 #endif

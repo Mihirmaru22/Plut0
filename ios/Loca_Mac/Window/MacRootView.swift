@@ -82,15 +82,28 @@ struct MacRootView: View {
             )
         }
         .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
-            if let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
-               let (type, _) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
-                switch type {
-                case .habit, .task, .journal:
-                    selectedSection = .today
-                case .principle, .bucket:
-                    selectedSection = .life
-                case .goal:
-                    selectedSection = .studio
+            if let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                if let uuid = UUID(uuidString: identifier) {
+                    selectedSection = .notes
+                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
+                } else if let (type, _) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
+                    switch type {
+                    case .habit, .task, .journal:
+                        selectedSection = .today
+                    case .principle, .bucket:
+                        selectedSection = .life
+                    case .goal:
+                        selectedSection = .studio
+                    }
+                }
+            }
+        }
+        .onOpenURL { url in
+            if (url.scheme == "pluto" || url.scheme == "loca") && (url.host == "note" || url.host == "notes") {
+                let idString = url.lastPathComponent
+                if let uuid = UUID(uuidString: idString) {
+                    selectedSection = .notes
+                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
                 }
             }
         }

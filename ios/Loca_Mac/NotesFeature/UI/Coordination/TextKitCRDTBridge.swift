@@ -51,6 +51,22 @@ public struct SplitResult: Sendable {
 }
 
 /// Snapshot representation for bridge-owned Undo and Redo operations.
+public struct AutoFormatRevertState: Sendable {
+    public let blockID: UUID
+    public let originalType: String
+    public let originalAttributes: [String: String]
+    public let prefix: String
+    public let location: Int
+    
+    public init(blockID: UUID, originalType: String, originalAttributes: [String: String], prefix: String, location: Int) {
+        self.blockID = blockID
+        self.originalType = originalType
+        self.originalAttributes = originalAttributes
+        self.prefix = prefix
+        self.location = location
+    }
+}
+
 public struct UndoRecord: Sendable {
     public let doc: CRDTDoc
     public let selection: NSRange
@@ -90,7 +106,14 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     private var undoStack: [UndoRecord] = []
     private var redoStack: [UndoRecord] = []
     private var lastTypingTime: Date = Date.distantPast
-    private var lastTypingBlockID: UUID? = nil
+    // Auto-Format Revert Snapshot
+    public private(set) var lastAutoFormatRevert: AutoFormatRevertState? = nil
+    
+    public func clearAutoFormatRevert() {
+        lock.lock()
+        defer { lock.unlock() }
+        lastAutoFormatRevert = nil
+    }
     
     public init(doc: CRDTDoc, deviceID: String = "local-device") {
         self.doc = doc
@@ -839,6 +862,255 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
             }
         }
         
+        return result
+    }
+    
+    // MARK: - Markdown Auto-Formatting & Backspace Revert
+    
+    public func convertMarkdownPrefix(at globalLocation: Int) -> (newCursor: Int, blockType: EditorBlockType)? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let target = resolveLocationInternal(globalLocation) else { return nil }
+        let blockText = target.block.text.string
+        let textBefore = String(blockText.prefix(target.relativeIndex))
+        
+        var matchType: (type: String, attrs: [String: String], prefix: String)? = nil
+        
+        if textBefore == "###" {
+            matchType = ("heading", ["level": "3"], "###")
+        } else if textBefore == "##" {
+            matchType = ("heading", ["level": "2"], "##")
+        } else if textBefore == "#" {
+            matchType = ("heading", ["level": "1"], "#")
+        } else if textBefore == "-" || textBefore == "*" {
+            matchType = ("bullet", [:], textBefore)
+        } else if textBefore == "1." {
+            matchType = ("bullet", [:], "1.")
+        } else if textBefore == "[]" || textBefore == "[ ]" {
+            matchType = ("checklistItem", ["isChecked": "false"], textBefore)
+        }
+        
+        guard let match = matchType else { return nil }
+        
+        recordUndo(beforeSelection: NSRange(location: globalLocation, length: 0), isTyping: false)
+        
+        let blockStartLocation = globalLocation - match.prefix.count
+        
+        lastAutoFormatRevert = AutoFormatRevertState(
+            blockID: target.block.id,
+            originalType: target.block.type,
+            originalAttributes: target.block.attributes,
+            prefix: match.prefix,
+            location: blockStartLocation
+        )
+        
+        doc.deleteText(at: 0, length: match.prefix.count, in: target.block.id)
+        
+        if let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) {
+            doc.blocks[idx].type = match.type
+            doc.blocks[idx].attributes = match.attrs
+        }
+        
+        let bType: EditorBlockType
+        if match.type == "heading" {
+            let lvl = match.attrs["level"] ?? "1"
+            bType = (lvl == "1" ? .h1 : (lvl == "2" ? .h2 : .h3))
+        } else if match.type == "checklistItem" {
+            bType = .checklist
+        } else if match.type == "bullet" {
+            bType = .bullet
+        } else {
+            bType = .paragraph
+        }
+        
+        return (newCursor: blockStartLocation, blockType: bType)
+    }
+    
+    public func revertAutoFormat() -> (restoredCursor: Int, blockType: EditorBlockType)? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let revert = lastAutoFormatRevert else { return nil }
+        guard let idx = doc.blocks.firstIndex(where: { $0.id == revert.blockID && !$0.isDeleted }) else {
+            lastAutoFormatRevert = nil
+            return nil
+        }
+        
+        recordUndo(beforeSelection: NSRange(location: revert.location, length: 0), isTyping: false)
+        
+        doc.blocks[idx].type = revert.originalType
+        doc.blocks[idx].attributes = revert.originalAttributes
+        
+        let restoredPrefix = revert.prefix + " "
+        doc.insertText(restoredPrefix, at: 0, in: revert.blockID)
+        
+        let newCursor = revert.location + restoredPrefix.count
+        lastAutoFormatRevert = nil
+        
+        let bType = blockType(for: doc.blocks[idx])
+        return (restoredCursor: newCursor, blockType: bType)
+    }
+    
+    // MARK: - List Indentation (Tab / Shift-Tab)
+    
+    public func indentBlock(at globalLocation: Int, direction: Int) -> (newLevel: Int, blockType: EditorBlockType)? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let target = resolveLocationInternal(globalLocation) else { return nil }
+        guard target.block.type == "checklistItem" || target.block.type == "bullet" else { return nil }
+        
+        guard let idx = doc.blocks.firstIndex(where: { $0.id == target.block.id }) else { return nil }
+        
+        let currentLevel = Int(doc.blocks[idx].attributes["indentLevel", default: "0"]) ?? 0
+        let newLevel = min(3, max(0, currentLevel + direction))
+        
+        guard newLevel != currentLevel else { return nil }
+        
+        recordUndo(beforeSelection: NSRange(location: globalLocation, length: 0), isTyping: false)
+        doc.blocks[idx].attributes["indentLevel"] = "\(newLevel)"
+        
+        return (newLevel: newLevel, blockType: blockType(for: doc.blocks[idx]))
+    }
+    
+    // MARK: - Rich Pasteboard Interop
+    
+    public func exportPlainText(for range: NSRange) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let full = renderAttributedStringInternal()
+        let clamped = NSRange(location: max(0, min(range.location, full.length)), length: max(0, min(range.length, full.length - max(0, min(range.location, full.length)))))
+        return (full.string as NSString).substring(with: clamped)
+    }
+    
+    public func exportRTF(for range: NSRange) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        let full = renderAttributedStringInternal()
+        let clamped = NSRange(location: max(0, min(range.location, full.length)), length: max(0, min(range.length, full.length - max(0, min(range.location, full.length)))))
+        let sub = full.attributedSubstring(from: clamped)
+        return try? sub.data(from: NSRange(location: 0, length: sub.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
+    }
+    
+    public func exportHTML(for range: NSRange) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let activeBlocks = doc.blocks.filter { !$0.isDeleted }
+        guard !activeBlocks.isEmpty else { return "" }
+        
+        var html = ""
+        var runningOffset = 0
+        
+        for block in activeBlocks {
+            let blockLen = block.text.string.count
+            let blockRange = NSRange(location: runningOffset, length: blockLen)
+            let intersection = NSIntersectionRange(blockRange, range)
+            
+            if intersection.length > 0 || (range.length == 0 && range.location >= runningOffset && range.location <= runningOffset + blockLen) {
+                let startRel = max(0, intersection.location - runningOffset)
+                let endRel = startRel + (range.length > 0 ? intersection.length : blockLen)
+                let clampedStart = min(startRel, blockLen)
+                let clampedEnd = min(max(clampedStart, endRel), blockLen)
+                let rawSnippet = (block.text.string as NSString).substring(with: NSRange(location: clampedStart, length: clampedEnd - clampedStart))
+                
+                var formattedText = rawSnippet
+                    .replacingOccurrences(of: "&", with: "&amp;")
+                    .replacingOccurrences(of: "<", with: "&lt;")
+                    .replacingOccurrences(of: ">", with: "&gt;")
+                
+                if block.marks.contains(where: { $0.type == "bold" }) {
+                    formattedText = "<strong>\(formattedText)</strong>"
+                }
+                if block.marks.contains(where: { $0.type == "italic" }) {
+                    formattedText = "<em>\(formattedText)</em>"
+                }
+                
+                switch block.type {
+                case "heading":
+                    let lvl = block.attributes["level", default: "1"]
+                    html += "<h\(lvl)>\(formattedText)</h\(lvl)>\n"
+                case "checklistItem":
+                    let isChecked = block.attributes["isChecked"] == "true"
+                    let checkedAttr = isChecked ? " checked" : ""
+                    html += "<ul><li><input type=\"checkbox\"\(checkedAttr) disabled /> \(formattedText)</li></ul>\n"
+                case "bullet":
+                    html += "<ul><li>\(formattedText)</li></ul>\n"
+                default:
+                    html += "<p>\(formattedText)</p>\n"
+                }
+            }
+            
+            runningOffset += blockLen + 1
+        }
+        
+        return html
+    }
+    
+    public func writeToPasteboard(selection: NSRange) {
+        let sel = selection.length > 0 ? selection : NSRange(location: 0, length: renderAttributedString().length)
+        let text = exportPlainText(for: sel)
+        let html = exportHTML(for: sel)
+        let rtfData = exportRTF(for: sel)
+        
+        let pboard = NSPasteboard.general
+        pboard.clearContents()
+        
+        let item = NSPasteboardItem()
+        item.setString(text, forType: .string)
+        if !html.isEmpty {
+            item.setString(html, forType: .html)
+        }
+        if let rtf = rtfData {
+            item.setData(rtf, forType: .rtf)
+        }
+        pboard.writeObjects([item])
+    }
+    
+    private func renderAttributedStringInternal() -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        blockRanges.removeAll()
+        
+        let activeBlocks = doc.blocks.filter { !$0.isDeleted }
+        if activeBlocks.isEmpty {
+            let emptyAttrs = TextKit2BlockAttributes.attributes(for: "paragraph")
+            return NSAttributedString(string: "", attributes: emptyAttrs)
+        }
+        
+        for (index, block) in activeBlocks.enumerated() {
+            let startLocation = result.length
+            let blockAttrs = TextKit2BlockAttributes.attributes(for: block.type, attributes: block.attributes, isFirstBlock: index == 0)
+            let blockText = block.text.string
+            
+            let mutableBlock = NSMutableAttributedString(string: blockText, attributes: blockAttrs)
+            
+            for mark in block.marks {
+                let clampedStart = max(0, min(mark.startIndex, blockText.count))
+                let clampedEnd = max(clampedStart, min(mark.endIndex, blockText.count))
+                let markRange = NSRange(location: clampedStart, length: clampedEnd - clampedStart)
+                
+                if markRange.length > 0 {
+                    if mark.type == "bold" {
+                        let baseFont = (blockAttrs[.font] as? NSFont) ?? NSFont.systemFont(ofSize: 14)
+                        let boldFont = NSFontManager.shared.convert(baseFont, toHaveTrait: .boldFontMask)
+                        mutableBlock.addAttribute(.font, value: boldFont, range: markRange)
+                    } else if mark.type == "italic" {
+                        let baseFont = (blockAttrs[.font] as? NSFont) ?? NSFont.systemFont(ofSize: 14)
+                        let italicFont = NSFontManager.shared.convert(baseFont, toHaveTrait: .italicFontMask)
+                        mutableBlock.addAttribute(.font, value: italicFont, range: markRange)
+                    }
+                }
+            }
+            
+            result.append(mutableBlock)
+            let endLocation = result.length
+            blockRanges[block.id] = NSRange(location: startLocation, length: endLocation - startLocation)
+            
+            if index < activeBlocks.count - 1 {
+                result.append(NSAttributedString(string: "\n", attributes: blockAttrs))
+            }
+        }
         return result
     }
     
