@@ -32,11 +32,14 @@ struct LOCACommands: Commands {
             Button("Today") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.today) }
                 .keyboardShortcut("1", modifiers: [.command])
 
-            Button("Studio") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.studio) }
+            Button("Notes") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.notes) }
                 .keyboardShortcut("2", modifiers: [.command])
 
-            Button("Life") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.life) }
+            Button("Studio") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.studio) }
                 .keyboardShortcut("3", modifiers: [.command])
+
+            Button("Life") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.life) }
+                .keyboardShortcut("4", modifiers: [.command])
 
             Button("Settings") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.settings) }
                 .keyboardShortcut(",", modifiers: [.command])

@@ -85,11 +85,19 @@ struct MacRootView: View {
             if let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
                 if let uuid = UUID(uuidString: identifier) {
                     selectedSection = .notes
-                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
-                } else if let (type, _) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
+                    if let note = try? modelContext.fetch(FetchDescriptor<JournalNote>(predicate: #Predicate { $0.id == uuid })).first {
+                        selectedJournalNote = note
+                    }
+                } else if let (type, id) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
                     switch type {
-                    case .habit, .task, .journal:
+                    case .habit, .task:
                         selectedSection = .today
+                    case .journal:
+                        selectedSection = .notes
+                        if let uuid = UUID(uuidString: id),
+                           let note = try? modelContext.fetch(FetchDescriptor<JournalNote>(predicate: #Predicate { $0.id == uuid })).first {
+                            selectedJournalNote = note
+                        }
                     case .principle, .bucket:
                         selectedSection = .life
                     case .goal:
@@ -103,7 +111,9 @@ struct MacRootView: View {
                 let idString = url.lastPathComponent
                 if let uuid = UUID(uuidString: idString) {
                     selectedSection = .notes
-                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
+                    if let note = try? modelContext.fetch(FetchDescriptor<JournalNote>(predicate: #Predicate { $0.id == uuid })).first {
+                        selectedJournalNote = note
+                    }
                 }
             }
         }
@@ -156,15 +166,32 @@ struct MacRootView: View {
                     )
             }
         } else if selectedSection == .notes {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
                 MacSidebarView(selection: $selectedSection)
                     .navigationSplitViewColumnWidth(
                         min:   DS.Mac.sidebarMinWidth,
                         ideal: DS.Mac.sidebarIdealWidth,
                         max:   DS.Mac.sidebarMaxWidth
                     )
+            } content: {
+                AppleJournalEntriesList(selectedNote: $selectedJournalNote)
+                    .navigationSplitViewColumnWidth(
+                        min:   280,
+                        ideal: 320,
+                        max:   360
+                    )
             } detail: {
-                NotesCanvasView()
+                if let note = selectedJournalNote {
+                    AppleJournalEditorCanvas(note: note)
+                } else {
+                    ContentUnavailableView {
+                        Label("No Note Selected", systemImage: "note.text")
+                    } description: {
+                        Text("Choose a note from the list or click New Entry (⌘N) to start writing.")
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.08, green: 0.07, blue: 0.12))
+                }
             }
         } else if selectedSection == .studio {
             NavigationSplitView {
