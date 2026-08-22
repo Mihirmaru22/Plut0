@@ -14,6 +14,7 @@ public struct NotesNavigatorView: View {
     public let onDeleteNote: (NoteID) -> Void
     public let onCreateFolder: (String) -> Void
     public let onDeleteFolder: (FolderID) -> Void
+    public let onToggleCollapse: (() -> Void)?
     
     @State private var newFolderName: String = ""
     @State private var isAddingFolder: Bool = false
@@ -27,8 +28,10 @@ public struct NotesNavigatorView: View {
         folders: [Folder],
         onCreateNote: @escaping () -> Void,
         onDeleteNote: @escaping (NoteID) -> Void,
-        onCreateFolder: @escaping (String) -> Void,
-        onDeleteFolder: @escaping (FolderID) -> Void
+        onCreateFolder: @escaping () -> Void = {},
+        onCreateFolderWithName: @escaping (String) -> Void = { _ in },
+        onDeleteFolder: @escaping (FolderID) -> Void = { _ in },
+        onToggleCollapse: (() -> Void)? = nil
     ) {
         self._searchText = searchText
         self._selectedFolderID = selectedFolderID
@@ -38,35 +41,51 @@ public struct NotesNavigatorView: View {
         self.folders = folders
         self.onCreateNote = onCreateNote
         self.onDeleteNote = onDeleteNote
-        self.onCreateFolder = onCreateFolder
+        self.onCreateFolder = onCreateFolderWithName
         self.onDeleteFolder = onDeleteFolder
+        self.onToggleCollapse = onToggleCollapse
     }
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Pinned Search Bar
+            // Pinned Search Bar & Burger Toggle
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                TextField("Search notes...", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
+                if let toggle = onToggleCollapse {
+                    Button(action: toggle) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
+                            .frame(width: 26, height: 26)
+                            .background(Color.secondary.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
+                    .help("Hide Notes List (⌘⌥S)")
                 }
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    TextField("Search notes...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color.secondary.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             

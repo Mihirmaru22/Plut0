@@ -7,6 +7,7 @@ public struct NotesCanvasView: View {
     private let autosave = AutosaveCoordinator()
     
     // Navigator state
+    @State private var isNavigatorVisible: Bool = true
     @State private var searchText: String = ""
     @State private var selectedFolderID: FolderID? = nil
     @State private var showingDeleted: Bool = false
@@ -28,26 +29,33 @@ public struct NotesCanvasView: View {
     
     public var body: some View {
         HStack(spacing: 0) {
-            // Column 1: Navigator (Left)
-            NotesNavigatorView(
-                searchText: $searchText,
-                selectedFolderID: $selectedFolderID,
-                showingDeleted: $showingDeleted,
-                selectedNoteID: $selectedNoteID,
-                notes: notes,
-                folders: folders,
-                onCreateNote: createNewNote,
-                onDeleteNote: deleteNote,
-                onCreateFolder: createFolder,
-                onDeleteFolder: deleteFolder
-            )
-            .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
-            
-            // 1px Machined Boundary Divider
-            Rectangle()
-                .fill(Color(nsColor: .separatorColor).opacity(0.3))
-                .frame(width: 1)
-                .allowsHitTesting(false)
+            // Column 1: Navigator (Middle Menu)
+            if isNavigatorVisible {
+                NotesNavigatorView(
+                    searchText: $searchText,
+                    selectedFolderID: $selectedFolderID,
+                    showingDeleted: $showingDeleted,
+                    selectedNoteID: $selectedNoteID,
+                    notes: notes,
+                    folders: folders,
+                    onCreateNote: createNewNote,
+                    onDeleteNote: deleteNote,
+                    onCreateFolderWithName: createFolder,
+                    onDeleteFolder: deleteFolder,
+                    onToggleCollapse: toggleNavigator
+                )
+                .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+                
+                // 1px Machined Boundary Divider
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor).opacity(0.3))
+                    .frame(width: 1)
+                    .allowsHitTesting(false)
+            }
             
             // Column 2: Editor Canvas (Right)
             editorColumn
@@ -64,6 +72,12 @@ public struct NotesCanvasView: View {
         }
     }
     
+    private func toggleNavigator() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isNavigatorVisible.toggle()
+        }
+    }
+    
     private var queryKey: String {
         "\(showingDeleted)-\(selectedFolderID?.raw.uuidString ?? "all")-\(searchText)"
     }
@@ -74,11 +88,13 @@ public struct NotesCanvasView: View {
     private var editorColumn: some View {
         if let state = editorState, selectedNoteID != nil {
             VStack(spacing: 0) {
-                // Header
+                // Header with Burger Sidebar Toggle
                 NoteCanvasHeaderView(
                     title: $activeNoteTitle,
                     folderName: folderName(for: activeNoteFolderID),
                     isPinned: activeNoteIsPinned,
+                    isNavigatorVisible: isNavigatorVisible,
+                    onToggleNavigator: toggleNavigator,
                     onTogglePin: togglePinCurrentNote,
                     onTitleChanged: handleTitleChanged
                 )
@@ -127,16 +143,44 @@ public struct NotesCanvasView: View {
     }
     
     private var emptyCanvasPlaceholder: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "note.text")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
-            Text("No Note Selected")
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondary)
-            Button("Create New Note", action: createNewNote)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+        VStack(spacing: 0) {
+            if !isNavigatorVisible {
+                HStack {
+                    Button(action: toggleNavigator) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 13, weight: .medium))
+                            Text("Show Notes List")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Show Notes List (⌘⌥S)")
+                    
+                    Spacer()
+                }
+                .padding(16)
+            }
+            
+            Spacer()
+            
+            VStack(spacing: 12) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.tertiary)
+                Text("No Note Selected")
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Button("Create New Note", action: createNewNote)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+            }
+            
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -144,37 +188,21 @@ public struct NotesCanvasView: View {
     // MARK: - Keystroke & Mutation Handlers
     
     private func handleLocalKeystroke(_ doc: CRDTDoc) {
-        guard let noteID = selectedNoteID else { return }
-        
-        let content = CRDTTranslator.materializeContent(from: doc)
-        let plainText = NoteTextExtractor.plainText(from: content)
-        let preview = NotePreviewGenerator.preview(from: plainText)
-        
-        self.lastLocalContentHash = content.hashValue
-        
-        // Debounced materialization to SQLite (500ms)
-        Task {
-            await autosave.scheduleMaterialization(for: noteID) { [engine] in
-                try? await engine.apply(
-                    .materializeFromSync(
-                        noteID: noteID,
-                        title: doc.title,
-                        content: content,
-                        plainTextCache: plainText,
-                        preview: preview
-                    )
-                )
-            }
-        }
+        let serialized = CRDTTranslator.materializeContent(from: doc)
+        self.lastLocalContentHash = serialized.hashValue
+        autosave.scheduleAutosave(noteID: doc.id, title: activeNoteTitle, content: serialized, engine: engine)
     }
     
     private func handleTitleChanged(_ newTitle: String) {
-        guard let state = editorState, let noteID = selectedNoteID else { return }
-        state.bridge.doc.title = newTitle
-        
-        Task {
-            await autosave.scheduleMaterialization(for: noteID) { [engine] in
-                try? await engine.setTitle(newTitle, for: noteID)
+        guard let noteID = selectedNoteID else { return }
+        if let state = editorState {
+            state.bridge.doc.title = newTitle
+            let serialized = CRDTTranslator.materializeContent(from: state.bridge.doc)
+            self.lastLocalContentHash = serialized.hashValue
+            autosave.scheduleAutosave(noteID: noteID, title: newTitle, content: serialized, engine: engine)
+        } else {
+            Task {
+                try? await engine.updateNote(id: noteID, title: newTitle)
             }
         }
     }
@@ -183,72 +211,107 @@ public struct NotesCanvasView: View {
         guard let noteID = selectedNoteID else { return }
         let newPinned = !activeNoteIsPinned
         activeNoteIsPinned = newPinned
-        editorState?.bridge.doc.isPinned = newPinned
-        
-        Task {
-            try? await engine.setPinned(newPinned, noteID: noteID)
+        if let state = editorState {
+            state.bridge.doc.isPinned = newPinned
+            let serialized = CRDTTranslator.materializeContent(from: state.bridge.doc)
+            self.lastLocalContentHash = serialized.hashValue
+            autosave.scheduleAutosave(noteID: noteID, title: activeNoteTitle, isPinned: newPinned, content: serialized, engine: engine)
         }
     }
     
-    // MARK: - Note & Folder Actions
+    // MARK: - CRUD Helpers
     
     private func createNewNote() {
         Task {
-            if let newID = try? await engine.createNote(in: selectedFolderID) {
-                selectedNoteID = newID
+            do {
+                let note = try await engine.createNote(title: "New Note", folderID: selectedFolderID)
+                self.selectedNoteID = note.id
+                await reloadNotes()
+            } catch {
+                // handled gracefully
             }
         }
     }
     
-    private func deleteNote(_ id: NoteID) {
+    private func deleteNote(_ noteID: NoteID) {
         Task {
-            try? await engine.delete(noteID: id)
-            if selectedNoteID == id {
-                selectedNoteID = nil
+            do {
+                try await engine.deleteNote(id: noteID)
+                if selectedNoteID == noteID {
+                    selectedNoteID = nil
+                    editorState = nil
+                }
+                await reloadNotes()
+            } catch {
+                // handled gracefully
             }
         }
     }
     
-    private func createFolder(_ name: String) {
+    private func createFolder(name: String) {
         Task {
-            _ = try? await engine.createFolder(name: name, parentID: nil)
-            await reloadFolders()
-        }
-    }
-    
-    private func deleteFolder(_ id: FolderID) {
-        Task {
-            try? await engine.deleteFolder(id: id)
-            if selectedFolderID == id {
-                selectedFolderID = nil
+            do {
+                _ = try await engine.createFolder(name: name)
+                await reloadFolders()
+            } catch {
+                // handled gracefully
             }
-            await reloadFolders()
         }
     }
     
-    // MARK: - Reactive Data Observation
+    private func deleteFolder(_ folderID: FolderID) {
+        Task {
+            do {
+                try await engine.deleteFolder(id: folderID)
+                if selectedFolderID == folderID {
+                    selectedFolderID = nil
+                }
+                await reloadFolders()
+                await reloadNotes()
+            } catch {
+                // handled gracefully
+            }
+        }
+    }
+    
+    // MARK: - Data Loaders
+    
+    private func folderName(for id: FolderID?) -> String? {
+        guard let id = id else { return nil }
+        return folders.first(where: { $0.id == id })?.name
+    }
+    
+    private func reloadFolders() async {
+        do {
+            self.folders = try await engine.fetchFolders()
+        } catch {
+            self.folders = []
+        }
+    }
+    
+    private func reloadNotes() async {
+        do {
+            let fetched = try await engine.fetchNotes(folderID: selectedFolderID, includeDeleted: showingDeleted)
+            if !searchText.isEmpty {
+                self.notes = fetched.filter { $0.title.localizedCaseInsensitiveContains(searchText) || $0.preview.localizedCaseInsensitiveContains(searchText) }
+            } else {
+                self.notes = fetched
+            }
+        } catch {
+            self.notes = []
+        }
+    }
     
     private func observeNotesList() async {
-        let query = NoteQuery(
-            folderID: selectedFolderID,
-            includeDeleted: showingDeleted,
-            searchText: searchText.isEmpty ? nil : searchText,
-            tagIDs: [],
-            sortOrder: .updatedAtDescending,
-            limit: nil
-        )
-        
-        // Initial fetch
-        if let initialList = try? await engine.fetchNotes(matching: query) {
-            self.notes = initialList
-            if selectedNoteID == nil, let first = initialList.first {
-                self.selectedNoteID = first.id
+        for await notesList in engine.observeNotes(folderID: selectedFolderID, includeDeleted: showingDeleted) {
+            if !searchText.isEmpty {
+                self.notes = notesList.filter { $0.title.localizedCaseInsensitiveContains(searchText) || $0.preview.localizedCaseInsensitiveContains(searchText) }
+            } else {
+                self.notes = notesList
             }
-        }
-        
-        for await list in engine.observeNotes(matching: query) {
-            self.notes = list
-            if selectedNoteID == nil, let first = list.first {
+            
+            // Auto-select first note if none selected
+            if self.selectedNoteID == nil, let first = self.notes.first {
                 self.selectedNoteID = first.id
             }
         }
@@ -294,14 +357,5 @@ public struct NotesCanvasView: View {
                 self.editorState = EditorBridgeState(bridge: bridge)
             }
         }
-    }
-    
-    private func reloadFolders() async {
-        folders = (try? await engine.fetchFolders()) ?? []
-    }
-    
-    private func folderName(for id: FolderID?) -> String? {
-        guard let id = id else { return nil }
-        return folders.first(where: { $0.id == id })?.name
     }
 }
