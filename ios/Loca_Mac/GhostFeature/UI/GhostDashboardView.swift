@@ -17,7 +17,7 @@ public struct GhostDashboardView: View {
     @State private var isOfflineDark: Bool = false
     @State private var darkStartTime: Date? = nil
 
-    @ObservedObject private var vaultManager = LocaVaultAuthManager.shared
+    @ObservedObject private var vaultManager: LocaVaultAuthManager = LocaVaultAuthManager.shared
     @Environment(\.modelContext) private var modelContext
 
     @Query(filter: #Predicate<JournalNote> { !$0.isArchived }, sort: \JournalNote.date, order: .reverse)

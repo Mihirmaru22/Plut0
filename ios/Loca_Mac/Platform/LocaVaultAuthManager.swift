@@ -7,16 +7,17 @@ import Combine
 
 /// Manages hardware-level biometric authentication (Touch ID / Face ID / Apple Watch proximity)
 /// to safeguard Private Journal reflections, Net Worth goals, and Life Blueprint.
-final class LocaVaultAuthManager: ObservableObject {
+public final class LocaVaultAuthManager: ObservableObject {
 
-    static let shared = LocaVaultAuthManager()
+    public static let shared = LocaVaultAuthManager()
 
-    @AppStorage("mac_vault_biometrics_enabled") var isVaultSecurityEnabled: Bool = false
-    @AppStorage("mac_vault_auto_lock_minutes") var autoLockMinutes: Int = 5
+    @AppStorage("mac_vault_biometrics_enabled") public var isVaultSecurityEnabled: Bool = false
+    @AppStorage("mac_vault_auto_lock_minutes") public var autoLockMinutes: Int = 5
 
-    @Published var isJournalUnlocked: Bool = false
-    @Published var isLifeUnlocked: Bool = false
-    @Published var lastUnlockTime: Date? = nil
+    @Published public var isJournalUnlocked: Bool = false
+    @Published public var isLifeUnlocked: Bool = false
+    @Published public var isGhostUnlocked: Bool = false
+    @Published public var lastUnlockTime: Date? = nil
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -29,13 +30,25 @@ final class LocaVaultAuthManager: ObservableObject {
             .store(in: &cancellables)
     }
 
-    var isBiometricsAvailable: Bool {
+    public func isLocked(for section: String) -> Bool {
+        guard isVaultSecurityEnabled else { return false }
+        if section.lowercased().contains("journal") {
+            return !isJournalUnlocked
+        } else if section.lowercased().contains("life") {
+            return !isLifeUnlocked
+        } else if section.lowercased().contains("ghost") {
+            return !isGhostUnlocked
+        }
+        return false
+    }
+
+    public var isBiometricsAvailable: Bool {
         let context = LAContext()
         var error: NSError?
         return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
     }
 
-    var biometryTypeString: String {
+    public var biometryTypeString: String {
         let context = LAContext()
         var error: NSError?
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
@@ -50,7 +63,7 @@ final class LocaVaultAuthManager: ObservableObject {
     }
 
     /// Authenticates with Touch ID or system passcode fallback.
-    func authenticate(for section: String, completion: ((Bool) -> Void)? = nil) {
+    public func authenticate(for section: String, completion: ((Bool) -> Void)? = nil) {
         guard isVaultSecurityEnabled else {
             unlockAll()
             completion?(true)
@@ -90,15 +103,19 @@ final class LocaVaultAuthManager: ObservableObject {
             isJournalUnlocked = true
         } else if section.lowercased().contains("life") {
             isLifeUnlocked = true
+        } else if section.lowercased().contains("ghost") {
+            isGhostUnlocked = true
         } else {
             isJournalUnlocked = true
             isLifeUnlocked = true
+            isGhostUnlocked = true
         }
     }
 
     func lockAll() {
         isJournalUnlocked = false
         isLifeUnlocked = false
+        isGhostUnlocked = false
         lastUnlockTime = nil
         Haptics.impact(.light)
     }
@@ -106,6 +123,7 @@ final class LocaVaultAuthManager: ObservableObject {
     private func unlockAll() {
         isJournalUnlocked = true
         isLifeUnlocked = true
+        isGhostUnlocked = true
     }
 
     private func handleBackgroundLock() {
