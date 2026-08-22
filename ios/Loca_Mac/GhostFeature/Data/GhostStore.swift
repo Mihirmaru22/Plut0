@@ -103,7 +103,7 @@ public actor GhostStore {
             SQLiteHelper.bind(int: day.silenceMinutesVerified, at: 9, statement: statement)
             SQLiteHelper.bind(int: day.silenceMinutesAttested, at: 10, statement: statement)
             SQLiteHelper.bind(text: intervalsJSON, at: 11, statement: statement)
-            SQLiteHelper.bind(optionalText: day.reflectionNoteID, at: 12, statement: statement)
+            SQLiteHelper.bind(text: day.reflectionNoteID, at: 12, statement: statement)
             SQLiteHelper.bind(double: day.createdAt.timeIntervalSince1970, at: 13, statement: statement)
 
             if sqlite3_step(statement) != SQLITE_DONE {
