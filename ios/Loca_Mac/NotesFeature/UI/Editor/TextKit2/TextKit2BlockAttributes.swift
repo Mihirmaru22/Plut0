@@ -4,7 +4,7 @@ import AppKit
 /// Typography, font metrics, and paragraph styling for TextKit 2 block rendering.
 public enum TextKit2BlockAttributes {
     
-    public static func attributes(for type: String, attributes: [String: String] = [:]) -> [NSAttributedString.Key: Any] {
+    public static func attributes(for type: String, attributes: [String: String] = [:], isFirstBlock: Bool = false) -> [NSAttributedString.Key: Any] {
         var attrs: [NSAttributedString.Key: Any] = [:]
         let style = NSMutableParagraphStyle()
         
@@ -14,19 +14,19 @@ public enum TextKit2BlockAttributes {
             if level == 1 {
                 attrs[.font] = NSFont.systemFont(ofSize: 24, weight: .bold)
                 attrs[.foregroundColor] = NSColor.labelColor
-                style.paragraphSpacingBefore = 12
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 12
                 style.paragraphSpacing = 6
                 style.lineHeightMultiple = 1.15
             } else if level == 2 {
                 attrs[.font] = NSFont.systemFont(ofSize: 18, weight: .bold)
                 attrs[.foregroundColor] = NSColor.labelColor
-                style.paragraphSpacingBefore = 10
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 10
                 style.paragraphSpacing = 4
                 style.lineHeightMultiple = 1.15
             } else {
                 attrs[.font] = NSFont.systemFont(ofSize: 15, weight: .semibold)
                 attrs[.foregroundColor] = NSColor.labelColor
-                style.paragraphSpacingBefore = 8
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 8
                 style.paragraphSpacing = 3
                 style.lineHeightMultiple = 1.15
             }
@@ -63,10 +63,17 @@ public enum TextKit2BlockAttributes {
             style.paragraphSpacing = 6
             
         default: // "paragraph"
-            attrs[.font] = NSFont.systemFont(ofSize: 14, weight: .regular)
-            attrs[.foregroundColor] = NSColor.labelColor
-            style.paragraphSpacing = 4
-            style.lineHeightMultiple = 1.2
+            if isFirstBlock {
+                attrs[.font] = NSFont.systemFont(ofSize: 22, weight: .bold)
+                attrs[.foregroundColor] = NSColor.labelColor
+                style.paragraphSpacing = 8
+                style.lineHeightMultiple = 1.15
+            } else {
+                attrs[.font] = NSFont.systemFont(ofSize: 14, weight: .regular)
+                attrs[.foregroundColor] = NSColor.labelColor
+                style.paragraphSpacing = 4
+                style.lineHeightMultiple = 1.2
+            }
         }
         
         attrs[.paragraphStyle] = style

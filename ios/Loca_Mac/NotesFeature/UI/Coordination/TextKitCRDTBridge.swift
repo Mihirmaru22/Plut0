@@ -804,7 +804,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         
         for (index, block) in activeBlocks.enumerated() {
             let startLocation = result.length
-            let blockAttrs = TextKit2BlockAttributes.attributes(for: block.type, attributes: block.attributes)
+            let blockAttrs = TextKit2BlockAttributes.attributes(for: block.type, attributes: block.attributes, isFirstBlock: index == 0)
             let blockText = block.text.string
             
             let mutableBlock = NSMutableAttributedString(string: blockText, attributes: blockAttrs)

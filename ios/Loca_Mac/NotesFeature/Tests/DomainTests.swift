@@ -85,5 +85,19 @@ Bullet point alpha
         let sanitized = LocalNotesStore.sanitizeForLike(raw)
         #expect(sanitized == "100\\%\\_complete\\\\test")
     }
+    
+    @Test func testDerivedTitleAndPreview() {
+        let content1 = NoteContent(version: 1, blocks: [
+            .paragraph(ParagraphBlock(text: "Grocery List")),
+            .checklistItem(ChecklistItemBlock(text: "Almond milk")),
+            .checklistItem(ChecklistItemBlock(text: "Avocados"))
+        ])
+        #expect(NotePreviewGenerator.deriveTitle(from: content1) == "Grocery List")
+        #expect(NotePreviewGenerator.derivePreview(from: content1) == "Almond milk")
+        
+        let emptyContent = NoteContent.empty
+        #expect(NotePreviewGenerator.deriveTitle(from: emptyContent) == "New Note")
+        #expect(NotePreviewGenerator.derivePreview(from: emptyContent) == "")
+    }
 }
 #endif

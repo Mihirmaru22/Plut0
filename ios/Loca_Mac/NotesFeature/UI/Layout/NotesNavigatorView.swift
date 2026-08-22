@@ -12,6 +12,7 @@ public struct NotesNavigatorView: View {
     public let folders: [Folder]
     public let onCreateNote: () -> Void
     public let onDeleteNote: (NoteID) -> Void
+    public let onTogglePinNote: (NoteID) -> Void
     public let onCreateFolder: (String) -> Void
     public let onDeleteFolder: (FolderID) -> Void
     public let onToggleCollapse: (() -> Void)?
@@ -28,7 +29,7 @@ public struct NotesNavigatorView: View {
         folders: [Folder],
         onCreateNote: @escaping () -> Void,
         onDeleteNote: @escaping (NoteID) -> Void,
-        onCreateFolder: @escaping () -> Void = {},
+        onTogglePinNote: @escaping (NoteID) -> Void = { _ in },
         onCreateFolderWithName: @escaping (String) -> Void = { _ in },
         onDeleteFolder: @escaping (FolderID) -> Void = { _ in },
         onToggleCollapse: (() -> Void)? = nil
@@ -41,6 +42,7 @@ public struct NotesNavigatorView: View {
         self.folders = folders
         self.onCreateNote = onCreateNote
         self.onDeleteNote = onDeleteNote
+        self.onTogglePinNote = onTogglePinNote
         self.onCreateFolder = onCreateFolderWithName
         self.onDeleteFolder = onDeleteFolder
         self.onToggleCollapse = onToggleCollapse
@@ -125,8 +127,8 @@ public struct NotesNavigatorView: View {
                                 Button {
                                     onDeleteFolder(folder.id)
                                 } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 9))
                                         .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
@@ -165,9 +167,9 @@ public struct NotesNavigatorView: View {
                 }
                 
                 // Section 3: Notes List
-                Section("Notes (\(notes.count))") {
+                Section("Notes") {
                     if notes.isEmpty {
-                        Text("No notes found")
+                        Text(showingDeleted ? "Trash is empty" : "No notes")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 8)
@@ -180,6 +182,9 @@ public struct NotesNavigatorView: View {
                             }
                             .buttonStyle(.plain)
                             .contextMenu {
+                                Button(note.isPinned ? "Unpin Note" : "Pin Note") {
+                                    onTogglePinNote(note.id)
+                                }
                                 Button("Delete Note", role: .destructive) {
                                     onDeleteNote(note.id)
                                 }
@@ -192,20 +197,16 @@ public struct NotesNavigatorView: View {
             
             Divider()
             
-            // Bottom Action Bar
+            // Bottom Action Bar (Quiet, no counters)
             HStack {
-                Text("\(notes.count) \(notes.count == 1 ? "Note" : "Notes")")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                
                 Spacer()
-                
                 Button(action: onCreateNote) {
                     Label("New Note", systemImage: "square.and.pencil")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
+                .keyboardShortcut("n", modifiers: .command)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)

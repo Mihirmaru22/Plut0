@@ -6,6 +6,8 @@ public struct NotesCanvasView: View {
     @ObservedObject public var engine: NotesEngine
     private let autosave = AutosaveCoordinator()
     
+    @AppStorage("notes_last_opened_note_id") private var lastOpenedNoteIDString: String = ""
+    
     // Navigator state
     @State private var isNavigatorVisible: Bool = true
     @State private var searchText: String = ""
@@ -17,11 +19,14 @@ public struct NotesCanvasView: View {
     @State private var folders: [Folder] = []
     
     // Active Editor state
-    @State private var activeNoteTitle: String = ""
     @State private var activeNoteIsPinned: Bool = false
     @State private var activeNoteFolderID: FolderID? = nil
     @State private var editorState: EditorBridgeState? = nil
     @State private var lastLocalContentHash: Int = 0
+    @State private var isToolbarHovered: Bool = false
+    
+    // Caret Memory Map per note for continuity
+    @State private var caretMemory: [UUID: NSRange] = [:]
     
     public init(engine: NotesEngine = NotesEngine.shared) {
         self.engine = engine
@@ -40,6 +45,7 @@ public struct NotesCanvasView: View {
                     folders: folders,
                     onCreateNote: createNewNote,
                     onDeleteNote: deleteNote,
+                    onTogglePinNote: togglePinNote,
                     onCreateFolderWithName: createFolder,
                     onDeleteFolder: deleteFolder,
                     onToggleCollapse: toggleNavigator
@@ -68,7 +74,17 @@ public struct NotesCanvasView: View {
             await observeNotesList()
         }
         .task(id: selectedNoteID) {
+            if let id = selectedNoteID {
+                lastOpenedNoteIDString = id.raw.uuidString
+            }
             await loadSelectedNote()
+        }
+        .onAppear {
+            if selectedNoteID == nil && !lastOpenedNoteIDString.isEmpty {
+                if let uuid = UUID(uuidString: lastOpenedNoteIDString) {
+                    selectedNoteID = NoteID(raw: uuid)
+                }
+            }
         }
     }
     
@@ -88,55 +104,61 @@ public struct NotesCanvasView: View {
     private var editorColumn: some View {
         if let state = editorState, selectedNoteID != nil {
             VStack(spacing: 0) {
-                // Header with Burger Sidebar Toggle
-                NoteCanvasHeaderView(
-                    title: $activeNoteTitle,
-                    folderName: folderName(for: activeNoteFolderID),
-                    isPinned: activeNoteIsPinned,
-                    isNavigatorVisible: isNavigatorVisible,
-                    onToggleNavigator: toggleNavigator,
-                    onTogglePin: togglePinCurrentNote,
-                    onTitleChanged: handleTitleChanged
-                )
-                
-                Divider()
-                    .allowsHitTesting(false)
-                
-                // Formatting Toolbar Strip
-                HStack {
-                    Spacer()
-                    NotesFormattingToolbar(
-                        state: state.formattingState,
-                        onToggleBold: {
-                            state.toggleBold()
-                            handleLocalKeystroke(state.bridge.doc)
-                        },
-                        onToggleItalic: {
-                            state.toggleItalic()
-                            handleLocalKeystroke(state.bridge.doc)
-                        },
-                        onToggleBlockType: { blockType in
-                            state.toggleBlockType(blockType)
-                            handleLocalKeystroke(state.bridge.doc)
-                        }
+                // Minimal Header (Burger toggle when navigator is closed, optional folder chip)
+                if !isNavigatorVisible || activeNoteFolderID != nil {
+                    NoteCanvasHeaderView(
+                        folderName: folderName(for: activeNoteFolderID),
+                        isNavigatorVisible: isNavigatorVisible,
+                        onToggleNavigator: toggleNavigator
                     )
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .background(Color(nsColor: .windowBackgroundColor).opacity(0.35))
                 
-                Divider()
-                    .allowsHitTesting(false)
+                // Contextual Formatting Toolbar Strip (fades/rises on focus or hover)
+                let isToolbarVisible = state.isFocused || isToolbarHovered || state.currentSelection.length > 0
+                if isToolbarVisible {
+                    HStack {
+                        Spacer()
+                        NotesFormattingToolbar(
+                            state: state.formattingState,
+                            onToggleBold: {
+                                state.toggleBold()
+                                handleLocalKeystroke(state.bridge.doc)
+                            },
+                            onToggleItalic: {
+                                state.toggleItalic()
+                                handleLocalKeystroke(state.bridge.doc)
+                            },
+                            onToggleBlockType: { blockType in
+                                state.toggleBlockType(blockType)
+                                handleLocalKeystroke(state.bridge.doc)
+                            }
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .background(Color(nsColor: .windowBackgroundColor).opacity(0.35))
+                    .onHover { isToolbarHovered = $0 }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    
+                    Divider()
+                        .allowsHitTesting(false)
+                }
                 
-                // Editor Body
+                // Calm Writing Surface (First line is title affordance)
                 TextKit2EditorRepresentable(
                     state: state,
                     onKeystroke: handleLocalKeystroke,
-                    onSelectionChanged: { _ in }
+                    onSelectionChanged: { newSel in
+                        if let id = selectedNoteID {
+                            caretMemory[id.raw] = newSel
+                        }
+                    }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(Color(nsColor: .textBackgroundColor))
+            .animation(.easeInOut(duration: 0.15), value: state.isFocused)
+            .animation(.easeInOut(duration: 0.15), value: isToolbarHovered)
         } else {
             emptyCanvasPlaceholder
         }
@@ -172,12 +194,10 @@ public struct NotesCanvasView: View {
                 Image(systemName: "note.text")
                     .font(.system(size: 48))
                     .foregroundStyle(.tertiary)
-                Text("No Note Selected")
-                    .font(.title3.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Button("Create New Note", action: createNewNote)
+                Button("Create Note", action: createNewNote)
                     .buttonStyle(.borderedProminent)
                     .controlSize(.regular)
+                    .keyboardShortcut("n", modifiers: .command)
             }
             
             Spacer()
@@ -190,32 +210,29 @@ public struct NotesCanvasView: View {
     private func handleLocalKeystroke(_ doc: CRDTDoc) {
         let serialized = CRDTTranslator.materializeContent(from: doc)
         self.lastLocalContentHash = serialized.hashValue
-        autosave.scheduleAutosave(noteID: doc.id, title: activeNoteTitle, content: serialized, engine: engine)
-    }
-    
-    private func handleTitleChanged(_ newTitle: String) {
-        guard let noteID = selectedNoteID else { return }
-        if let state = editorState {
-            state.bridge.doc.title = newTitle
-            let serialized = CRDTTranslator.materializeContent(from: state.bridge.doc)
-            self.lastLocalContentHash = serialized.hashValue
-            autosave.scheduleAutosave(noteID: noteID, title: newTitle, content: serialized, engine: engine)
-        } else {
-            Task {
-                try? await engine.updateNote(id: noteID, title: newTitle)
-            }
-        }
+        let derivedTitle = NotePreviewGenerator.deriveTitle(from: serialized)
+        autosave.scheduleAutosave(noteID: doc.id, title: derivedTitle, content: serialized, engine: engine)
     }
     
     private func togglePinCurrentNote() {
         guard let noteID = selectedNoteID else { return }
+        togglePinNote(noteID)
+    }
+    
+    private func togglePinNote(_ noteID: NoteID) {
         let newPinned = !activeNoteIsPinned
         activeNoteIsPinned = newPinned
-        if let state = editorState {
+        if let state = editorState, state.bridge.doc.id == noteID {
             state.bridge.doc.isPinned = newPinned
             let serialized = CRDTTranslator.materializeContent(from: state.bridge.doc)
             self.lastLocalContentHash = serialized.hashValue
-            autosave.scheduleAutosave(noteID: noteID, title: activeNoteTitle, isPinned: newPinned, content: serialized, engine: engine)
+            let derivedTitle = NotePreviewGenerator.deriveTitle(from: serialized)
+            autosave.scheduleAutosave(noteID: noteID, title: derivedTitle, isPinned: newPinned, content: serialized, engine: engine)
+        } else {
+            Task {
+                try? await engine.updateNote(id: noteID, isPinned: newPinned)
+                await reloadNotes()
+            }
         }
     }
     
@@ -224,7 +241,7 @@ public struct NotesCanvasView: View {
     private func createNewNote() {
         Task {
             do {
-                let note = try await engine.createNote(title: "New Note", folderID: selectedFolderID)
+                let note = try await engine.createNote(title: "", folderID: selectedFolderID)
                 self.selectedNoteID = note.id
                 await reloadNotes()
             } catch {
@@ -262,6 +279,7 @@ public struct NotesCanvasView: View {
     private func deleteFolder(_ folderID: FolderID) {
         Task {
             do {
+                // Reversible: move notes in folder to all notes, delete folder
                 try await engine.deleteFolder(id: folderID)
                 if selectedFolderID == folderID {
                     selectedFolderID = nil
@@ -325,18 +343,23 @@ public struct NotesCanvasView: View {
         
         // Immediate synchronous fetch for instant transition
         if let initialNote = try? await engine.fetchNote(id: noteID) {
-            self.activeNoteTitle = initialNote.title
             self.activeNoteIsPinned = initialNote.isPinned
             self.activeNoteFolderID = initialNote.folderID
             
             let doc = CRDTTranslator.crdtDoc(from: initialNote)
             let bridge = TextKitCRDTBridge(doc: doc)
-            self.editorState = EditorBridgeState(bridge: bridge)
+            let state = EditorBridgeState(bridge: bridge)
+            
+            // Restore caret from memory map if available
+            if let savedCaret = caretMemory[noteID.raw] {
+                state.updateSelection(savedCaret)
+            }
+            
+            self.editorState = state
         }
         
         for await note in engine.observeNote(id: noteID) {
             guard let note = note else { continue }
-            self.activeNoteTitle = note.title
             self.activeNoteIsPinned = note.isPinned
             self.activeNoteFolderID = note.folderID
             
@@ -354,7 +377,11 @@ public struct NotesCanvasView: View {
                 existingState.updateDocFromRemote(doc)
             } else {
                 let bridge = TextKitCRDTBridge(doc: doc)
-                self.editorState = EditorBridgeState(bridge: bridge)
+                let state = EditorBridgeState(bridge: bridge)
+                if let savedCaret = caretMemory[noteID.raw] {
+                    state.updateSelection(savedCaret)
+                }
+                self.editorState = state
             }
         }
     }

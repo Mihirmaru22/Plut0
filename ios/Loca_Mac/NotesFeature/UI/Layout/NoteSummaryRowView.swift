@@ -32,11 +32,13 @@ public struct NoteSummaryRowView: View {
                     .foregroundStyle(.tertiary)
             }
             
-            Text(summary.preview.isEmpty ? "No additional text" : summary.preview)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
+            if !summary.preview.isEmpty {
+                Text(summary.preview)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 8)

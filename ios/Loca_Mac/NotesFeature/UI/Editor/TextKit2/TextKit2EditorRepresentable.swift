@@ -12,13 +12,14 @@
 // 4. Remote CRDT merges update textStorage only on remote deltas, preventing local render loops.
 // 5. Checklist and bullet glyphs are drawn exclusively in the margin via custom draw(_:); storage string is untouched.
 // 6. Bridge owns undo/redo history (allowsUndo = false) for deterministic state restoration.
+// 7. Calm Surface Protocol: First block renders as title affordance (22pt bold); toolbar is contextual.
 
 import Foundation
 import Combine
 import SwiftUI
 import AppKit
 
-/// Subclassed NSTextView supporting interactive margin-drawn glyphs, gutter clicks, and text engine integration.
+/// Subclassed NSTextView supporting interactive margin-drawn glyphs, gutter clicks, focus callbacks, and text engine integration.
 public final class NoteCanvasTextView: NSTextView {
     
     public weak var bridge: TextKitCRDTBridge?
@@ -27,13 +28,26 @@ public final class NoteCanvasTextView: NSTextView {
     public var onToggleItalic: (() -> Void)?
     public var onUndo: (() -> Void)?
     public var onRedo: (() -> Void)?
+    public var onFocusChanged: ((Bool) -> Void)?
     
     public override var acceptsFirstResponder: Bool { true }
     public override var canBecomeKeyView: Bool { true }
     public override var needsPanelToBecomeKey: Bool { true }
     
     public override func becomeFirstResponder() -> Bool {
-        return super.becomeFirstResponder()
+        let result = super.becomeFirstResponder()
+        if result {
+            onFocusChanged?(true)
+        }
+        return result
+    }
+    
+    public override func resignFirstResponder() -> Bool {
+        let result = super.resignFirstResponder()
+        if result {
+            onFocusChanged?(false)
+        }
+        return result
     }
     
     public override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -180,7 +194,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
         textView.font = NSFont.systemFont(ofSize: 14)
         textView.textColor = NSColor.labelColor
         textView.insertionPointColor = NSColor.controlAccentColor
-        textView.textContainerInset = NSSize(width: 24, height: 16)
+        textView.textContainerInset = NSSize(width: 24, height: 20)
         textView.minSize = NSSize(width: 0, height: 0)
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.isVerticallyResizable = true
@@ -191,12 +205,19 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
         textView.textContainer?.lineFragmentPadding = 0
         
         textView.typingAttributes = [
-            .font: NSFont.systemFont(ofSize: 14),
+            .font: NSFont.systemFont(ofSize: 22, weight: .bold),
             .foregroundColor: NSColor.labelColor,
             .paragraphStyle: NSParagraphStyle.default
         ]
         
         context.coordinator.textView = textView
+        
+        // Focus state sync
+        textView.onFocusChanged = { [weak state] isFocused in
+            DispatchQueue.main.async {
+                state?.isFocused = isFocused
+            }
+        }
         
         // Wire in-place format updates directly to textStorage with Programmatic-Edit Guard
         state.onInPlaceFormatUpdate = { [weak textView, weak state, weak coordinator = context.coordinator] in
@@ -212,10 +233,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             
             let bType = state.bridge.blockType(at: intendedCursor.location)
             var isChecked = false
+            var isFirstBlock = false
             if let target = state.bridge.resolveLocation(intendedCursor.location) {
                 isChecked = target.block.attributes["isChecked"] == "true"
+                isFirstBlock = (target.blockIndex == 0)
             }
-            coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked)
+            coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
             
             self.onKeystroke(state.bridge.doc)
         }
@@ -252,10 +275,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 
                 let bType = state.bridge.blockType(at: targetSel.location)
                 var isChecked = false
+                var isFirstBlock = false
                 if let target = state.bridge.resolveLocation(targetSel.location) {
                     isChecked = target.block.attributes["isChecked"] == "true"
+                    isFirstBlock = (target.blockIndex == 0)
                 }
-                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked)
+                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
                 
                 self.onKeystroke(state.bridge.doc)
                 DispatchQueue.main.async {
@@ -280,10 +305,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 
                 let bType = state.bridge.blockType(at: targetSel.location)
                 var isChecked = false
+                var isFirstBlock = false
                 if let target = state.bridge.resolveLocation(targetSel.location) {
                     isChecked = target.block.attributes["isChecked"] == "true"
+                    isFirstBlock = (target.blockIndex == 0)
                 }
-                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked)
+                coordinator?.syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
                 
                 self.onKeystroke(state.bridge.doc)
                 DispatchQueue.main.async {
@@ -318,7 +345,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             tv.setNeedsDisplay(tv.bounds)
             
             let isChecked = target.block.attributes["isChecked"] != "true"
-            coordinator?.syncTypingAttributes(for: .checklist, isChecked: isChecked)
+            coordinator?.syncTypingAttributes(for: .checklist, isChecked: isChecked, isFirstBlock: target.blockIndex == 0)
             
             DispatchQueue.main.async {
                 self.state.refreshFormattingState()
@@ -375,10 +402,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
         
         let bType = state.bridge.blockType(at: newSelection.location)
         var isChecked = false
+        var isFirstBlock = false
         if let target = state.bridge.resolveLocation(newSelection.location) {
             isChecked = target.block.attributes["isChecked"] == "true"
+            isFirstBlock = (target.blockIndex == 0)
         }
-        context.coordinator.syncTypingAttributes(for: bType, isChecked: isChecked)
+        context.coordinator.syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
     }
     
     public final class Coordinator: NSObject, NSTextViewDelegate {
@@ -390,7 +419,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             self.parent = parent
         }
         
-        public func syncTypingAttributes(for blockType: EditorBlockType, isChecked: Bool = false) {
+        public func syncTypingAttributes(for blockType: EditorBlockType, isChecked: Bool = false, isFirstBlock: Bool = false) {
             guard let tv = textView else { return }
             let style = NSMutableParagraphStyle()
             var attrs: [NSAttributedString.Key: Any] = [:]
@@ -417,19 +446,19 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 attrs[.font] = NSFont.systemFont(ofSize: 14)
                 attrs[.foregroundColor] = NSColor.labelColor
             case .h1:
-                style.paragraphSpacingBefore = 12
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 12
                 style.paragraphSpacing = 6
                 style.lineHeightMultiple = 1.15
                 attrs[.font] = NSFont.systemFont(ofSize: 24, weight: .bold)
                 attrs[.foregroundColor] = NSColor.labelColor
             case .h2:
-                style.paragraphSpacingBefore = 10
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 10
                 style.paragraphSpacing = 4
                 style.lineHeightMultiple = 1.15
                 attrs[.font] = NSFont.systemFont(ofSize: 18, weight: .bold)
                 attrs[.foregroundColor] = NSColor.labelColor
             case .h3:
-                style.paragraphSpacingBefore = 8
+                style.paragraphSpacingBefore = isFirstBlock ? 0 : 8
                 style.paragraphSpacing = 3
                 style.lineHeightMultiple = 1.15
                 attrs[.font] = NSFont.systemFont(ofSize: 15, weight: .semibold)
@@ -437,9 +466,15 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             case .paragraph:
                 style.headIndent = 0
                 style.firstLineHeadIndent = 0
-                style.paragraphSpacing = 4
-                style.lineHeightMultiple = 1.2
-                attrs[.font] = NSFont.systemFont(ofSize: 14)
+                if isFirstBlock {
+                    style.paragraphSpacing = 8
+                    style.lineHeightMultiple = 1.15
+                    attrs[.font] = NSFont.systemFont(ofSize: 22, weight: .bold)
+                } else {
+                    style.paragraphSpacing = 4
+                    style.lineHeightMultiple = 1.2
+                    attrs[.font] = NSFont.systemFont(ofSize: 14)
+                }
                 attrs[.foregroundColor] = NSColor.labelColor
             }
             
@@ -456,10 +491,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             
             let bType = parent.state.bridge.blockType(at: sel.location)
             var isChecked = false
+            var isFirstBlock = false
             if let target = parent.state.bridge.resolveLocation(sel.location) {
                 isChecked = target.block.attributes["isChecked"] == "true"
+                isFirstBlock = (target.blockIndex == 0)
             }
-            syncTypingAttributes(for: bType, isChecked: isChecked)
+            syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
             
             DispatchQueue.main.async {
                 self.parent.state.refreshFormattingState()
@@ -489,10 +526,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                     
                     let newBType = parent.state.bridge.blockType(at: split.newCursor)
                     var isChecked = false
+                    var isFirstBlock = false
                     if let target = parent.state.bridge.resolveLocation(split.newCursor) {
                         isChecked = target.block.attributes["isChecked"] == "true"
+                        isFirstBlock = (target.blockIndex == 0)
                     }
-                    syncTypingAttributes(for: newBType, isChecked: isChecked)
+                    syncTypingAttributes(for: newBType, isChecked: isChecked, isFirstBlock: isFirstBlock)
                     
                     parent.onKeystroke(parent.state.bridge.doc)
                     DispatchQueue.main.async {
@@ -518,10 +557,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 }
                 let bType = parent.state.bridge.blockType(at: newCursor)
                 var isChecked = false
+                var isFirstBlock = false
                 if let target = parent.state.bridge.resolveLocation(newCursor) {
                     isChecked = target.block.attributes["isChecked"] == "true"
+                    isFirstBlock = (target.blockIndex == 0)
                 }
-                syncTypingAttributes(for: bType, isChecked: isChecked)
+                syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
                 
                 parent.onKeystroke(parent.state.bridge.doc)
                 DispatchQueue.main.async {
@@ -545,10 +586,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
                 }
                 let bType = parent.state.bridge.blockType(at: affectedCharRange.location)
                 var isChecked = false
+                var isFirstBlock = false
                 if let target = parent.state.bridge.resolveLocation(affectedCharRange.location) {
                     isChecked = target.block.attributes["isChecked"] == "true"
+                    isFirstBlock = (target.blockIndex == 0)
                 }
-                syncTypingAttributes(for: bType, isChecked: isChecked)
+                syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
                 
                 parent.onKeystroke(parent.state.bridge.doc)
                 DispatchQueue.main.async {
@@ -576,10 +619,12 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
             let sel = tv.selectedRange()
             let bType = parent.state.bridge.blockType(at: sel.location)
             var isChecked = false
+            var isFirstBlock = false
             if let target = parent.state.bridge.resolveLocation(sel.location) {
                 isChecked = target.block.attributes["isChecked"] == "true"
+                isFirstBlock = (target.blockIndex == 0)
             }
-            syncTypingAttributes(for: bType, isChecked: isChecked)
+            syncTypingAttributes(for: bType, isChecked: isChecked, isFirstBlock: isFirstBlock)
         }
     }
 }
@@ -589,6 +634,7 @@ public struct TextKit2EditorRepresentable: NSViewRepresentable {
 public final class EditorBridgeState: ObservableObject {
     public var bridge: TextKitCRDTBridge
     @Published public var formattingState: FormattingState = FormattingState()
+    @Published public var isFocused: Bool = false
     public var needsRemoteRefresh: Bool = false
     public var currentSelection: NSRange = NSRange(location: 0, length: 0)
     

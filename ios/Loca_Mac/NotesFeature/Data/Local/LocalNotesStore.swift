@@ -289,14 +289,17 @@ public actor LocalNotesStore {
             }
             let now = Date().timeIntervalSince1970
             let plainText = NoteTextExtractor.plainText(from: content)
-            let preview = NotePreviewGenerator.preview(from: plainText)
+            let derivedTitle = NotePreviewGenerator.deriveTitle(from: content)
+            let preview = NotePreviewGenerator.derivePreview(from: content)
             
             var note = NotesMappers.note(from: row)
+            note.title = derivedTitle
             note.content = content
             note.plainTextCache = plainText
             note.preview = preview
             
             let updatedRow = NotesMappers.noteRow(from: note)
+            row.title = derivedTitle
             row.contentJSON = updatedRow.contentJSON
             row.plainTextCache = plainText
             row.preview = preview

@@ -237,8 +237,10 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
             }
             let now = Date()
             let plainText = NoteTextExtractor.plainText(from: content)
-            let preview = NotePreviewGenerator.preview(from: plainText)
+            let derivedTitle = NotePreviewGenerator.deriveTitle(from: content)
+            let preview = NotePreviewGenerator.derivePreview(from: content)
             
+            note.title = derivedTitle
             note.content = content
             note.plainTextCache = plainText
             note.preview = preview
