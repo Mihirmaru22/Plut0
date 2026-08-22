@@ -3,175 +3,177 @@ import SQLite3
 
 /// Actor handling SQLite persistence for Ghost Mode seasons, days, and streaks.
 public actor GhostStore {
-    public static let shared = GhostStore()
+    
+    public static let shared: GhostStore = {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let plutoDir = appSupport.appendingPathComponent("Pluto", isDirectory: true)
+        try? FileManager.default.createDirectory(at: plutoDir, withIntermediateDirectories: true)
+        let dbURL = plutoDir.appendingPathComponent("notes_v1.sqlite")
+        
+        do {
+            let db = try NotesDatabase(fileURL: dbURL)
+            return GhostStore(database: db)
+        } catch {
+            let inMemoryDB = try! NotesDatabase(fileURL: nil)
+            return GhostStore(database: inMemoryDB)
+        }
+    }()
 
-    private var dbPointer: OpaquePointer? {
-        NotesDatabase.shared.dbPointer
-    }
-
+    private let database: NotesDatabase
     private let jsonDecoder = JSONDecoder()
     private let jsonEncoder = JSONEncoder()
 
-    public init() {}
+    public init(database: NotesDatabase) {
+        self.database = database
+    }
 
     // MARK: - Season CRUD
 
     public func saveSeason(_ season: GhostSeason) throws {
-        guard let db = dbPointer else {
-            throw NotesError.persistenceFailure("Database pointer is null")
-        }
+        try database.write { db in
+            let sql = """
+            INSERT OR REPLACE INTO ghost_seasons (
+                id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            """
 
-        let sql = """
-        INSERT OR REPLACE INTO ghost_seasons (
-            id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
 
-        let statement = try SQLiteHelper.prepare(sql: sql, on: db)
-        defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: season.id, at: 1, statement: statement)
+            SQLiteHelper.bind(text: season.name, at: 2, statement: statement)
+            SQLiteHelper.bind(text: season.protocolKind.rawValue, at: 3, statement: statement)
+            SQLiteHelper.bind(double: season.startDate.timeIntervalSince1970, at: 4, statement: statement)
+            SQLiteHelper.bind(double: season.endDate.timeIntervalSince1970, at: 5, statement: statement)
+            SQLiteHelper.bind(text: season.doctrine.rawValue, at: 6, statement: statement)
+            SQLiteHelper.bind(double: season.signedAt.timeIntervalSince1970, at: 7, statement: statement)
+            SQLiteHelper.bind(text: season.deviceID, at: 8, statement: statement)
 
-        SQLiteHelper.bind(text: season.id, at: 1, statement: statement)
-        SQLiteHelper.bind(text: season.name, at: 2, statement: statement)
-        SQLiteHelper.bind(text: season.protocolKind.rawValue, at: 3, statement: statement)
-        SQLiteHelper.bind(double: season.startDate.timeIntervalSince1970, at: 4, statement: statement)
-        SQLiteHelper.bind(double: season.endDate.timeIntervalSince1970, at: 5, statement: statement)
-        SQLiteHelper.bind(text: season.doctrine.rawValue, at: 6, statement: statement)
-        SQLiteHelper.bind(double: season.signedAt.timeIntervalSince1970, at: 7, statement: statement)
-        SQLiteHelper.bind(text: season.deviceID, at: 8, statement: statement)
-
-        if sqlite3_step(statement) != SQLITE_DONE {
-            let msg = String(cString: sqlite3_errmsg(db))
-            throw NotesError.persistenceFailure("Failed to save ghost season: \(msg)")
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw NotesError.persistenceFailure("Failed to save ghost season: \(msg)")
+            }
         }
     }
 
     public func fetchActiveSeason() throws -> GhostSeason? {
-        guard let db = dbPointer else { return nil }
+        try database.read { db in
+            let sql = """
+            SELECT id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id
+            FROM ghost_seasons
+            ORDER BY signed_at DESC
+            LIMIT 1;
+            """
 
-        let sql = """
-        SELECT id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id
-        FROM ghost_seasons
-        ORDER BY signed_at DESC
-        LIMIT 1;
-        """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
 
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
+            if sqlite3_step(statement) == SQLITE_ROW {
+                return extractSeason(from: statement)
+            }
             return nil
         }
-        defer { sqlite3_finalize(statement) }
-
-        if sqlite3_step(statement) == SQLITE_ROW {
-            return extractSeason(from: statement)
-        }
-        return nil
     }
 
     // MARK: - Day Records CRUD
 
     public func saveDay(_ day: GhostDay) throws {
-        guard let db = dbPointer else {
-            throw NotesError.persistenceFailure("Database pointer is null")
-        }
+        try database.write { db in
+            let intervalsJSON = (try? String(data: self.jsonEncoder.encode(day.offlineIntervals), encoding: .utf8)) ?? "[]"
 
-        let intervalsJSON = (try? String(data: jsonEncoder.encode(day.offlineIntervals), encoding: .utf8)) ?? "[]"
+            let sql = """
+            INSERT OR REPLACE INTO ghost_days (
+                id, season_id, date, body_closed, mind_closed, silence_closed,
+                ghost_day, score, silence_minutes_verified, silence_minutes_attested,
+                offline_intervals_json, reflection_note_id, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """
 
-        let sql = """
-        INSERT OR REPLACE INTO ghost_days (
-            id, season_id, date, body_closed, mind_closed, silence_closed,
-            ghost_day, score, silence_minutes_verified, silence_minutes_attested,
-            offline_intervals_json, reflection_note_id, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
 
-        let statement = try SQLiteHelper.prepare(sql: sql, on: db)
-        defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: day.id, at: 1, statement: statement)
+            SQLiteHelper.bind(text: day.seasonID, at: 2, statement: statement)
+            SQLiteHelper.bind(text: day.dateString, at: 3, statement: statement)
+            SQLiteHelper.bind(int: day.bodyClosed ? 1 : 0, at: 4, statement: statement)
+            SQLiteHelper.bind(int: day.mindClosed ? 1 : 0, at: 5, statement: statement)
+            SQLiteHelper.bind(int: day.silenceClosed ? 1 : 0, at: 6, statement: statement)
+            SQLiteHelper.bind(int: day.ghostDay ? 1 : 0, at: 7, statement: statement)
+            SQLiteHelper.bind(int: day.score, at: 8, statement: statement)
+            SQLiteHelper.bind(int: day.silenceMinutesVerified, at: 9, statement: statement)
+            SQLiteHelper.bind(int: day.silenceMinutesAttested, at: 10, statement: statement)
+            SQLiteHelper.bind(text: intervalsJSON, at: 11, statement: statement)
+            SQLiteHelper.bind(optionalText: day.reflectionNoteID, at: 12, statement: statement)
+            SQLiteHelper.bind(double: day.createdAt.timeIntervalSince1970, at: 13, statement: statement)
 
-        SQLiteHelper.bind(text: day.id, at: 1, statement: statement)
-        SQLiteHelper.bind(text: day.seasonID, at: 2, statement: statement)
-        SQLiteHelper.bind(text: day.dateString, at: 3, statement: statement)
-        SQLiteHelper.bind(int: day.bodyClosed ? 1 : 0, at: 4, statement: statement)
-        SQLiteHelper.bind(int: day.mindClosed ? 1 : 0, at: 5, statement: statement)
-        SQLiteHelper.bind(int: day.silenceClosed ? 1 : 0, at: 6, statement: statement)
-        SQLiteHelper.bind(int: day.ghostDay ? 1 : 0, at: 7, statement: statement)
-        SQLiteHelper.bind(int: day.score, at: 8, statement: statement)
-        SQLiteHelper.bind(int: day.silenceMinutesVerified, at: 9, statement: statement)
-        SQLiteHelper.bind(int: day.silenceMinutesAttested, at: 10, statement: statement)
-        SQLiteHelper.bind(text: intervalsJSON, at: 11, statement: statement)
-        SQLiteHelper.bind(optionalText: day.reflectionNoteID, at: 12, statement: statement)
-        SQLiteHelper.bind(double: day.createdAt.timeIntervalSince1970, at: 13, statement: statement)
-
-        if sqlite3_step(statement) != SQLITE_DONE {
-            let msg = String(cString: sqlite3_errmsg(db))
-            throw NotesError.persistenceFailure("Failed to save ghost day: \(msg)")
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw NotesError.persistenceFailure("Failed to save ghost day: \(msg)")
+            }
         }
     }
 
     public func fetchDay(seasonID: String, dateString: String) throws -> GhostDay? {
-        guard let db = dbPointer else { return nil }
+        try database.read { db in
+            let sql = """
+            SELECT id, season_id, date, body_closed, mind_closed, silence_closed,
+                   ghost_day, score, silence_minutes_verified, silence_minutes_attested,
+                   offline_intervals_json, reflection_note_id, created_at
+            FROM ghost_days
+            WHERE season_id = ? AND date = ?
+            LIMIT 1;
+            """
 
-        let sql = """
-        SELECT id, season_id, date, body_closed, mind_closed, silence_closed,
-               ghost_day, score, silence_minutes_verified, silence_minutes_attested,
-               offline_intervals_json, reflection_note_id, created_at
-        FROM ghost_days
-        WHERE season_id = ? AND date = ?
-        LIMIT 1;
-        """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
 
-        let statement = try SQLiteHelper.prepare(sql: sql, on: db)
-        defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
+            SQLiteHelper.bind(text: dateString, at: 2, statement: statement)
 
-        SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
-        SQLiteHelper.bind(text: dateString, at: 2, statement: statement)
-
-        if sqlite3_step(statement) == SQLITE_ROW {
-            return extractDay(from: statement)
+            if sqlite3_step(statement) == SQLITE_ROW {
+                return extractDay(from: statement)
+            }
+            return nil
         }
-        return nil
     }
 
     public func fetchAllDays(seasonID: String) throws -> [GhostDay] {
-        guard let db = dbPointer else { return [] }
+        try database.read { db in
+            let sql = """
+            SELECT id, season_id, date, body_closed, mind_closed, silence_closed,
+                   ghost_day, score, silence_minutes_verified, silence_minutes_attested,
+                   offline_intervals_json, reflection_note_id, created_at
+            FROM ghost_days
+            WHERE season_id = ?
+            ORDER BY date ASC;
+            """
 
-        let sql = """
-        SELECT id, season_id, date, body_closed, mind_closed, silence_closed,
-               ghost_day, score, silence_minutes_verified, silence_minutes_attested,
-               offline_intervals_json, reflection_note_id, created_at
-        FROM ghost_days
-        WHERE season_id = ?
-        ORDER BY date ASC;
-        """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
 
-        let statement = try SQLiteHelper.prepare(sql: sql, on: db)
-        defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
 
-        SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
-
-        var days: [GhostDay] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
-            if let day = extractDay(from: statement) {
-                days.append(day)
+            var days: [GhostDay] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let day = extractDay(from: statement) {
+                    days.append(day)
+                }
             }
+            return days
         }
-        return days
     }
 
     // MARK: - Mappers
 
-    private func extractSeason(from statement: OpaquePointer?) -> GhostSeason? {
-        guard let stmt = statement else { return nil }
-        guard let id = SQLiteHelper.columnText(at: 0, statement: stmt),
-              let name = SQLiteHelper.columnText(at: 1, statement: stmt),
-              let kindRaw = SQLiteHelper.columnText(at: 2, statement: stmt),
-              let doctrineRaw = SQLiteHelper.columnText(at: 5, statement: stmt) else {
-            return nil
-        }
-
-        let startDate = Date(timeIntervalSince1970: SQLiteHelper.columnDouble(at: 3, statement: stmt))
-        let endDate = Date(timeIntervalSince1970: SQLiteHelper.columnDouble(at: 4, statement: stmt))
-        let signedAt = Date(timeIntervalSince1970: SQLiteHelper.columnDouble(at: 6, statement: stmt))
-        let deviceID = SQLiteHelper.columnText(at: 7, statement: stmt) ?? "Mac"
+    private func extractSeason(from statement: OpaquePointer) -> GhostSeason? {
+        let id = SQLiteHelper.nonNullText(at: 0, statement: statement)
+        let name = SQLiteHelper.nonNullText(at: 1, statement: statement)
+        let kindRaw = SQLiteHelper.nonNullText(at: 2, statement: statement)
+        let doctrineRaw = SQLiteHelper.nonNullText(at: 5, statement: statement)
+        let startDate = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 3, statement: statement))
+        let endDate = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 4, statement: statement))
+        let signedAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 6, statement: statement))
+        let deviceID = SQLiteHelper.text(at: 7, statement: statement) ?? "Mac"
 
         let kind = GhostProtocolKind(rawValue: kindRaw) ?? .the120
         let doctrine = GhostDoctrine(rawValue: doctrineRaw) ?? .hard
@@ -188,24 +190,21 @@ public actor GhostStore {
         )
     }
 
-    private func extractDay(from statement: OpaquePointer?) -> GhostDay? {
-        guard let stmt = statement else { return nil }
-        guard let id = SQLiteHelper.columnText(at: 0, statement: stmt),
-              let seasonID = SQLiteHelper.columnText(at: 1, statement: stmt),
-              let dateStr = SQLiteHelper.columnText(at: 2, statement: stmt) else {
-            return nil
-        }
+    private func extractDay(from statement: OpaquePointer) -> GhostDay? {
+        let id = SQLiteHelper.nonNullText(at: 0, statement: statement)
+        let seasonID = SQLiteHelper.nonNullText(at: 1, statement: statement)
+        let dateStr = SQLiteHelper.nonNullText(at: 2, statement: statement)
 
-        let bodyClosed = SQLiteHelper.columnInt(at: 3, statement: stmt) == 1
-        let mindClosed = SQLiteHelper.columnInt(at: 4, statement: stmt) == 1
-        let silenceClosed = SQLiteHelper.columnInt(at: 5, statement: stmt) == 1
-        let ghostDay = SQLiteHelper.columnInt(at: 6, statement: stmt) == 1
-        let score = SQLiteHelper.columnInt(at: 7, statement: stmt)
-        let verifiedMin = SQLiteHelper.columnInt(at: 8, statement: stmt)
-        let attestedMin = SQLiteHelper.columnInt(at: 9, statement: stmt)
-        let intervalsStr = SQLiteHelper.columnText(at: 10, statement: stmt) ?? "[]"
-        let noteID = SQLiteHelper.columnText(at: 11, statement: stmt)
-        let createdAt = Date(timeIntervalSince1970: SQLiteHelper.columnDouble(at: 12, statement: stmt))
+        let bodyClosed = SQLiteHelper.int(at: 3, statement: statement) == 1
+        let mindClosed = SQLiteHelper.int(at: 4, statement: statement) == 1
+        let silenceClosed = SQLiteHelper.int(at: 5, statement: statement) == 1
+        let ghostDay = SQLiteHelper.int(at: 6, statement: statement) == 1
+        let score = SQLiteHelper.int(at: 7, statement: statement)
+        let verifiedMin = SQLiteHelper.int(at: 8, statement: statement)
+        let attestedMin = SQLiteHelper.int(at: 9, statement: statement)
+        let intervalsStr = SQLiteHelper.text(at: 10, statement: statement) ?? "[]"
+        let noteID = SQLiteHelper.text(at: 11, statement: statement)
+        let createdAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 12, statement: statement))
 
         let intervals = (try? jsonDecoder.decode([GhostOfflineInterval].self, from: Data(intervalsStr.utf8))) ?? []
 
