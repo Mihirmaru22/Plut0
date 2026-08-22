@@ -211,7 +211,9 @@ public struct NotesCanvasView: View {
         let serialized = CRDTTranslator.materializeContent(from: doc)
         self.lastLocalContentHash = serialized.hashValue
         let derivedTitle = NotePreviewGenerator.deriveTitle(from: serialized)
-        autosave.scheduleAutosave(noteID: doc.id, title: derivedTitle, content: serialized, engine: engine)
+        Task {
+            await autosave.scheduleAutosave(noteID: doc.id, title: derivedTitle, content: serialized, engine: engine)
+        }
     }
     
     private func togglePinCurrentNote() {
@@ -227,7 +229,9 @@ public struct NotesCanvasView: View {
             let serialized = CRDTTranslator.materializeContent(from: state.bridge.doc)
             self.lastLocalContentHash = serialized.hashValue
             let derivedTitle = NotePreviewGenerator.deriveTitle(from: serialized)
-            autosave.scheduleAutosave(noteID: noteID, title: derivedTitle, isPinned: newPinned, content: serialized, engine: engine)
+            Task {
+                await autosave.scheduleAutosave(noteID: noteID, title: derivedTitle, isPinned: newPinned, content: serialized, engine: engine)
+            }
         } else {
             Task {
                 try? await engine.updateNote(id: noteID, isPinned: newPinned)

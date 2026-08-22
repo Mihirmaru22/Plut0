@@ -17,6 +17,22 @@ public actor AutosaveCoordinator {
         self.syncBatchInterval = syncBatchInterval
     }
     
+    /// Schedules a debounced autosave write using the provided engine.
+    public func scheduleAutosave(
+        noteID: NoteID,
+        title: String,
+        isPinned: Bool? = nil,
+        content: NoteContent,
+        engine: NotesEngine
+    ) {
+        scheduleMaterialization(for: noteID) {
+            try? await engine.updateContent(content, for: noteID)
+            if let pinned = isPinned {
+                try? await engine.setPinned(pinned, noteID: noteID)
+            }
+        }
+    }
+    
     /// Debounces the materialization of a CRDT document into the SQLite read-view.
     public func scheduleMaterialization(
         for noteID: NoteID,

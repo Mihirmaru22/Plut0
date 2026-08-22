@@ -61,6 +61,36 @@ public final class NotesEngine: ObservableObject {
         try await createNoteUseCase.execute(in: folderID)
     }
     
+    public func createNote(title: String = "", folderID: FolderID? = nil) async throws -> Note {
+        let noteID = try await createNoteUseCase.execute(in: folderID)
+        if let note = try await repository.fetchNote(id: noteID) {
+            return note
+        }
+        return Note(id: noteID, folderID: folderID, title: title)
+    }
+    
+    public func updateNote(id: NoteID, title: String? = nil, isPinned: Bool? = nil, content: NoteContent? = nil) async throws {
+        if let title = title {
+            try await setTitle(title, for: id)
+        }
+        if let isPinned = isPinned {
+            try await setPinned(isPinned, noteID: id)
+        }
+        if let content = content {
+            try await updateContent(content, for: id)
+        }
+    }
+    
+    public func fetchNotes(folderID: FolderID? = nil, includeDeleted: Bool = false) async throws -> [NoteSummary] {
+        let query = NoteQuery(folderID: folderID, includeDeleted: includeDeleted)
+        return try await fetchNotes(matching: query)
+    }
+    
+    public func observeNotes(folderID: FolderID? = nil, includeDeleted: Bool = false) -> AsyncStream<[NoteSummary]> {
+        let query = NoteQuery(folderID: folderID, includeDeleted: includeDeleted)
+        return observeNotes(matching: query)
+    }
+    
     public func setTitle(_ title: String, for noteID: NoteID) async throws {
         try await updateNoteUseCase.setTitle(title, for: noteID)
     }
