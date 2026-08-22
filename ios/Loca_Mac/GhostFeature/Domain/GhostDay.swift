@@ -104,7 +104,7 @@ public struct GhostRidgePoint: Identifiable, Equatable, Sendable {
     public let isGhostDay: Bool
     public let isToday: Bool
     public let isSummitMarker: Bool
-    public let elevationMeters: Double
+    public var elevationMeters: Double
 
     public init(
         dayIndex: Int,

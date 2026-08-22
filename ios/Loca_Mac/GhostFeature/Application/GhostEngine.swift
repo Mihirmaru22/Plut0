@@ -442,6 +442,18 @@ public actor GhostEngine {
         public let weekMinutes: Int
         public let longestStretchMinutes: Int
         public let recentIntervals: [GhostOfflineInterval]
+
+        public init(
+            todayMinutes: Int = 0,
+            weekMinutes: Int = 0,
+            longestStretchMinutes: Int = 0,
+            recentIntervals: [GhostOfflineInterval] = []
+        ) {
+            self.todayMinutes = todayMinutes
+            self.weekMinutes = weekMinutes
+            self.longestStretchMinutes = longestStretchMinutes
+            self.recentIntervals = recentIntervals
+        }
     }
 
     public func fetchDarkHoursSummary() async throws -> DarkHoursSummary {
@@ -487,6 +499,20 @@ public actor GhostEngine {
         public var ratePercent: Double {
             totalDays > 0 ? (Double(completedDays) / Double(totalDays)) * 100.0 : 0.0
         }
+
+        public init(
+            ruleID: String,
+            title: String,
+            ring: GhostRing,
+            completedDays: Int,
+            totalDays: Int
+        ) {
+            self.ruleID = ruleID
+            self.title = title
+            self.ring = ring
+            self.completedDays = completedDays
+            self.totalDays = totalDays
+        }
     }
 
     public struct GhostEvolutionReport: Sendable {
@@ -496,6 +522,22 @@ public actor GhostEngine {
         public let silenceAdherence: Double
         public let ruleAdherences: [RuleAdherence]
         public let suggestion: String
+
+        public init(
+            weeklyGhostRate: Double = 0,
+            bodyAdherence: Double = 0,
+            mindAdherence: Double = 0,
+            silenceAdherence: Double = 0,
+            ruleAdherences: [RuleAdherence] = [],
+            suggestion: String = ""
+        ) {
+            self.weeklyGhostRate = weeklyGhostRate
+            self.bodyAdherence = bodyAdherence
+            self.mindAdherence = mindAdherence
+            self.silenceAdherence = silenceAdherence
+            self.ruleAdherences = ruleAdherences
+            self.suggestion = suggestion
+        }
     }
 
     public func fetchEvolutionReport() async throws -> GhostEvolutionReport {

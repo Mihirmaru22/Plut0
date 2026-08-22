@@ -24,8 +24,8 @@ public struct WinterArcPassportData: Sendable {
         days: [GhostDay] = [],
         receipts: [GhostReceipt] = [],
         photos: [GhostEngine.GhostPhotoArtifact] = [],
-        darkHours: GhostEngine.DarkHoursSummary = GhostEngine.DarkHoursSummary(todayMinutes: 0, weekMinutes: 0, longestStretchMinutes: 0, recentIntervals: []),
-        evolution: GhostEngine.GhostEvolutionReport = GhostEngine.GhostEvolutionReport(weeklyGhostRate: 0, bodyAdherence: 0, mindAdherence: 0, silenceAdherence: 0, ruleAdherences: [], suggestion: ""),
+        darkHours: GhostEngine.DarkHoursSummary = GhostEngine.DarkHoursSummary(),
+        evolution: GhostEngine.GhostEvolutionReport = GhostEngine.GhostEvolutionReport(),
         callsign: String? = nil
     ) {
         self.season = season
@@ -190,7 +190,7 @@ public enum WinterArcPassportPDFGenerator {
 
         // Outer Border Double Line
         context.saveGState()
-        context.setStrokeColor(cyanColor(alpha: 0.35))
+        context.setStrokeColor(cyanColor(alpha: 0.35).cgColor)
         context.setLineWidth(1.5)
         context.stroke(rect.insetBy(dx: 28, dy: 28))
         context.setLineWidth(0.6)
@@ -422,7 +422,7 @@ public enum WinterArcPassportPDFGenerator {
             let a: CGFloat = CGFloat(10 + l * 6)
             let phi: CGFloat = CGFloat(l) * (.pi / 4.0)
 
-            context.setStrokeColor(cyanColor(alpha: 0.06 + CGFloat(l) * 0.02))
+            context.setStrokeColor(cyanColor(alpha: 0.06 + CGFloat(l) * 0.02).cgColor)
             context.beginPath()
 
             let steps = 360
@@ -448,12 +448,12 @@ public enum WinterArcPassportPDFGenerator {
         context.saveGState()
 
         // Double Circle
-        context.setStrokeColor(cyanColor(alpha: 0.7))
+        context.setStrokeColor(cyanColor(alpha: 0.7).cgColor)
         context.setLineWidth(1.8)
         context.addArc(center: center, radius: radius, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
         context.strokePath()
 
-        context.setStrokeColor(cyanColor(alpha: 0.3))
+        context.setStrokeColor(cyanColor(alpha: 0.3).cgColor)
         context.setLineWidth(0.8)
         context.addArc(center: center, radius: radius - 6, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
         context.strokePath()
@@ -482,7 +482,7 @@ public enum WinterArcPassportPDFGenerator {
     private static func drawBiometricChip(context: CGContext, rect: CGRect) {
         context.saveGState()
         context.setFillColor(NSColor(red: 0.12, green: 0.14, blue: 0.18, alpha: 1.0).cgColor)
-        context.setStrokeColor(orangeColor(alpha: 0.8))
+        context.setStrokeColor(orangeColor(alpha: 0.8).cgColor)
         context.setLineWidth(1.0)
 
         let path = CGPath(roundedRect: rect, cornerWidth: 5, cornerHeight: 5, transform: nil)
@@ -490,7 +490,7 @@ public enum WinterArcPassportPDFGenerator {
         context.drawPath(using: .fillStroke)
 
         // Chip Pin Traces
-        context.setStrokeColor(orangeColor(alpha: 0.6))
+        context.setStrokeColor(orangeColor(alpha: 0.6).cgColor)
         context.setLineWidth(0.8)
         context.move(to: CGPoint(x: rect.minX + 10, y: rect.minY))
         context.addLine(to: CGPoint(x: rect.minX + 10, y: rect.maxY))
@@ -505,7 +505,7 @@ public enum WinterArcPassportPDFGenerator {
 
     private static func drawHolderPhoto(context: CGContext, rect: CGRect, photos: [GhostEngine.GhostPhotoArtifact]) {
         context.saveGState()
-        context.setStrokeColor(cyanColor(alpha: 0.4))
+        context.setStrokeColor(cyanColor(alpha: 0.4).cgColor)
         context.setLineWidth(1.0)
         context.stroke(rect)
 
@@ -530,7 +530,7 @@ public enum WinterArcPassportPDFGenerator {
 
         let center = CGPoint(x: rect.midX, y: rect.midY)
         // Hooded circle head
-        context.setFillColor(cyanColor(alpha: 0.3))
+        context.setFillColor(cyanColor(alpha: 0.3).cgColor)
         context.addArc(center: CGPoint(x: center.x, y: center.y + 15), radius: 24, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
         context.fillPath()
 
@@ -555,10 +555,10 @@ public enum WinterArcPassportPDFGenerator {
         context.translateBy(x: center.x, y: center.y)
         context.rotate(by: jitterDeg * (.pi / 180.0))
 
-        let color = isEarned ? (threshold >= 75 ? orangeColor(alpha: 0.9) : cyanColor(alpha: 0.9)) : NSColor(white: 0.25, alpha: 0.4).cgColor
+        let color = isEarned ? (threshold >= 75 ? orangeColor(alpha: 0.9) : cyanColor(alpha: 0.9)) : NSColor(white: 0.25, alpha: 0.4)
 
         // Outer Ring
-        context.setStrokeColor(color)
+        context.setStrokeColor(color.cgColor)
         context.setLineWidth(isEarned ? 1.5 : 0.8)
         if !isEarned {
             context.setLineDash(phase: 0, lengths: [3, 3])
@@ -572,9 +572,9 @@ public enum WinterArcPassportPDFGenerator {
         context.strokePath()
 
         if isEarned {
-            drawText(rank.rawValue.uppercased(), at: CGPoint(x: 0, y: 12), font: .systemFont(ofSize: 8, weight: .bold), color: NSColor(cgColor: color) ?? .white, alignment: .center)
-            drawText("DAY \(threshold)", at: CGPoint(x: 0, y: 0), font: .monospacedSystemFont(ofSize: 9, weight: .black), color: NSColor(cgColor: color) ?? .white, alignment: .center)
-            drawText("SEALED", at: CGPoint(x: 0, y: -14), font: .monospacedSystemFont(ofSize: 7, weight: .bold), color: NSColor(cgColor: color) ?? .white, alignment: .center, tracking: 1.0)
+            drawText(rank.rawValue.uppercased(), at: CGPoint(x: 0, y: 12), font: .systemFont(ofSize: 8, weight: .bold), color: color, alignment: .center)
+            drawText("DAY \(threshold)", at: CGPoint(x: 0, y: 0), font: .monospacedSystemFont(ofSize: 9, weight: .black), color: color, alignment: .center)
+            drawText("SEALED", at: CGPoint(x: 0, y: -14), font: .monospacedSystemFont(ofSize: 7, weight: .bold), color: color, alignment: .center, tracking: 1.0)
         } else {
             drawText("PENDING", at: CGPoint(x: 0, y: 4), font: .monospacedSystemFont(ofSize: 8, weight: .bold), color: NSColor(white: 0.35, alpha: 0.6), alignment: .center, tracking: 1.0)
             drawText("DAY \(threshold)", at: CGPoint(x: 0, y: -10), font: .monospacedSystemFont(ofSize: 7.5, weight: .medium), color: NSColor(white: 0.3, alpha: 0.6), alignment: .center)
@@ -612,7 +612,7 @@ public enum WinterArcPassportPDFGenerator {
                 let isPast = targetDate < today && !calendar.isDateInToday(targetDate)
 
                 if isGhost {
-                    context.setFillColor(cyanColor(alpha: 0.85))
+                    context.setFillColor(cyanColor(alpha: 0.85).cgColor)
                     context.fill(boxRect)
                 } else if isPast {
                     context.setFillColor(NSColor(white: 0.12, alpha: 1.0).cgColor)
@@ -654,7 +654,7 @@ public enum WinterArcPassportPDFGenerator {
             }
         }
 
-        context.setStrokeColor(cyanColor(alpha: 0.9))
+        context.setStrokeColor(cyanColor(alpha: 0.9).cgColor)
         context.setLineWidth(1.8)
         context.addPath(path)
         context.strokePath()
@@ -670,7 +670,7 @@ public enum WinterArcPassportPDFGenerator {
         context.restoreGState()
     }
 
-    private static func drawMicroArcGauge(context: CGContext, center: CGPoint, radius: CGFloat, percentage: Double, color: CGColor, label: String) {
+    private static func drawMicroArcGauge(context: CGContext, center: CGPoint, radius: CGFloat, percentage: Double, color: NSColor, label: String) {
         context.saveGState()
         // Background Circle
         context.setStrokeColor(NSColor(white: 0.15, alpha: 0.6).cgColor)
@@ -682,7 +682,7 @@ public enum WinterArcPassportPDFGenerator {
         let startAngle: CGFloat = -.pi / 2.0
         let endAngle: CGFloat = startAngle + (CGFloat(percentage) / 100.0) * 2.0 * .pi
 
-        context.setStrokeColor(color)
+        context.setStrokeColor(color.cgColor)
         context.setLineWidth(3.0)
         context.setLineCap(.round)
         context.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: false)
@@ -690,7 +690,7 @@ public enum WinterArcPassportPDFGenerator {
 
         // Percentage Text
         drawText("\(Int(percentage))%", at: CGPoint(x: center.x, y: center.y - 4), font: .monospacedSystemFont(ofSize: 10, weight: .bold), color: .white, alignment: .center)
-        drawText(label, at: CGPoint(x: center.x, y: center.y - radius - 14), font: .monospacedSystemFont(ofSize: 7.5, weight: .bold), color: NSColor(cgColor: color) ?? .white, alignment: .center)
+        drawText(label, at: CGPoint(x: center.x, y: center.y - radius - 14), font: .monospacedSystemFont(ofSize: 7.5, weight: .bold), color: color, alignment: .center)
         context.restoreGState()
     }
 
@@ -720,7 +720,7 @@ public enum WinterArcPassportPDFGenerator {
 
     private static func drawSovereignCompletionSeal(context: CGContext, center: CGPoint, radius: CGFloat) {
         context.saveGState()
-        context.setStrokeColor(orangeColor(alpha: 0.9))
+        context.setStrokeColor(orangeColor(alpha: 0.9).cgColor)
         context.setLineWidth(2.0)
         context.addArc(center: center, radius: radius, startAngle: 0, endAngle: 2 * .pi, clockwise: false)
         context.strokePath()
@@ -752,7 +752,7 @@ public enum WinterArcPassportPDFGenerator {
     private static func drawMRZBox(context: CGContext, rect: CGRect, data: WinterArcPassportData) {
         context.saveGState()
         context.setFillColor(NSColor(red: 0.02, green: 0.02, blue: 0.03, alpha: 1.0).cgColor)
-        context.setStrokeColor(cyanColor(alpha: 0.3))
+        context.setStrokeColor(cyanColor(alpha: 0.3).cgColor)
         context.setLineWidth(0.8)
 
         let path = CGPath(roundedRect: rect, cornerWidth: 4, cornerHeight: 4, transform: nil)
@@ -778,9 +778,9 @@ public enum WinterArcPassportPDFGenerator {
         drawText("PAGE \(pageNo) OF 04", at: CGPoint(x: rect.width - 44, y: y), font: .monospacedSystemFont(ofSize: 9, weight: .bold), color: NSColor(white: 0.45, alpha: 1.0), alignment: .right)
     }
 
-    private static func drawField(label: String, value: String, at point: CGPoint, valueColor: CGColor = NSColor.white.cgColor) {
+    private static func drawField(label: String, value: String, at point: CGPoint, valueColor: NSColor = .white) {
         drawText(label, at: point, font: .monospacedSystemFont(ofSize: 7.5, weight: .bold), color: NSColor(white: 0.45, alpha: 1.0), tracking: 1.0)
-        drawText(value, at: CGPoint(x: point.x, y: point.y - 14), font: .systemFont(ofSize: 11, weight: .bold), color: NSColor(cgColor: valueColor) ?? .white)
+        drawText(value, at: CGPoint(x: point.x, y: point.y - 14), font: .systemFont(ofSize: 11, weight: .bold), color: valueColor)
     }
 
     private static func drawMetricPill(title: String, value: String, at point: CGPoint) {
@@ -823,17 +823,17 @@ public enum WinterArcPassportPDFGenerator {
 
     // MARK: - Color Constants
 
-    private static func cyanColor(alpha: CGFloat = 1.0) -> CGColor {
-        NSColor(red: 0.0, green: 0.85, blue: 1.0, alpha: alpha).cgColor
+    private static func cyanColor(alpha: CGFloat = 1.0) -> NSColor {
+        NSColor(red: 0.0, green: 0.85, blue: 1.0, alpha: alpha)
     }
 
-    private static func orangeColor(alpha: CGFloat = 1.0) -> CGColor {
-        NSColor(red: 1.0, green: 0.55, blue: 0.15, alpha: alpha).cgColor
+    private static func orangeColor(alpha: CGFloat = 1.0) -> NSColor {
+        NSColor(red: 1.0, green: 0.55, blue: 0.15, alpha: alpha)
     }
 
     private enum ColorHex {
-        static let red = NSColor(red: 0.90, green: 0.30, blue: 0.18, alpha: 1.0).cgColor
-        static let blue = NSColor(red: 0.24, green: 0.39, blue: 0.87, alpha: 1.0).cgColor
-        static let cyan = NSColor(red: 0.0, green: 0.85, blue: 1.0, alpha: 1.0).cgColor
+        static let red = NSColor(red: 0.90, green: 0.30, blue: 0.18, alpha: 1.0)
+        static let blue = NSColor(red: 0.24, green: 0.39, blue: 0.87, alpha: 1.0)
+        static let cyan = NSColor(red: 0.0, green: 0.85, blue: 1.0, alpha: 1.0)
     }
 }
