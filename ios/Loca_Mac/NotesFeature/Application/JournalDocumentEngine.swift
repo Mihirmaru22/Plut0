@@ -45,7 +45,7 @@ public final class InMemoryJournalDocumentRepository: DocumentCoreRepository, @u
             entries[id] = note
             eventBus.publish(.noteUpdated(id))
             
-        case .delete(let id), .permanentlyDelete(let id):
+        case .markDeleted(let id), .permanentlyDelete(let id):
             entries.removeValue(forKey: id)
             eventBus.publish(.noteDeleted(id))
             
