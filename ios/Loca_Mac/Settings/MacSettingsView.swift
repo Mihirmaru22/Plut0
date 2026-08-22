@@ -47,7 +47,6 @@ struct MacSettingsView: View {
     @State private var showingResetConfirmation = false
     @State private var showResetSuccess = false
     @State private var resetSuccessMessage = ""
-    @State private var showStudioFeatureTour = false
 
     // Accent Palette
     private var accentColor: Color {
@@ -122,8 +121,8 @@ struct MacSettingsView: View {
                     dangerZoneControlBlock
                 }
 
-                // Studio Notes Feature Guide Tile
-                bentoTile(title: "Studio Notes & BrainStorm Guide", icon: "sparkles", accent: Color(red: 0.95, green: 0.75, blue: 0.25)) {
+                // Studio Guide Tile
+                bentoTile(title: "App Spotlight & Shortcuts Guide", icon: "sparkles", accent: Color(red: 0.95, green: 0.75, blue: 0.25)) {
                     studioNotesGuideBlock
                 }
 
@@ -138,11 +137,6 @@ struct MacSettingsView: View {
             .frame(maxWidth: 960)
         }
         .background(DS.Color.background)
-        .overlay {
-            if showStudioFeatureTour {
-                BrainStormFeatureTourOverlay(isPresented: $showStudioFeatureTour)
-            }
-        }
         .confirmationDialog(
             "Reset Whole App Data?",
             isPresented: $showingResetConfirmation,
@@ -566,28 +560,6 @@ struct MacSettingsView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color(red: 0.95, green: 0.75, blue: 0.25), in: RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-
-                // 2. Studio Notes Guide
-                Button {
-                    PlutoSoundEngine.shared.play(.tabSwitch)
-                    Haptics.impact(.medium)
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        showStudioFeatureTour = true
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "note.text")
-                            .font(.system(size: 11, weight: .bold))
-                        Text("Studio Notes Guide")
-                            .font(.system(size: 11.5, weight: .semibold))
-                    }
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(DS.Color.surface, in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }

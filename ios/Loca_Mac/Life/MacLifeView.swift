@@ -31,21 +31,21 @@ struct MacLifeView: View {
     var body: some View {
         VStack(spacing: 0) {
 
-            // Top Header: Sleek, Minimalist Apple Glass Bar
+            // Top Header: Linear Obsidian Minimalist Precision Bar
             HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Life")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.white)
+                HStack(spacing: 8) {
+                    Image(systemName: selectedVariant.icon)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(DS.Theme.accent)
 
                     Text(selectedVariant.shortTitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.white.opacity(0.5))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.white)
                 }
 
                 Spacer()
 
-                // Sleek Segmented Glass Switcher
+                // Sleek Segmented Switcher
                 HStack(spacing: 2) {
                     ForEach(LifeDesignVariant.allCases) { variant in
                         let isSelected = selectedVariant == variant
@@ -61,25 +61,25 @@ struct MacLifeView: View {
                                 Text(variant.shortTitle)
                                     .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
                             }
-                            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.6))
+                            .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
                             .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 4.5)
                             .background(
                                 isSelected ? Color.white.opacity(0.12) : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 6)
+                                in: RoundedRectangle(cornerRadius: 5)
                             )
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(PlutoFastButtonStyle())
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(3)
-                .background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
+                .padding(2.5)
+                .background(DS.Theme.sidebar, in: RoundedRectangle(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(DS.Theme.border, lineWidth: 1))
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color(nsColor: NSColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)))
+            .padding(.vertical, 7)
+            .background(DS.Theme.surface)
 
             Divider().opacity(0.20)
 

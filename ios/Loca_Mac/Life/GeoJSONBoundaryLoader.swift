@@ -141,15 +141,19 @@ final class GeoJSONBoundaryLoader {
                     continue
                 }
 
-                // Extract polygons from geometry
+                // Extract polygons from geometry with Douglas-Peucker simplification
                 var statePolygons: [[[CLLocationCoordinate2D]]] = cache[stateCode] ?? []
 
                 for geometry in feature.geometry {
                     if let polygon = geometry as? MKPolygon {
-                        statePolygons.append(extractRings(from: polygon))
+                        let rings = extractRings(from: polygon)
+                        let simplified = rings.map { Self.simplify(coordinates: $0, tolerance: 0.012) }
+                        statePolygons.append(simplified)
                     } else if let multiPolygon = geometry as? MKMultiPolygon {
                         for poly in multiPolygon.polygons {
-                            statePolygons.append(extractRings(from: poly))
+                            let rings = extractRings(from: poly)
+                            let simplified = rings.map { Self.simplify(coordinates: $0, tolerance: 0.012) }
+                            statePolygons.append(simplified)
                         }
                     }
                 }
@@ -157,7 +161,7 @@ final class GeoJSONBoundaryLoader {
                 cache[stateCode] = statePolygons
             }
 
-            print("✅ GeoJSONBoundaryLoader: Loaded boundaries for \(cache.count) states/UTs")
+            print("✅ GeoJSONBoundaryLoader: Loaded & simplified boundaries for \(cache.count) states/UTs")
 
         } catch {
             print("❌ GeoJSONBoundaryLoader: Failed to decode GeoJSON — \(error)")
@@ -185,6 +189,53 @@ final class GeoJSONBoundaryLoader {
         }
 
         return rings
+    }
+
+    // MARK: - Douglas-Peucker Coordinate Simplification (60 FPS GPU Optimization)
+
+    private static func simplify(coordinates: [CLLocationCoordinate2D], tolerance: Double) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 4 else { return coordinates }
+
+        var maxDistance = 0.0
+        var index = 0
+        let first = coordinates.first!
+        let last = coordinates.last!
+
+        for i in 1..<(coordinates.count - 1) {
+            let distance = perpendicularDistance(point: coordinates[i], lineStart: first, lineEnd: last)
+            if distance > maxDistance {
+                maxDistance = distance
+                index = i
+            }
+        }
+
+        if maxDistance > tolerance {
+            let left = simplify(coordinates: Array(coordinates[0...index]), tolerance: tolerance)
+            let right = simplify(coordinates: Array(coordinates[index..<coordinates.count]), tolerance: tolerance)
+            return Array(left.dropLast()) + right
+        } else {
+            return [first, last]
+        }
+    }
+
+    private static func perpendicularDistance(
+        point: CLLocationCoordinate2D,
+        lineStart: CLLocationCoordinate2D,
+        lineEnd: CLLocationCoordinate2D
+    ) -> Double {
+        let dx = lineEnd.longitude - lineStart.longitude
+        let dy = lineEnd.latitude - lineStart.latitude
+
+        if dx == 0 && dy == 0 {
+            return hypot(point.longitude - lineStart.longitude, point.latitude - lineStart.latitude)
+        }
+
+        let t = ((point.longitude - lineStart.longitude) * dx + (point.latitude - lineStart.latitude) * dy) / (dx * dx + dy * dy)
+        let clampedT = max(0.0, min(1.0, t))
+        let projX = lineStart.longitude + clampedT * dx
+        let projY = lineStart.latitude + clampedT * dy
+
+        return hypot(point.longitude - projX, point.latitude - projY)
     }
 
     /// Fuzzy matching: strip diacritics and compare lowercased.

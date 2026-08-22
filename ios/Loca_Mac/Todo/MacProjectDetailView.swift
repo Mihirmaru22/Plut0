@@ -338,16 +338,12 @@ struct MacProjectDetailView: View {
     }
     
     private var briefEditorSurface: some View {
-        MacRichTextEditor(
-            attributedText: $localBriefAttr,
-            plainText: $localBriefPlain,
-            preset: .standard,
-            isEditable: true,
-            onTextChange: { updatedAttr, updatedPlain in
-                handleBriefChange(updatedAttr: updatedAttr, updatedPlain: updatedPlain)
-            }
+        PlutoDocumentEditor(
+            repository: ProjectBriefEngine.shared,
+            documentID: NoteID(raw: project.id),
+            memory: .brief,
+            config: .briefDefault
         )
-        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     

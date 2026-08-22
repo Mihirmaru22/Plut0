@@ -32,14 +32,11 @@ struct LOCACommands: Commands {
             Button("Today") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.today) }
                 .keyboardShortcut("1", modifiers: [.command])
 
-            Button("Notes") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.notes) }
+            Button("Studio") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.studio) }
                 .keyboardShortcut("2", modifiers: [.command])
 
-            Button("Studio") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.studio) }
-                .keyboardShortcut("3", modifiers: [.command])
-
             Button("Life") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.life) }
-                .keyboardShortcut("4", modifiers: [.command])
+                .keyboardShortcut("3", modifiers: [.command])
 
             Button("Settings") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.settings) }
                 .keyboardShortcut(",", modifiers: [.command])
@@ -132,6 +129,5 @@ extension Notification.Name {
     static let locaOpenTask         = Notification.Name("com.mihirmaru.loca.mac.openTask")
     static let locaShowOnboarding   = Notification.Name("com.mihirmaru.loca.mac.showOnboarding")
     static let locaDeepLink         = Notification.Name("com.mihirmaru.loca.mac.deepLink")
-    static let locaOpenNoteById     = Notification.Name("com.mihirmaru.loca.mac.openNoteById")
     static let locaLockVault        = Notification.Name("com.mihirmaru.loca.mac.lockVault")
 }

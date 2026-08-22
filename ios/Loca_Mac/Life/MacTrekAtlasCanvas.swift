@@ -7,18 +7,17 @@ import UniformTypeIdentifiers
 
 enum TrekFilter: String, CaseIterable, Identifiable {
     case all          = "All"
-    case himalayas    = "Himalayas 🏔️"
-    case westernGhats = "Western Ghats 🌿"
-    case gujarat      = "Gujarat 🦁"
-    case maharashtra  = "Maharashtra 🏰"
-    case rajasthan    = "Rajasthan 🏜️"
+    case himalayas    = "Himalayas"
+    case westernGhats = "Western Ghats"
+    case gujarat      = "Gujarat"
+    case maharashtra  = "Maharashtra"
     case conquered    = "Conquered 🏆"
     case wishlist     = "Wishlist 📍"
 
     var id: String { rawValue }
 }
 
-// MARK: - MacTrekAtlasCanvas (Minimalist Sovereign Expedition & Mountain Atlas)
+// MARK: - MacTrekAtlasCanvas (Clean Minimalist Mountain Atlas)
 
 struct MacTrekAtlasCanvas: View {
 
@@ -30,15 +29,9 @@ struct MacTrekAtlasCanvas: View {
     @State private var selectedFilter: TrekFilter = .all
     @State private var isLogModalPresented: Bool = false
     @State private var isTrophyCabinetPresented: Bool = false
-    @State private var isWatchSyncPresented: Bool = false
     @State private var passportTrek: TrekRecord? = nil
-    @State private var quickLookTrek: TrekRecord? = nil
-    @State private var quickLookPhotoIndex: Int = 0
-    @State private var isFlyingTrail: Bool = false
-    @State private var scrubCoordinate: CLLocationCoordinate2D? = nil
 
-    // MARK: - Filtered Treks
-
+    // Filtered Treks
     private var activeTreks: [TrekRecord] {
         allTreks.filter { !$0.isArchived }
     }
@@ -77,12 +70,7 @@ struct MacTrekAtlasCanvas: View {
             case .maharashtra:
                 return trek.region.localizedCaseInsensitiveContains("Maharashtra") ||
                        trek.region.localizedCaseInsensitiveContains("Sahyadri") ||
-                       trek.region.localizedCaseInsensitiveContains("Kalsubai") ||
-                       trek.region.localizedCaseInsensitiveContains("Harishchandragad")
-            case .rajasthan:
-                return trek.region.localizedCaseInsensitiveContains("Rajasthan") ||
-                       trek.region.localizedCaseInsensitiveContains("Aravalli") ||
-                       trek.region.localizedCaseInsensitiveContains("Abu")
+                       trek.region.localizedCaseInsensitiveContains("Kalsubai")
             case .conquered:
                 return trek.status == .conquered
             case .wishlist:
@@ -95,41 +83,39 @@ struct MacTrekAtlasCanvas: View {
         activeTreks.filter { $0.status == .conquered }
     }
 
-    private var currentRank: ExplorerRank {
-        MountaineerRankEngine.currentRank(conqueredTreks: conqueredTreks)
+    private var totalAscendedMeters: Int {
+        conqueredTreks.reduce(0) { $0 + Int($1.elevationMeters) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
 
-            // 1. MINIMALIST EXPEDITION TOP HEADER
-            minimalTopBar
+            // 1. Clean Top Header
+            topHeaderBar
 
-            Divider().opacity(0.18)
+            Divider().opacity(0.12)
 
-            // 2. MAIN 2-PANE SPATIAL MAP WORKSPACE
+            // 2. 2-Pane Workspace (Directory List + Map Canvas)
             HSplitView {
-                // Left Column: Peak Directory (320–380pt)
+                // Left Column: Mountain Directory
                 VStack(spacing: 0) {
-                    peakSearchAndFilterHeader
-                    Divider().opacity(0.15)
+                    searchAndFilterHeader
+                    Divider().opacity(0.12)
                     peakListScrollView
                 }
-                .frame(minWidth: 300, idealWidth: 330, maxWidth: 400)
-                .background(Color(nsColor: NSColor(red: 0.10, green: 0.10, blue: 0.11, alpha: 1.0)))
+                .frame(minWidth: 280, idealWidth: 320, maxWidth: 380)
+                .background(DS.Theme.sidebar)
 
-                // Right Column: Full-Canvas Topo Map & Floating Peak Inspector
+                // Right Column: Topo Map & Floating Peak Inspector
                 ZStack(alignment: .bottomTrailing) {
                     MacTrekMapView(
                         treks: filteredTreks,
                         selectedTrek: selectedTrek,
-                        scrubCoordinate: scrubCoordinate,
-                        isFlyingTrail: isFlyingTrail,
-                        onFinishFlyTrail: {
-                            isFlyingTrail = false
-                        },
+                        scrubCoordinate: nil,
+                        isFlyingTrail: false,
+                        onFinishFlyTrail: {},
                         onSelectTrek: { trek in
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                                 selectedTrek = trek
                             }
                             Haptics.impact(.light)
@@ -137,182 +123,132 @@ struct MacTrekAtlasCanvas: View {
                     )
                     .edgesIgnoringSafeArea(.all)
 
-                    // Floating Glassmorphic Peak Inspector Card
+                    // Clean Floating Peak Inspector Card
                     if let trek = selectedTrek {
-                        floatingPeakInspector(trek: trek)
+                        cleanPeakInspector(trek: trek)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
-                            .padding(18)
+                            .padding(16)
                     }
                 }
-                .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minWidth: 440, maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .sheet(isPresented: $isLogModalPresented) {
-            LogTrekModal { newTrek in
-                modelContext.insert(newTrek)
-                try? modelContext.save()
-                withAnimation {
-                    selectedTrek = newTrek
-                }
-                Haptics.notification(.success)
-            }
+        .sheet(item: $passportTrek) { trek in
+            ExpeditionPassportModal(trek: trek, onDismiss: { passportTrek = nil })
+                .frame(minWidth: 700, minHeight: 600)
         }
         .sheet(isPresented: $isTrophyCabinetPresented) {
-            MountaineerTrophyCabinetModal(
-                conqueredTreks: conqueredTreks,
-                allTreks: activeTreks,
-                onDismiss: {
-                    isTrophyCabinetPresented = false
+            MountaineerTrophyCabinetModal(conqueredTreks: conqueredTreks, allTreks: activeTreks, onDismiss: { isTrophyCabinetPresented = false })
+                .frame(minWidth: 640, minHeight: 520)
+        }
+        .sheet(isPresented: $isLogModalPresented) {
+            MacLogPeakModal(
+                onDismiss: { isLogModalPresented = false },
+                onPeakCreated: { newPeak in
+                    selectedTrek = newPeak
                 }
             )
         }
-        .sheet(item: $passportTrek) { trek in
-            ExpeditionPassportModal(trek: trek) {
-                passportTrek = nil
-            }
-        }
-        .sheet(isPresented: $isWatchSyncPresented) {
-            AppleWatchTrekSyncModal(allTreks: activeTreks) {
-                isWatchSyncPresented = false
-            }
-        }
         .onAppear {
-            DispatchQueue.main.async {
-                TrekSeeder.seedIfNeeded(context: modelContext)
-                if selectedTrek == nil {
-                    selectedTrek = filteredTreks.first
-                }
+            TrekSeeder.seedIfNeeded(context: modelContext)
+            if selectedTrek == nil {
+                selectedTrek = activeTreks.first(where: { $0.name == "Mount Everest" }) ?? activeTreks.first
             }
         }
     }
 
-    // MARK: - Minimalist Top Bar
+    // MARK: - Top Header Bar
 
-    private var minimalTopBar: some View {
+    private var topHeaderBar: some View {
         HStack(spacing: 12) {
-            
-            // Left: Title & Live Elevation Telemetry
-            HStack(spacing: 8) {
-                Image(systemName: "mountain.2.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.cyan)
+            Image(systemName: "mountain.2.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(DS.Theme.amber)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Expeditions & Mountain Atlas")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.white)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Mountain Atlas")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.white)
 
-                    Text("\(conqueredTreks.count) Conquered · Rank: \(currentRank.title) · \(Int(conqueredTreks.compactMap(\.elevationGainMeters).reduce(0, +)).formatted()) m Vertical Ascended")
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.55))
-                }
+                Text("\(conqueredTreks.count) Conquered · \(totalAscendedMeters.formatted())m Total Ascent")
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(DS.Theme.textSecondary)
             }
 
             Spacer()
 
-            // Right Actions: Trophy Cabinet | Watch Sync | + Log Peak
-            HStack(spacing: 8) {
-                
-                // Trophy Cabinet
-                Button {
-                    isTrophyCabinetPresented = true
-                    Haptics.impact(.medium)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.yellow)
-                        Text("Trophies")
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-                    .contentShape(Rectangle())
+            // Trophies Button
+            Button {
+                isTrophyCabinetPresented = true
+                Haptics.impact(.light)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 11))
+                    Text("Trophies")
+                        .font(.system(size: 11.5, weight: .semibold))
                 }
-                .buttonStyle(PlutoFastButtonStyle())
-                .help("Open Trophy Cabinet & Summit Badges")
-
-                // Apple Watch Sync
-                Button {
-                    isWatchSyncPresented = true
-                    Haptics.impact(.medium)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "applewatch")
-                            .font(.system(size: 11.5, weight: .bold))
-                            .foregroundStyle(Color.orange)
-                        Text("Watch Sync")
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlutoFastButtonStyle())
-                .help("Sync summit routes with Apple Watch")
-
-                // + Log Peak
-                Button {
-                    isLogModalPresented = true
-                    Haptics.impact(.medium)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .bold))
-                        Text("Log Peak")
-                            .font(.system(size: 11.5, weight: .bold))
-                    }
-                    .foregroundStyle(Color.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(Color(red: 0.95, green: 0.75, blue: 0.25), in: RoundedRectangle(cornerRadius: 6))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlutoFastButtonStyle())
+                .foregroundStyle(Color.white.opacity(0.85))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.08), lineWidth: 1))
             }
+            .buttonStyle(.plain)
+
+            // Log Peak Action
+            Button {
+                isLogModalPresented = true
+                Haptics.impact(.light)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Log Peak")
+                        .font(.system(size: 11.5, weight: .bold))
+                }
+                .foregroundStyle(Color.black)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 5)
+                .background(DS.Theme.amber, in: RoundedRectangle(cornerRadius: 6))
+                .shadow(color: DS.Theme.amber.opacity(0.35), radius: 5, x: 0, y: 1)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color(nsColor: NSColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)))
+        .background(DS.Theme.surface)
     }
 
     // MARK: - Search & Filter Header
 
-    private var peakSearchAndFilterHeader: some View {
+    private var searchAndFilterHeader: some View {
         VStack(spacing: 8) {
-            
             // Search Field
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.white.opacity(0.4))
+                    .font(.system(size: 11))
+                    .foregroundStyle(DS.Theme.textTertiary)
 
-                TextField("Search mountains, regions...", text: $searchText)
+                TextField("Search peaks, ranges...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
 
                 if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
+                    Button { searchText = "" } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.4))
+                            .foregroundStyle(DS.Theme.textTertiary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5.5)
+            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Theme.border, lineWidth: 1))
 
-            // Minimal Horizontal Filter Pills
+            // Filter Pills
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
                     ForEach(TrekFilter.allCases) { filter in
@@ -324,23 +260,21 @@ struct MacTrekAtlasCanvas: View {
                             Haptics.impact(.light)
                         } label: {
                             Text(filter.rawValue)
-                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                                .foregroundStyle(isSelected ? Color.black : Color.white.opacity(0.7))
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 4)
+                                .font(.system(size: 10.5, weight: isSelected ? .bold : .medium))
+                                .foregroundStyle(isSelected ? Color.black : DS.Theme.textSecondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3.5)
                                 .background(
-                                    isSelected ? Color(red: 0.95, green: 0.75, blue: 0.25) : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 5)
+                                    isSelected ? DS.Theme.amber : Color.white.opacity(0.04),
+                                    in: RoundedRectangle(cornerRadius: 4)
                                 )
-                                .contentShape(Rectangle())
                         }
-                        .buttonStyle(PlutoFastButtonStyle())
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(.vertical, 2)
             }
         }
-        .padding(12)
+        .padding(10)
     }
 
     // MARK: - Peak Directory ScrollView
@@ -349,15 +283,10 @@ struct MacTrekAtlasCanvas: View {
         ScrollView {
             LazyVStack(spacing: 4) {
                 if filteredTreks.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "mountain.2")
-                            .font(.system(size: 28))
-                            .foregroundStyle(Color.white.opacity(0.3))
-                        Text("No mountain peaks found")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.white.opacity(0.4))
-                    }
-                    .padding(.top, 40)
+                    Text("No mountain peaks found")
+                        .font(.system(size: 11))
+                        .foregroundStyle(DS.Theme.textTertiary)
+                        .padding(.top, 30)
                 } else {
                     ForEach(filteredTreks) { trek in
                         let isSelected = selectedTrek?.id == trek.id
@@ -369,384 +298,197 @@ struct MacTrekAtlasCanvas: View {
                             }
                             Haptics.impact(.light)
                         } label: {
-                            HStack(spacing: 10) {
-                                
-                                // Status Icon
-                                Image(systemName: isConquered ? "trophy.fill" : "mappin.and.ellipse")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(isConquered ? Color.yellow : Color.white.opacity(0.4))
-                                    .frame(width: 24, height: 24)
-                                    .background(isConquered ? Color.yellow.opacity(0.15) : Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 5))
+                            HStack(spacing: 8) {
+                                Image(systemName: isConquered ? "trophy.fill" : "mountain.2")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(isConquered ? DS.Theme.amber : DS.Theme.textTertiary)
+                                    .frame(width: 22, height: 22)
+                                    .background(
+                                        isConquered ? DS.Theme.amber.opacity(0.15) : Color.white.opacity(0.04),
+                                        in: RoundedRectangle(cornerRadius: 4)
+                                    )
 
-                                // Name & Region
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 1) {
                                     Text(trek.name)
-                                        .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
+                                        .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                                         .foregroundStyle(Color.white)
                                         .lineLimit(1)
 
                                     Text("\(trek.region), \(trek.country)")
-                                        .font(.system(size: 10.5))
-                                        .foregroundStyle(Color.white.opacity(0.45))
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(DS.Theme.textSecondary)
                                         .lineLimit(1)
                                 }
 
-                                Spacer()
+                                Spacer(minLength: 4)
 
-                                // Elevation Badge
                                 Text("\(Int(trek.elevationMeters).formatted()) m")
-                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(isConquered ? Color.cyan : Color.white.opacity(0.7))
-                                    .padding(.horizontal, 6)
+                                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(isConquered ? DS.Theme.cyan : DS.Theme.textSecondary)
+                                    .padding(.horizontal, 5)
                                     .padding(.vertical, 2)
-                                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                                    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 3))
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(
-                                isSelected
-                                    ? Color.accentColor.opacity(0.18)
-                                    : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 7)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 7)
-                                    .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.clear, lineWidth: 1)
-                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .machinedCard(isHovered: false, isSelected: isSelected, cornerRadius: 6, accent: DS.Theme.amber)
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(PlutoFastButtonStyle())
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(6)
         }
     }
 
-    // MARK: - Floating Peak Inspector Card (Apple Maps Glassmorphic Style)
+    // MARK: - Clean Floating Peak Inspector Card
 
-    private func floatingPeakInspector(trek: TrekRecord) -> some View {
+    private func cleanPeakInspector(trek: TrekRecord) -> some View {
         let isConquered = trek.status == .conquered
 
         return VStack(alignment: .leading, spacing: 10) {
-            
             // Header: Title, Region, Close Button
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(trek.name)
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 14.5, weight: .bold))
                             .foregroundStyle(Color.white)
 
                         if isConquered {
                             Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.yellow)
+                                .font(.system(size: 12))
+                                .foregroundStyle(DS.Theme.amber)
                         }
                     }
 
                     Text("\(trek.region), \(trek.country)")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color.white.opacity(0.55))
+                        .foregroundStyle(DS.Theme.textSecondary)
                 }
 
                 Spacer()
 
                 Button {
-                    withAnimation(.easeOut(duration: 0.15)) {
+                    withAnimation(.easeOut(duration: 0.12)) {
                         selectedTrek = nil
                     }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.white.opacity(0.4))
+                        .font(.system(size: 13))
+                        .foregroundStyle(DS.Theme.textTertiary)
                 }
                 .buttonStyle(.plain)
             }
 
-            Divider().opacity(0.15)
+            Divider().opacity(0.12)
 
-            // Metrics Grid
+            // Clean 3-Metric Row (Altitude, Gain, Difficulty)
             HStack(spacing: 6) {
-                metricPill(label: "ELEVATION", value: "\(Int(trek.elevationMeters).formatted()) m", color: Color.cyan)
+                metricBox(label: "ALTITUDE", value: "\(Int(trek.elevationMeters).formatted()) m", accent: DS.Theme.cyan)
                 if let gain = trek.formattedGain {
-                    metricPill(label: "VERT GAIN", value: gain, color: Color.purple)
+                    metricBox(label: "VERT GAIN", value: gain, accent: DS.Theme.violet)
                 }
-                metricPill(label: "DIFFICULTY", value: trek.difficulty.title, color: Color(hex: trek.difficulty.badgeColorHex) ?? Color.orange)
+                metricBox(label: "DIFFICULTY", value: trek.difficulty.title, accent: DS.Theme.amber)
             }
 
-            // Elevation Profile Mini-Chart
-            TrekElevationProfileChart(
-                trek: trek,
-                points: TrekElevationProfileEngine.generateProfile(for: trek),
-                onScrubPoint: { pt in
-                    self.scrubCoordinate = pt?.coordinate
-                }
-            )
-            .frame(height: 70)
-
-            Divider().opacity(0.15)
+            Divider().opacity(0.12)
 
             // Action Buttons
             HStack(spacing: 8) {
-                
-                // Passport Modal Trigger
                 Button {
                     passportTrek = trek
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Image(systemName: "book.pages.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10.5))
                         Text("Passport")
-                            .font(.system(size: 11.5, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundStyle(Color.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 28)
-                    .background(Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
-                    .contentShape(Rectangle())
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.10), lineWidth: 1))
                 }
-                .buttonStyle(PlutoFastButtonStyle())
+                .buttonStyle(.plain)
 
-                // Status Toggle (Conquer / Wishlist)
                 Button {
                     toggleTrekStatus(trek)
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Image(systemName: isConquered ? "arrow.uturn.backward" : "trophy.fill")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10.5, weight: .bold))
                         Text(isConquered ? "Mark Wishlist" : "Conquer 🏆")
-                            .font(.system(size: 11.5, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                     }
                     .foregroundStyle(isConquered ? Color.white : Color.black)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 28)
+                    .padding(.vertical, 6)
                     .background(
-                        isConquered
-                            ? Color.white.opacity(0.12)
-                            : Color(red: 0.95, green: 0.75, blue: 0.25),
+                        isConquered ? Color.white.opacity(0.10) : DS.Theme.amber,
                         in: RoundedRectangle(cornerRadius: 6)
                     )
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PlutoFastButtonStyle())
+                .buttonStyle(.plain)
             }
         }
-        .padding(14)
-        .frame(width: 320)
+        .padding(12)
+        .frame(width: 290)
         .background(
-            Color(nsColor: NSColor(red: 0.12, green: 0.12, blue: 0.13, alpha: 0.96)),
-            in: RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(DS.Theme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(DS.Theme.border, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.4), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.45), radius: 12, x: 0, y: 6)
     }
 
-    private func metricPill(label: String, value: String, color: Color) -> some View {
+    private func metricBox(label: String, value: String, accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.4))
+                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                .foregroundStyle(DS.Theme.textTertiary)
             Text(value)
-                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(color)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(accent)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 5))
+        .padding(5)
+        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 4))
     }
 
     private func toggleTrekStatus(_ trek: TrekRecord) {
-        if trek.status == .conquered {
-            trek.status = .wishlist
-            trek.dateConquered = nil
-        } else {
-            trek.status = .conquered
-            trek.dateConquered = Date()
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+            if trek.status == .conquered {
+                trek.status = .wishlist
+                trek.dateConquered = nil
+            } else {
+                trek.status = .conquered
+                trek.dateConquered = Date.now
+                Haptics.notify(.success)
+            }
+            try? modelContext.save()
         }
-        try? modelContext.save()
-        Haptics.notification(.success)
     }
-}
 
-// MARK: - LogTrekModal
-
-struct LogTrekModal: View {
-    @Environment(\.dismiss) private var dismiss
-    let onSave: (TrekRecord) -> Void
-
-    @State private var name: String = ""
-    @State private var region: String = "Himalayas"
-    @State private var country: String = "India"
-    @State private var elevationText: String = ""
-    @State private var vertGainText: String = ""
-    @State private var status: TrekStatus = .conquered
-    @State private var difficulty: TrekDifficulty = .moderate
-    @State private var notes: String = ""
-
-    var body: some View {
-        VStack(spacing: 0) {
-            
-            // Header
-            HStack {
-                Text("Log Mountain Peak")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.white)
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.white.opacity(0.6))
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-
-            Divider().opacity(0.15)
-
-            // Form Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    
-                    // Peak Name
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("PEAK / MOUNTAIN NAME")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                        TextField("e.g. Mount Everest, Kalsubai", text: $name)
-                            .textFieldStyle(.plain)
-                            .padding(8)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                    }
-
-                    // Region & Country
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("REGION / RANGE")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            TextField("e.g. Himalayas, Sahyadri", text: $region)
-                                .textFieldStyle(.plain)
-                                .padding(8)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("COUNTRY")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            TextField("e.g. India, Nepal", text: $country)
-                                .textFieldStyle(.plain)
-                                .padding(8)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                        }
-                    }
-
-                    // Elevation & Vertical Gain
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("ALTITUDE (METERS)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            TextField("e.g. 8848", text: $elevationText)
-                                .textFieldStyle(.plain)
-                                .padding(8)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("VERTICAL GAIN (M)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            TextField("e.g. 1200", text: $vertGainText)
-                                .textFieldStyle(.plain)
-                                .padding(8)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                        }
-                    }
-
-                    // Status & Difficulty
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("STATUS")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            Picker("", selection: $status) {
-                                ForEach(TrekStatus.allCases, id: \.self) { s in
-                                    Text(s.title).tag(s)
-                                }
-                            }
-                            .labelsHidden()
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("DIFFICULTY")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.5))
-                            Picker("", selection: $difficulty) {
-                                ForEach(TrekDifficulty.allCases, id: \.self) { d in
-                                    Text(d.title).tag(d)
-                                }
-                            }
-                            .labelsHidden()
-                        }
-                    }
-
-                    // Notes
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("EXPEDITION NOTES")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.white.opacity(0.5))
-                        TextEditor(text: $notes)
-                            .font(.system(size: 12))
-                            .frame(height: 60)
-                            .padding(4)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
-                    }
-                }
-                .padding(20)
-            }
-
-            Divider().opacity(0.15)
-
-            // Bottom Actions
-            HStack {
-                Spacer()
-                Button {
-                    let elevation = Double(elevationText) ?? 1000.0
-                    let vertGain = Double(vertGainText)
-                    let newTrek = TrekRecord(
-                        name: name.isEmpty ? "Untitled Peak" : name,
-                        region: region.isEmpty ? "Himalayas" : region,
-                        country: country.isEmpty ? "India" : country,
-                        latitude: 28.0,
-                        longitude: 84.0,
-                        elevationMeters: elevation,
-                        elevationGainMeters: vertGain,
-                        status: status,
-                        difficulty: difficulty,
-                        personalNotes: notes
-                    )
-                    onSave(newTrek)
-                    dismiss()
-                } label: {
-                    Text("Save Peak")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 7)
-                        .background(Color(red: 0.95, green: 0.75, blue: 0.25), in: RoundedRectangle(cornerRadius: 6))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PlutoFastButtonStyle())
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-        }
-        .frame(width: 440, height: 460)
-        .background(Color(nsColor: NSColor(red: 0.12, green: 0.12, blue: 0.13, alpha: 1.0)))
+    private func createNewPeak() {
+        let newPeak = TrekRecord(
+            name: "New Peak",
+            region: "Himalayas",
+            country: "India",
+            latitude: 30.5,
+            longitude: 79.5,
+            elevationMeters: 4500,
+            status: .wishlist,
+            difficulty: .moderate
+        )
+        modelContext.insert(newPeak)
+        try? modelContext.save()
+        selectedTrek = newPeak
     }
 }

@@ -82,15 +82,28 @@ struct MacRootView: View {
             )
         }
         .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
-            if let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
-               let (type, _) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
-                switch type {
-                case .habit, .task, .journal:
-                    selectedSection = .today
-                case .principle, .bucket:
-                    selectedSection = .life
-                case .goal:
-                    selectedSection = .studio
+            if let identifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                if let uuid = UUID(uuidString: identifier) {
+                    selectedSection = .notes
+                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
+                } else if let (type, _) = LocaSpotlightIndexer.ItemType.parseIdentifier(identifier) {
+                    switch type {
+                    case .habit, .task, .journal:
+                        selectedSection = .today
+                    case .principle, .bucket:
+                        selectedSection = .life
+                    case .goal:
+                        selectedSection = .studio
+                    }
+                }
+            }
+        }
+        .onOpenURL { url in
+            if (url.scheme == "pluto" || url.scheme == "loca") && (url.host == "note" || url.host == "notes") {
+                let idString = url.lastPathComponent
+                if let uuid = UUID(uuidString: idString) {
+                    selectedSection = .notes
+                    NotificationCenter.default.post(name: .plutoOpenNote, object: NoteID(raw: uuid))
                 }
             }
         }
@@ -105,14 +118,11 @@ struct MacRootView: View {
                 selectedSection = section
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .locaOpenNoteById)) { note in
-            selectedSection = .notes
-        }
         .onReceive(NotificationCenter.default.publisher(for: .locaShowOnboarding)) { _ in
             showOnboarding = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .locaLockVault)) { _ in
-            vaultManager.lockVault()
+            vaultManager.lockAll()
         }
     }
 
@@ -154,7 +164,7 @@ struct MacRootView: View {
                         max:   DS.Mac.sidebarMaxWidth
                     )
             } detail: {
-                MacBrainStormView()
+                NotesCanvasView()
             }
         } else if selectedSection == .studio {
             NavigationSplitView {
@@ -243,7 +253,7 @@ struct MacDetailPlaceholder: View {
 
                     guidedActionRow(icon: "plus.circle", title: "New Task / Block", shortcut: "⌘N")
                     guidedActionRow(icon: "calendar.day.timeline.left", title: "Day Planner Timeline", shortcut: "⌘1")
-                    guidedActionRow(icon: "note.text", title: "BrainStorm Notes Studio", shortcut: "⌘2")
+                    guidedActionRow(icon: "note.text", title: "Notes", shortcut: "⌘2")
                     guidedActionRow(icon: "sparkles.rectangle.stack.fill", title: "Studio Projects & Goals", shortcut: "⌘3")
                     guidedActionRow(icon: "mountain.2.fill", title: "Trek & Travel Atlas", shortcut: "⌘4")
                     guidedActionRow(icon: "gearshape", title: "Settings & Preferences", shortcut: "⌘,")

@@ -1,25 +1,23 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - MacStudioWorkspaceView (Unified Projects + Notes Sovereign Studio)
+// MARK: - MacStudioWorkspaceView (Unified Projects + Journal Sovereign Studio)
 
-/// Unified Knowledge & Execution Workspace combining Work Projects and Apple Notes BrainStorm.
+/// Unified Knowledge & Execution Workspace combining Work Projects and Apple Journal.
 struct MacStudioWorkspaceView: View {
 
-    @AppStorage("mac_studio_active_tab") private var activeTab: StudioTab = .notes
+    @AppStorage("mac_studio_active_tab") private var activeTab: StudioTab = .projects
 
     enum StudioTab: String, CaseIterable, Identifiable {
-        case notes    = "Notes"
-        case journal  = "Journal"
         case projects = "Projects"
+        case journal  = "Journal"
 
         var id: String { rawValue }
 
         var icon: String {
             switch self {
-            case .notes:    return "note.text"
-            case .journal:  return "book.pages.fill"
             case .projects: return "briefcase.fill"
+            case .journal:  return "book.pages.fill"
             }
         }
     }
@@ -38,31 +36,7 @@ struct MacStudioWorkspaceView: View {
                 // High-Speed Segmented Switcher
                 HStack(spacing: 2) {
                     ForEach(StudioTab.allCases) { tab in
-                        let isSelected = activeTab == tab
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.12)) {
-                                activeTab = tab
-                            }
-                            Haptics.impact(.light)
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: tab.icon)
-                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                                Text(tab.rawValue)
-                                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
-                            }
-                            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.6))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(
-                                isSelected
-                                    ? Color.white.opacity(0.12)
-                                    : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 6)
-                            )
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlutoFastButtonStyle())
+                        tabButton(for: tab)
                     }
                 }
                 .padding(3)
@@ -78,16 +52,43 @@ struct MacStudioWorkspaceView: View {
             // Active Workspace Content
             Group {
                 switch activeTab {
-                case .notes:
-                    MacBrainStormView()
-                case .journal:
-                    MacAppleJournalView()
                 case .projects:
                     MacWorkWorkspaceView()
+                case .journal:
+                    MacAppleJournalView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(DS.Color.background)
+    }
+
+    @ViewBuilder
+    private func tabButton(for tab: StudioTab) -> some View {
+        let isSelected = activeTab == tab
+        Button {
+            withAnimation(.easeInOut(duration: 0.12)) {
+                activeTab = tab
+            }
+            Haptics.impact(.light)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                Text(tab.rawValue)
+                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+            }
+            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.6))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(
+                isSelected
+                    ? Color.white.opacity(0.12)
+                    : Color.clear,
+                in: RoundedRectangle(cornerRadius: 6)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlutoFastButtonStyle())
     }
 }

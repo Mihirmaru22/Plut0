@@ -23,18 +23,23 @@ struct Loca_MacTests {
 
     // MARK: - Invariant 2: Markdown Legacy Migration & Checklists
     @Test func testMarkdownToAttributedConversion() throws {
-        let markdown = "# Title Heading\n- [ ] Unchecked Task\n- [x] Done Task\n**Bold Text**"
+        let markdown = "# Title Heading\n- [ ] Unchecked Task\n- [x] Done Task\n  - [X] Nested Done Task\n* [ ] Alt Marker Task\n- [ ] \n**Bold Text**"
         let attr = RichTextTypography.convertMarkdownToAttributedString(markdown: markdown)
         
         #expect(attr.string.contains("Title Heading"))
-        #expect(attr.string.contains(RichTextTypography.checklistUncheckedGlyph))
-        #expect(attr.string.contains(RichTextTypography.checklistCheckedGlyph))
+        #expect(attr.string.contains("Unchecked Task"))
+        #expect(attr.string.contains("Done Task"))
+        #expect(attr.string.contains("Nested Done Task"))
+        #expect(attr.string.contains("Alt Marker Task"))
         #expect(attr.string.contains("Bold Text"))
         
         let exportedMarkdown = RichTextTypography.convertAttributedStringToMarkdown(attributedString: attr)
         #expect(exportedMarkdown.contains("Title Heading"))
-        #expect(exportedMarkdown.contains("- [ ]"))
-        #expect(exportedMarkdown.contains("- [x]"))
+        #expect(exportedMarkdown.contains("- [ ] Unchecked Task"))
+        #expect(exportedMarkdown.contains("- [x] Done Task"))
+        #expect(exportedMarkdown.contains("- [x] Nested Done Task"))
+        #expect(exportedMarkdown.contains("- [ ] Alt Marker Task"))
+        #expect(exportedMarkdown.contains("- [ ] \n") || exportedMarkdown.contains("- [ ]\n"))
     }
 
     // MARK: - Invariant 3: Work Project Progress Calculation
@@ -99,34 +104,5 @@ struct Loca_MacTests {
         let remainingTasks = try context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.projectID == projID }))
         #expect(remainingTasks.count == 1)
         #expect(remainingTasks.first?.sectionID == nil)
-    }
-
-    // MARK: - Invariant 5: Pillar Bridge Note Extraction
-    @MainActor
-    @Test func testPillarBridgeNoteToWork() throws {
-        let schema = Schema([BrainStormNote.self, WorkProject.self, WorkSection.self, TodoItem.self, JournalNote.self])
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: schema, configurations: [config])
-        let context = ModelContext(container)
-        
-        let noteBody = """
-# Project Alpha Brief
-Here is the specification.
-- [ ] Implement feature A
-- [x] Review architecture
-"""
-        let note = BrainStormNote(title: "Alpha Note", bodyText: noteBody)
-        context.insert(note)
-        try context.save()
-        
-        let project = PillarBridgeController.shared.sendNoteToWork(note: note, context: context, archiveOriginal: true)
-        let projID = project.id
-        
-        #expect(project.title == "Alpha Note")
-        #expect(note.isArchived == true)
-        
-        let createdTasks = try context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.projectID == projID }))
-        #expect(createdTasks.count == 2)
-        #expect(createdTasks.filter { $0.isCompleted }.count == 1)
     }
 }

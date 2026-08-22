@@ -77,7 +77,6 @@ struct LOCAMacApp: App {
             LOCACommands()
         }
         .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified(showsTitle: true))
     }
 }
 
