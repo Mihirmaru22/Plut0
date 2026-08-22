@@ -10,6 +10,7 @@ enum MacSection: String, CaseIterable, Identifiable {
     case notes    = "Notes"
     case studio   = "Studio"
     case life     = "Life"
+    case ghost    = "Ghost Mode"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -20,6 +21,7 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .notes:    "note.text"
         case .studio:   "sparkles.rectangle.stack.fill"
         case .life:     "mountain.2.fill"
+        case .ghost:    "sparkles"
         case .settings: "gearshape"
         }
     }
@@ -214,6 +216,17 @@ struct MacRootView: View {
                     )
             } detail: {
                 MacLifeView()
+            }
+        } else if selectedSection == .ghost {
+            NavigationSplitView {
+                MacSidebarView(selection: $selectedSection)
+                    .navigationSplitViewColumnWidth(
+                        min:   DS.Mac.sidebarMinWidth,
+                        ideal: DS.Mac.sidebarIdealWidth,
+                        max:   DS.Mac.sidebarMaxWidth
+                    )
+            } detail: {
+                GhostDashboardView()
             }
         } else {
             NavigationSplitView {

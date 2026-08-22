@@ -33,6 +33,12 @@ public enum NotesMigrations {
             try runMigrationV3(on: db)
             try recordMigration(version: 3, on: db)
         }
+        
+        // 5. Migration v4: Ghost Mode Seasons & Days (Winter Arc)
+        if !applied.contains(4) {
+            try runMigrationV4(on: db)
+            try recordMigration(version: 4, on: db)
+        }
     }
     
     // MARK: - Migration Version Gating & Inspection
@@ -163,6 +169,42 @@ public enum NotesMigrations {
             client_updated_at REAL NOT NULL,
             device_id TEXT NOT NULL
         );
+        """
+        try execute(sql: sql, on: db)
+    }
+
+    private static func runMigrationV4(on db: OpaquePointer?) throws {
+        let sql = """
+        CREATE TABLE IF NOT EXISTS ghost_seasons (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            protocol_kind TEXT NOT NULL,
+            start_date REAL NOT NULL,
+            end_date REAL NOT NULL,
+            doctrine TEXT NOT NULL,
+            signed_at REAL NOT NULL,
+            device_id TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ghost_days (
+            id TEXT PRIMARY KEY,
+            season_id TEXT NOT NULL,
+            date TEXT NOT NULL,
+            body_closed INTEGER NOT NULL DEFAULT 0,
+            mind_closed INTEGER NOT NULL DEFAULT 0,
+            silence_closed INTEGER NOT NULL DEFAULT 0,
+            ghost_day INTEGER NOT NULL DEFAULT 0,
+            score INTEGER NOT NULL DEFAULT 0,
+            silence_minutes_verified INTEGER NOT NULL DEFAULT 0,
+            silence_minutes_attested INTEGER NOT NULL DEFAULT 0,
+            offline_intervals_json TEXT NOT NULL DEFAULT '[]',
+            reflection_note_id TEXT,
+            created_at REAL NOT NULL,
+            FOREIGN KEY(season_id) REFERENCES ghost_seasons(id) ON DELETE CASCADE
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_ghost_days_season_date ON ghost_days(season_id, date);
+        CREATE INDEX IF NOT EXISTS idx_ghost_days_date ON ghost_days(date);
         """
         try execute(sql: sql, on: db)
     }

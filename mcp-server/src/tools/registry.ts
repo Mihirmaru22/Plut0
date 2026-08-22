@@ -6,6 +6,7 @@ import { notesRepo } from "../db/notes.js";
 import { projectsRepo } from "../db/projects.js";
 import { focusRepo } from "../db/focus.js";
 import { lifeRepo } from "../db/life.js";
+import { ghostRepo } from "../db/ghost.js";
 
 export function registerTools(server: McpServer): void {
   // MARK: - 1. Day Architecture & Daily Briefing
@@ -451,6 +452,49 @@ export function registerTools(server: McpServer): void {
           {
             type: "text",
             text: `🌟 Horizon Goal added to [${goal.category}]: '${goal.title}' (${goal.targetYear || "Ongoing"}).`,
+          },
+        ],
+      };
+    }
+  );
+
+  // MARK: - 6. Ghost Mode / Winter Arc Pillar
+
+  server.tool(
+    "ghost_status",
+    "Inspects active Winter Arc / Ghost Mode season, day progress, Three Rings (Body, Mind, Silence), current streak, and rank.",
+    {},
+    async () => {
+      const status = ghostRepo.getGhostStatus();
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(status, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "ghost_check_in",
+    "Executes daily check-in sealing Ghost Mode rings (Body, Mind, Silence) and logging focus silence minutes.",
+    {
+      bodyClosed: z.boolean().optional().describe("Whether physical forge / body ring was closed today"),
+      mindClosed: z.boolean().optional().describe("Whether mental synthesis / mind ring was closed today"),
+      silenceMinutes: z.number().optional().describe("Total attested focus silence or offline minutes logged"),
+      reflectionNote: z.string().optional().describe("Optional evening reflection synthesis text"),
+    },
+    async (params) => {
+      const res = ghostRepo.checkIn(params);
+      return {
+        content: [
+          {
+            type: "text",
+            text: res.success
+              ? `👻 Ghost Check-In Sealed: Score ${res.score}/100. Ghost Day achieved: ${res.isGhostDay ? "YES 🔥" : "NO ⏳"}`
+              : `⚠️ No active Ghost Season found. Sign a covenant in Pluto first.`,
           },
         ],
       };

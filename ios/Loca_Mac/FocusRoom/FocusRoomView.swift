@@ -833,6 +833,13 @@ struct FocusRoomView: View {
         session.durationSeconds = duration
         try? modelContext.save()
         currentSession = nil
+
+        let minutes = duration / 60
+        if minutes > 0 {
+            Task {
+                _ = try? await GhostEngine.shared.recordVerifiedSilenceMinutes(minutes)
+            }
+        }
     }
 
     private func shortcutBadge(key: String, label: String) -> some View {

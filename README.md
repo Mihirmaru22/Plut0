@@ -20,36 +20,37 @@
 3. [NOTES: Sovereign CRDT Knowledge Engine (TextKit 2 + E2EE)](#3-notes-sovereign-crdt-knowledge-engine)
 4. [STUDIO: Executive Workspace (Projects / Journal / Analyse)](#4-studio-executive-workspace--synthesis)
 5. [LIFE: Horizons, Mountain Trek Atlas & Travel Atlases](#5-life-horizons-mountain-atlas--travel-atlases)
-6. [Focus Room & Procedural Spatial Audio DSP Engine](#6-focus-room--spatial-audio-dsp-engine)
-7. [On-Device Intelligence: Apple Neural Engine (ANE)](#7-on-device-intelligence-apple-neural-engine)
-8. [Model Context Protocol (MCP) Server for Local AI Agents](#8-model-context-protocol-mcp-server)
-9. [Private Alpha Telemetry & Creator Web Dossier](#9-private-alpha-telemetry--creator-web-dossier)
-10. [Detailed Codebase Architecture](#10-detailed-codebase-architecture)
-11. [Building, Running & Packaging Pluto for Mac](#11-building-running--packaging-pluto-for-mac)
-12. [Master Keyboard Shortcut Matrix](#12-master-keyboard-shortcut-matrix)
-13. [Core Mathematical & Engineering Invariants](#13-core-mathematical--engineering-invariants)
+6. [GHOST MODE: The Winter Arc (Three Rings & Season Ridge)](#6-ghost-mode-the-winter-arc-three-rings--season-ridge)
+7. [Focus Room & Procedural Spatial Audio DSP Engine](#7-focus-room--spatial-audio-dsp-engine)
+8. [On-Device Intelligence: Apple Neural Engine (ANE)](#8-on-device-intelligence-apple-neural-engine)
+9. [Model Context Protocol (MCP) Server for Local AI Agents](#9-model-context-protocol-mcp-server)
+10. [Private Alpha Telemetry & Creator Web Dossier](#10-private-alpha-telemetry--creator-web-dossier)
+11. [Detailed Codebase Architecture](#11-detailed-codebase-architecture)
+12. [Building, Running & Packaging Pluto for Mac](#12-building-running--packaging-pluto-for-mac)
+13. [Master Keyboard Shortcut Matrix](#13-master-keyboard-shortcut-matrix)
+14. [Core Mathematical & Engineering Invariants](#14-core-mathematical--engineering-invariants)
 
 ---
 
-## 1. The 4 Sovereign macOS Navigation Pillars
+## 1. The 5 Sovereign macOS Navigation Pillars
 
-Pluto organizes all human productivity, synthesis, and long-term exploration across 4 core navigation sections orchestrated in a native AppKit/SwiftUI `NavigationSplitView` with a machined obsidian sidebar (`MacSidebarView`):
+Pluto organizes all human productivity, synthesis, discipline, and long-term exploration across 5 core navigation sections orchestrated in a native AppKit/SwiftUI `NavigationSplitView` with a machined obsidian sidebar (`MacSidebarView`):
 
 ```
-                      ┌────────────────────────────────────────────────────────┐
-                      │                 🪐 PLUTO FOR macOS                     │
-                      └───────────────────────────┬────────────────────────────┘
-                                                  │
-         ┌───────────────────┬────────────────────┼────────────────────┬───────────────────┐
-         ▼                   ▼                    ▼                    ▼                   ▼
- ┌───────────────┐   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   ┌───────────────┐
- │   1. TODAY    │   │   2. NOTES    │    │   3. STUDIO   │    │    4. LIFE    │   │  5. SETTINGS  │
- │  Day Planning │   │  CRDT Canvas  │    │ Projects & PM │    │ Mountain/Map  │   │ Mission Ctrl  │
- ├───────────────┤   ├───────────────┤    ├───────────────┤    ├───────────────┤   ├───────────────┤
- │ • Plan (Time) │   │ • TextKit 2   │    │ • Briefs (DB) │    │ • Trek Atlas  │   │ • Vault Lock  │
- │ • List (GTD)  │   │ • ⌘K Switcher │    │ • Journal     │    │ • Travel Atlas│   │ • Diagnostics │
- │ • Time (Focus)│   │ • E2EE Sync   │    │ • Analyse     │    │ • Bucket List │   │ • Notifs Sync │
- └───────────────┘   └───────────────┘    └───────────────┘    └───────────────┘   └───────────────┘
+                      ┌────────────────────────────────────────────────────────────────────────┐
+                      │                          🪐 PLUTO FOR macOS                            │
+                      └───────────────────────────────────┬────────────────────────────────────┘
+                                                          │
+         ┌───────────────────┬────────────────────┼────────────────────┬───────────────────┬───────────────────┐
+         ▼                   ▼                    ▼                    ▼                   ▼                   ▼
+ ┌───────────────┐   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+ │   1. TODAY    │   │   2. NOTES    │    │   3. STUDIO   │    │    4. LIFE    │   │ 5. GHOST MODE │   │  6. SETTINGS  │
+ │  Day Planning │   │  CRDT Canvas  │    │ Projects & PM │    │ Mountain/Map  │   │  Winter Arc   │   │ Mission Ctrl  │
+ ├───────────────┤   ├───────────────┤    ├───────────────┤    ├───────────────┤   ├───────────────┤   ├───────────────┤
+ │ • Plan (Time) │   │ • TextKit 2   │    │ • Briefs (DB) │    │ • Trek Atlas  │   │ • Three Rings │   │ • Vault Lock  │
+ │ • List (GTD)  │   │ • ⌘K Switcher │    │ • Journal     │    │ • Travel Atlas│   │ • Season Ridge│   │ • Diagnostics │
+ │ • Time (Focus)│   │ • E2EE Sync   │    │ • Analyse     │    │ • Bucket List │   │ • Ghost Streak│   │ • Notifs Sync │
+ └───────────────┘   └───────────────┘    └───────────────┘    └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
 ---
@@ -158,7 +159,27 @@ The `Life` workspace (`⌘4`) provides high-altitude perspective across long-ter
 
 ---
 
-## 6. Focus Room & Spatial Audio DSP Engine
+## 6. GHOST MODE: The Winter Arc (Three Rings & Season Ridge)
+
+The `Ghost Mode` workspace (`⌘5`) provides a sovereign, privacy-first discipline environment for the 120-day Winter Arc:
+
+* **Sovereign Covenant Onboarding (`ContractOnboardingView`)**: Sign an on-device digital signature committing to The 120, 75 Hard, or Custom Arc with Hard Doctrine (zero compromise) or Arc Doctrine (resilient momentum).
+* **Three Ghost Rings**:
+  - **Body Ring**: Physical forge (daily workout, 10k steps, cold exposure).
+  - **Mind Ring**: Mental synthesis (10 pages reading, evening reflection note).
+  - **Silence Ring**: 45+ minutes deep focus silence or complete offline dark mode.
+* **Ghost Streak & Rank Progression**:
+  - Consecutive Ghost Days unlock ranks from `Apparition 👻` $\to$ `Shadow 👤` $\to$ `Phantom 🌫️` $\to$ `Wraith ⚔️` $\to$ `Specter 👁️` $\to$ `Ghost Sovereign 👑`.
+  - Dynamic opacity silhouette glyph reflecting real-time streak materialization.
+* **Season Ridge Mountain Elevation Visualizer (`GhostRidgeProfileChart`)**: SwiftCharts alpine terrain curve tracking 120 days of execution with missed-day valleys and a Dec 31 summit marker flag.
+* **Cognitive Burnout Advisory**: Automatic recovery advisory triggered when the Apple Neural Engine (`LocaNeuralEngine`) detects a 14-day negative sentiment trend.
+* **"Went Dark" Offline Logger**: Fast HUD toggle to log intentional offline off-grid disconnect intervals.
+* **Vector PDF Sovereign Passport (`WinterArcPassportPDFGenerator`)**: High-resolution vector certificate export for completed seasons.
+* **Strict Privacy Isolation**: Ghost data is 100% local, vault-lockable with `LocaVaultAuthManager`, and excluded from Spotlight and telemetry streams.
+
+---
+
+## 7. Focus Room & Spatial Audio DSP Engine
 
 PLUTO contains an embedded digital signal processing (DSP) spatial audio engine (`SpatialAudioEngine.swift`):
 
@@ -312,6 +333,7 @@ Run the bundled release script to package a signed distribution DMG:
 | **`⌘ + 2`** | Navigate to **Notes** (Sovereign CRDT Canvas) | Global macOS |
 | **`⌘ + 3`** | Navigate to **Studio** (Projects / Journal / Analyse) | Global macOS |
 | **`⌘ + 4`** | Navigate to **Life** (Mountain Atlas / Travel / Bucket List) | Global macOS |
+| **`⌘ + 5`** | Navigate to **Ghost Mode** (Winter Arc & Three Rings) | Global macOS |
 | **`⌘ + ,`** | Navigate to **Settings & Mission Control** | Global macOS |
 | **`⌘ + K`** | Open **Quick Switcher** / Spotlight Note Search | Notes & Studio |
 | **`⌘ + ⌥ + S`**| Toggle Notes Navigator / Sidebar Column | Notes & Studio |

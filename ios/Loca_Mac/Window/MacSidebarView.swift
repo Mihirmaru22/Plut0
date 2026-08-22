@@ -8,7 +8,7 @@ struct MacSidebarView: View {
     @Binding var selection: MacSection?
     @State private var hoveredSection: MacSection? = nil
 
-    private let mainSections: [MacSection] = [.today, .notes, .studio, .life]
+    private let mainSections: [MacSection] = [.today, .notes, .studio, .life, .ghost]
 
     var body: some View {
         ZStack(alignment: .trailing) {
@@ -184,6 +184,7 @@ struct MacSidebarView: View {
         case .notes:    return "⌘2"
         case .studio:   return "⌘3"
         case .life:     return "⌘4"
+        case .ghost:    return "⌘5"
         case .settings: return "⌘,"
         }
     }
@@ -194,6 +195,7 @@ struct MacSidebarView: View {
         case .notes:    return DS.Theme.cyan
         case .studio:   return DS.Theme.violet
         case .life:     return DS.Theme.emerald
+        case .ghost:    return Color(red: 0.0, green: 0.85, blue: 1.0)
         case .settings: return Color.white.opacity(0.85)
         }
     }

@@ -41,6 +41,9 @@ struct LOCACommands: Commands {
             Button("Life") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.life) }
                 .keyboardShortcut("4", modifiers: [.command])
 
+            Button("Ghost Mode") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.ghost) }
+                .keyboardShortcut("5", modifiers: [.command])
+
             Button("Settings") { NotificationCenter.default.post(name: .locaJumpToSection, object: MacSection.settings) }
                 .keyboardShortcut(",", modifiers: [.command])
         }
