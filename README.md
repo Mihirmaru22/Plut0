@@ -9,93 +9,52 @@
 [![Security: E2EE ChaCha20-Poly1305](https://img.shields.io/badge/Security-ChaCha20--Poly1305%20E2EE-00C853?style=for-the-badge)](https://developer.apple.com/documentation/cryptokit)
 [![AI Protocol: Model Context Protocol](https://img.shields.io/badge/AI%20Protocol-Model%20Context%20Protocol%20(MCP)-8A2BE2?style=for-the-badge)](https://modelcontextprotocol.io)
 
-**PLUTO** is a sovereign, local-first personal operating system engineered **exclusively for macOS**. Designed from the ground up for Apple Silicon, AppKit, TextKit 2, and macOS Sonoma/Sequoia, Pluto unifies daily time execution, high-velocity GTD task inventory, keystone habit tracking, mathematical CRDT note synthesis, deep focus sessions with procedural spatial audio DSP, and high-altitude life exploration atlases into a single cohesive, Apple-native desktop canvas.
+**PLUTO** is a sovereign, local-first personal operating system engineered **exclusively for macOS**. Designed from first principles for Apple Silicon, AppKit, TextKit 2, and macOS Sonoma/Sequoia, Pluto unifies diurnal day execution, GTD task inventory, mathematical CRDT note synthesis, deep focus sessions with procedural spatial audio DSP, and high-altitude life exploration atlases into a single cohesive desktop canvas.
 
 ---
 
 ## 📑 Table of Contents
 
-1. [Architectural Overview: The 3 Primary macOS Domains](#1-architectural-overview-the-3-primary-macos-domains)
-2. [Dual-Tier Workspaces: Hero Mode vs. Architect Mode](#2-dual-tier-workspace-architecture)
-3. [TODAY: Diurnal Execution Engine (Plan / List / Time)](#3-today-the-living-day-execution-engine)
-4. [STUDIO: Sovereign Knowledge & Synthesis (One Engine, Three Memories)](#4-studio-sovereign-knowledge--synthesis)
-5. [LIFE: Horizons, Mountain Trek Atlas & Travel Atlases](#5-life-horizons--adventure-atlases)
-6. [Focus Studio & Procedural Spatial Audio DSP Engine](#6-focus-room--spatial-audio-dsp-engine)
-7. [On-Device Intelligence: Apple Neural Engine & Sentiment Analytics](#7-on-device-intelligence-apple-neural-engine)
+1. [The 4 Sovereign macOS Navigation Pillars](#1-the-4-sovereign-macos-navigation-pillars)
+2. [TODAY: Diurnal Execution Engine (Plan / List / Time)](#2-today-the-living-day-execution-engine)
+3. [NOTES: Sovereign CRDT Knowledge Engine (TextKit 2 + E2EE)](#3-notes-sovereign-crdt-knowledge-engine)
+4. [STUDIO: Executive Workspace (Projects / Journal / Analyse)](#4-studio-executive-workspace--synthesis)
+5. [LIFE: Horizons, Mountain Trek Atlas & Travel Atlases](#5-life-horizons-mountain-atlas--travel-atlases)
+6. [Focus Room & Procedural Spatial Audio DSP Engine](#6-focus-room--spatial-audio-dsp-engine)
+7. [On-Device Intelligence: Apple Neural Engine (ANE)](#7-on-device-intelligence-apple-neural-engine)
 8. [Model Context Protocol (MCP) Server for Local AI Agents](#8-model-context-protocol-mcp-server)
 9. [Private Alpha Telemetry & Creator Web Dossier](#9-private-alpha-telemetry--creator-web-dossier)
-10. [Detailed macOS Codebase Architecture](#10-detailed-macos-codebase-architecture)
+10. [Detailed Codebase Architecture](#10-detailed-codebase-architecture)
 11. [Building, Running & Packaging Pluto for Mac](#11-building-running--packaging-pluto-for-mac)
-12. [Master Keyboard Shortcut & Gesture Matrix](#12-master-keyboard-shortcut--gesture-matrix)
+12. [Master Keyboard Shortcut Matrix](#12-master-keyboard-shortcut-matrix)
 13. [Core Mathematical & Engineering Invariants](#13-core-mathematical--engineering-invariants)
 
 ---
 
-## 1. Architectural Overview: The 3 Primary macOS Domains
+## 1. The 4 Sovereign macOS Navigation Pillars
 
-Pluto organizes all human intentionality into three distinct structural domains, fluidly orchestrated through a native AppKit/SwiftUI `NavigationSplitView` with Liquid Glass interactive controls:
+Pluto organizes all human productivity, synthesis, and long-term exploration across 4 core navigation sections orchestrated in a native AppKit/SwiftUI `NavigationSplitView` with a machined obsidian sidebar (`MacSidebarView`):
 
 ```
                       ┌────────────────────────────────────────────────────────┐
                       │                 🪐 PLUTO FOR macOS                     │
-                      └──────────────┬─────────────────┬───────────────────────┘
-                                     │                 │
-                ┌────────────────────┘                 └────────────────────┐
-                ▼                                                           ▼
-    ┌─────────────────────────┐                                 ┌─────────────────────────┐
-    │       1. TODAY          │                                 │       2. STUDIO         │
-    │  Living Day Execution   │                                 │ Knowledge & Synthesis   │
-    ├─────────────────────────┤                                 ├─────────────────────────┤
-    │ • Plan: Day Timeline    │                                 │ • Notes: CRDT Engine    │
-    │ • List: GTD Tasks       │                                 │ • Journal: Reflections  │
-    │ • Time: Focus Studio    │                                 │ • Projects: PM Briefs   │
-    └─────────────────────────┘                                 └─────────────────────────┘
-                                             │
-                                             ▼
-                                ┌─────────────────────────┐
-                                │        3. LIFE          │
-                                │   Horizons & Atlases    │
-                                ├─────────────────────────┤
-                                │ • Mountain Trek Atlas   │
-                                │ • GeoJSON Travel Atlas  │
-                                │ • Bucket List / Badges  │
-                                └─────────────────────────┘
+                      └───────────────────────────┬────────────────────────────┘
+                                                  │
+         ┌───────────────────┬────────────────────┼────────────────────┬───────────────────┐
+         ▼                   ▼                    ▼                    ▼                   ▼
+ ┌───────────────┐   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   ┌───────────────┐
+ │   1. TODAY    │   │   2. NOTES    │    │   3. STUDIO   │    │    4. LIFE    │   │  5. SETTINGS  │
+ │  Day Planning │   │  CRDT Canvas  │    │ Projects & PM │    │ Mountain/Map  │   │ Mission Ctrl  │
+ ├───────────────┤   ├───────────────┤    ├───────────────┤    ├───────────────┤   ├───────────────┤
+ │ • Plan (Time) │   │ • TextKit 2   │    │ • Briefs (DB) │    │ • Trek Atlas  │   │ • Vault Lock  │
+ │ • List (GTD)  │   │ • ⌘K Switcher │    │ • Journal     │    │ • Travel Atlas│   │ • Diagnostics │
+ │ • Time (Focus)│   │ • E2EE Sync   │    │ • Analyse     │    │ • Bucket List │   │ • Notifs Sync │
+ └───────────────┘   └───────────────┘    └───────────────┘    └───────────────┘   └───────────────┘
 ```
 
 ---
 
-## 2. Dual-Tier Workspace Architecture
-
-Pluto accommodates different cognitive modes throughout the day by providing two distinct desktop workspace environments:
-
-```
-                  ┌──────────────────────────────────────────────────┐
-                  │              PRESS  ⌘ + ⇧ + P                     │
-                  │   Toggle Hero Cockpit <-> Architect Matrix       │
-                  └──────────────┬───────────────────┬───────────────┘
-                                 │                   │
-                 ┌───────────────┘                   └───────────────┐
-                 ▼                                                   ▼
-   ┌───────────────────────────┐                       ┌───────────────────────────┐
-   │       ⚔️ HERO MODE        │                       │     👑 ARCHITECT MODE     │
-   │  2-Column Daily Cockpit   │                       │  3-Column Sovereign Desk  │
-   ├───────────────────────────┤                       ├───────────────────────────┤
-   │ • Tri-Diurnal Timeline    │                       │ • Proportional Day Plan   │
-   │ • Rule of 3 Top Missions  │                       │ • Sovereign CRDT Canvas   │
-   │ • Circadian Battery Dial  │                       │ • PM Project Workspaces   │
-   │ • Habit Streaks & Streaks │                       │ • Interactive Map Atlases │
-   │ • Ambient Audio Soundscape│                       │ • Strategic Life Audits   │
-   └───────────────────────────┘                       └───────────────────────────┘
-```
-
-| Workspace | Mode Name | Layout | Capabilities & Cognitive Objective |
-|---|---|---|---|
-| **⚔️ Tier 1** | **Hero Mode** | **2-Column Focus Engine** | **Left Column**: Tri-Diurnal Horizontal Timeline (Morning 🌅, Afternoon ☀️, Evening 🌙) + Rule of 3 Active Mission Objectives.<br>**Right Column**: Circadian Energy Battery dial (calculating wake time, sleep debt, and schedule density), Keystone Habit consistency list with live flame streaks, Weekly Momentum index, Ambient Focus Soundscape player, and Quick Check-in drawer. |
-| **👑 Tier 2** | **Architect Mode** | **3-Column Sovereign OS** | Full 3-column `NavigationSplitView` with proportional Day Planner timeline, CRDT Notes canvas, Projects management, Mountain Trek Atlas, GeoJSON Travel Atlas, Life Audit matrix, and local Model Context Protocol (MCP) AI agent integration. |
-
----
-
-## 3. TODAY: The Living Day Execution Engine
+## 2. TODAY: The Living Day Execution Engine
 
 The `Today` workspace (`⌘1`) governs immediate diurnal execution through three specialized sub-modes:
 
@@ -111,16 +70,41 @@ The `Today` workspace (`⌘1`) governs immediate diurnal execution through three
 * **Document Detail Panel**: Calm document side-panel replacing bulky form controls with grouped cards, date/time chips, and recurrence selectors.
 * **MacBlockEditor**: Embedded slash-command block editor supporting Paragraphs, Headings (`H1`/`H2`/`H3`), Bullet lists, Numbered lists, Checklists with strikethrough, Quotes, and Dividers.
 
-### 🎧 Time Mode (Focus Room & Spatial Audio Studio)
+### 🎧 Time Mode (Fullscreen Focus Room & Spatial Audio)
+* **Fullscreen Immersion**: Distraction-free StudyStream study environment (`FocusRoomView`) with persistent inspirational quotes and active session goals drawer.
 * **Pomodoro Focus Engine**: Interactive round-based focus sprint timer with configurable intervals, phase switches, and countdowns.
 * **Multi-Stem Spatial Audio Engine**: Procedural binaural soundscapes (5-Pole Rain & Thunder Matrix, Forest Birds, Deep Space White Noise, Polyphonic Chords) with logarithmic volume mixers.
-* **Curated Wallpaper Canvas**: Zero-latency local disk/RAM cached focus backgrounds with StudyStream aesthetics, inspiring quotes, and session duration tracking.
+* **Curated Wallpaper Canvas**: Zero-latency local disk/RAM cached focus backgrounds with StudyStream aesthetics and session duration tracking.
 
 ---
 
-## 4. STUDIO: Sovereign Knowledge & Synthesis
+## 3. NOTES: Sovereign CRDT Knowledge Engine
 
-The `Studio` workspace (`⌘2`) unifies document drafting, daily reflection, and project execution under **One Unified Presentation Engine (`PlutoDocumentEditor`)** backed by **Three Mathematically Isolated Memories**:
+The `Notes` workspace (`⌘2`) provides a sovereign, mathematical knowledge synthesis surface built directly on Apple's **AppKit TextKit 2** pipeline:
+
+```
+ ┌───────────────────────────┐     ┌───────────────────────────┐     ┌───────────────────────────┐
+ │   TextKitCRDTBridge       │     │     CRDTDoc / Vector      │     │  ChaCha20-Poly1305 Vault  │
+ │ (In-Place NSTextStorage)  │ ◄─► │  (Character Lamport Time) │ ◄─► │    (ShadowSync Engine)    │
+ └───────────────────────────┘     └───────────────────────────┘     └───────────────────────────┘
+```
+
+* **Native AppKit TextKit 2 Surface**: Character-level CRDT math (`TextKitCRDTBridge`, `CRDTDoc`, `CRDTBlock`) with zero typing latency and guaranteed deterministic convergence.
+* **Minimalist Markdown Magic ("Magic" Typing)**:
+  - Instant block transformation upon typing space: `# ` $\to$ H1, `## ` $\to$ H2, `### ` $\to$ H3, `- ` or `* ` $\to$ Bullet List, `1. ` $\to$ Numbered List, `[] ` $\to$ Checklist.
+  - **Instant Backspace Revert**: Pressing `Backspace` at the beginning of an auto-formatted block reverts it to plain text in-place without altering document history.
+* **Margin-Drawn Circular Checklists**: Checkboxes are drawn directly in the left margin gutter (`circle` unchecked, `checkmark.circle.fill` checked with accent tint) without polluting storage characters or vector clocks.
+* **Tab / Shift-Tab List Indentation**: Fluid indentation nesting for bullets and checklists with coordinated margin gutter drawing.
+* **`⌘K` Quick Switcher (`QuickSwitcherView`)**: Frosted glass spotlight command palette providing instant sub-millisecond search across note titles and content.
+* **Rich Multi-Representation Pasteboard**: Copying rich text outputs UTF-8 plain text, HTML (`public.html`), and formatted RTF (`public.rtf`) for seamless clipboard interop across Apple Notes, Mail, Pages, Slack, Notion, and Discord.
+* **macOS Spotlight & Deep Linking**: Direct CoreSpotlight indexing (`NotesSpotlightIndexer`) supporting system-wide search and `pluto://note/{uuid}` deep-link navigation.
+* **E2EE Vault & Sync Protocol**: ChaCha20-Poly1305 client-side encrypted sync coordinator (`ShadowSyncCoordinator`) communicating over encrypted WebSockets.
+
+---
+
+## 4. STUDIO: Executive Workspace & Synthesis
+
+The `Studio` workspace (`⌘3`) unites project delivery, daily reflections, and cognitive analytics under **One Unified Presentation Engine (`PlutoDocumentEditor`)** across **Three Mathematically Isolated Memories**:
 
 ```
                                ┌─────────────────────────────┐
@@ -144,33 +128,23 @@ The `Studio` workspace (`⌘2`) unifies document drafting, daily reflection, and
  └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 📝 Notes: Sovereign CRDT Engine
-* **Native AppKit TextKit 2 Surface**: Character-level CRDT math (`TextKitCRDTBridge`, `CRDTDoc`, `CRDTBlock`) with zero typing latency and guaranteed convergence.
-* **Minimalist Markdown Magic ("Magic" Typing)**:
-  - Instant block transformation upon typing space: `# ` $\to$ H1, `## ` $\to$ H2, `### ` $\to$ H3, `- ` or `* ` $\to$ Bullet List, `1. ` $\to$ Numbered List, `[] ` $\to$ Checklist.
-  - **Instant Backspace Revert**: Pressing `Backspace` at the beginning of an auto-formatted block reverts it to plain text in-place.
-* **Margin-Drawn Circular Checklists**: Checkboxes are drawn directly in the left margin gutter (`circle` unchecked, `checkmark.circle.fill` checked with accent tint) without polluting storage characters or vector clocks.
-* **Tab / Shift-Tab List Indentation**: Fluid indentation nesting for bullets and checklists with coordinated margin gutter drawing.
-* **`⌘K` Quick Switcher (`QuickSwitcherView`)**: Frosted glass spotlight command palette providing instant sub-millisecond search across note titles and content.
-* **Rich Multi-Representation Pasteboard**: Copying rich text outputs UTF-8 plain text, HTML (`public.html`), and formatted RTF (`public.rtf`) for seamless clipboard interop across Apple Notes, Mail, Pages, Slack, Notion, and Discord.
-* **macOS Spotlight & Deep Linking**: Direct CoreSpotlight indexing (`NotesSpotlightIndexer`) supporting system-wide search and `pluto://note/{uuid}` deep-link navigation.
-* **E2EE Vault & Sync Protocol**: ChaCha20-Poly1305 client-side encrypted sync coordinator (`ShadowSyncCoordinator`) communicating over encrypted WebSockets.
-
-### 💼 Projects: Studio Project Briefs
+### 💼 Projects (Command Center)
 * **Isolated `project_briefs` SQLite Storage**: Backed by sovereign schema migration v3 (`LocalProjectBriefStore` & `ProjectBriefEngine.shared`). Completely decoupled from general notes and global search.
 * **Structured Execution Pipeline**: Milestone checklists, subtask assignments, and project deliverables linked directly to the project brief.
 
-### 📖 Journal: Apple Journal Surface & Life Reflections
+### 📖 Journal (Apple Journal Canvas)
 * **Sensory Formatting Chrome**: Compact `Aa` typography popover (`PlutoTypographyPopover`), date & time graphical picker popover, and live word count & reading time footer (`"X words • Y min read"`).
 * **Media & Attachment Suite**: Photos gallery picker, Apple Maps location tagging (`MKLocalSearch`), and Voice Memo audio studio with live waveform visualization & playback.
 * **Daylight Flow & Sleep Tracker**: Morning/evening keystone rituals, wake/bedtime tracking, and overnight sleep debt estimation.
-* **Analyse Dashboard**: 30-day consistency indices, monthly heatmaps, and sentiment correlation matrices via Apple Neural Engine (`LocaNeuralEngine`).
+
+### 📊 Analyse (Cognitive Dashboard)
+* **Consistency & Habit Correlation**: 30-day consistency indices, monthly heatmaps, and sentiment correlation matrices via Apple Neural Engine (`LocaNeuralEngine`).
 
 ---
 
-## 5. LIFE: Horizons & Adventure Atlases
+## 5. LIFE: Horizons, Mountain Atlas & Travel Atlases
 
-The `Life` workspace (`⌘3`) provides high-altitude perspective across long-term goals and physical explorations:
+The `Life` workspace (`⌘4`) provides high-altitude perspective across long-term goals and physical explorations:
 
 ### 🗺 Mountain Atlas (Trek & Expedition Canvas)
 * **GPX Trail Engine**: Native parser and interactive elevation profile chart for mountaineering routes.
@@ -186,7 +160,7 @@ The `Life` workspace (`⌘3`) provides high-altitude perspective across long-ter
 
 ## 6. Focus Room & Spatial Audio DSP Engine
 
-PLUTO contains an embedded, non-blocking digital signal processing (DSP) spatial audio engine (`SpatialAudioEngine.swift`):
+PLUTO contains an embedded digital signal processing (DSP) spatial audio engine (`SpatialAudioEngine.swift`):
 
 * **Procedural Multi-Stem Mixer**: Synthesizes 4 distinct continuous ambient layers:
   1. **5-Pole Rain & Thunder Matrix**: Procedurally modulated white/pink noise filtered through low-pass resonant filters.
@@ -261,7 +235,7 @@ For private alpha testing, Pluto includes an invisible background telemetry pipe
 
 ---
 
-## 10. Detailed macOS Codebase Architecture
+## 10. Detailed Codebase Architecture
 
 ```
 Plut0-main/
@@ -269,7 +243,7 @@ Plut0-main/
 │   ├── Loca_Mac/                          # Native macOS 14+ Target (Pluto for Mac)
 │   │   ├── Window/                        # MacRootView, MacSidebarView, NavigationSplitView
 │   │   ├── Today/ & Todo/                 # Day Planner, GTD List, MacBlockEditor, Projects
-│   │   ├── Studio/                        # Studio Workspace Shell
+│   │   ├── Studio/                        # Studio Workspace Shell (Projects, Journal, Analyse)
 │   │   ├── NotesFeature/                  # Sovereign Next-Gen Notes Engine
 │   │   │   ├── Domain/                    # Note, NoteContent, NoteBlock, DocumentCoreRepository, NoteMutation
 │   │   │   ├── Application/               # NotesEngine, ProjectBriefEngine, JournalDocumentEngine
@@ -330,17 +304,17 @@ Run the bundled release script to package a signed distribution DMG:
 
 ---
 
-## 12. Master Keyboard Shortcut & Gesture Matrix
+## 12. Master Keyboard Shortcut Matrix
 
 | Shortcut | Action | Scope |
 | :--- | :--- | :--- |
 | **`⌘ + 1`** | Navigate to **Today** (Plan / List / Time) | Global macOS |
-| **`⌘ + 2`** | Navigate to **Studio** (Notes / Journal / Projects) | Global macOS |
-| **`⌘ + 3`** | Navigate to **Life** (Mountain Atlas / Travel / Bucket List) | Global macOS |
-| **`⌘ + 4`** | Navigate to **Settings & Mission Control** | Global macOS |
+| **`⌘ + 2`** | Navigate to **Notes** (Sovereign CRDT Canvas) | Global macOS |
+| **`⌘ + 3`** | Navigate to **Studio** (Projects / Journal / Analyse) | Global macOS |
+| **`⌘ + 4`** | Navigate to **Life** (Mountain Atlas / Travel / Bucket List) | Global macOS |
+| **`⌘ + ,`** | Navigate to **Settings & Mission Control** | Global macOS |
 | **`⌘ + K`** | Open **Quick Switcher** / Spotlight Note Search | Notes & Studio |
-| **`⌘ + ⇧ + P`**| Toggle **Hero Mode** $\leftrightarrow$ **Architect Mode** | Global macOS |
-| **`⌘ + ⌥ + S`**| Toggle Notes & Sidebar Navigator Column | Notes & Studio |
+| **`⌘ + ⌥ + S`**| Toggle Notes Navigator / Sidebar Column | Notes & Studio |
 | **`⌘ + N`** | Create New Task / Note / Habit / Entry | Workspace-Aware |
 | **`⌘ + F`** | Search across active workspace / In-Note Find | Workspace-Aware |
 | **`Tab`** / **`⇧Tab`** | Indent / Outdent Checklist and Bullet items | Editor |

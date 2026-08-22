@@ -43,6 +43,10 @@ public struct FormattingState: Equatable, Sendable {
         self.isStrikethrough = isStrikethrough
         self.blockType = blockType
     }
+    
+    public var activeBlockType: EditorBlockType {
+        blockType
+    }
 }
 
 /// Return-key split result containing block metadata and target cursor position.

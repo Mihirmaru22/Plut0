@@ -40,27 +40,27 @@ public struct PlutoTypographyPopover: View {
             
             // Row 2: Block Styles (Headings & Lists)
             HStack(spacing: 3) {
-                formatBlockBtn("H1", isActive: state.formattingState.activeBlockType == .h1) {
+                formatBlockBtn("H1", isActive: state.formattingState.blockType == .h1) {
                     state.toggleBlockType(.h1)
                     Haptics.impact(.light)
                 }
-                formatBlockBtn("H2", isActive: state.formattingState.activeBlockType == .h2) {
+                formatBlockBtn("H2", isActive: state.formattingState.blockType == .h2) {
                     state.toggleBlockType(.h2)
                     Haptics.impact(.light)
                 }
-                formatBlockBtn("H3", isActive: state.formattingState.activeBlockType == .h3) {
+                formatBlockBtn("H3", isActive: state.formattingState.blockType == .h3) {
                     state.toggleBlockType(.h3)
                     Haptics.impact(.light)
                 }
-                formatIconBtn("checklist", isActive: state.formattingState.activeBlockType == .checklist) {
+                formatIconBtn("checklist", isActive: state.formattingState.blockType == .checklist) {
                     state.toggleBlockType(.checklist)
                     Haptics.impact(.light)
                 }
-                formatIconBtn("list.bullet", isActive: state.formattingState.activeBlockType == .bullet) {
+                formatIconBtn("list.bullet", isActive: state.formattingState.blockType == .bullet) {
                     state.toggleBlockType(.bullet)
                     Haptics.impact(.light)
                 }
-                formatIconBtn("paragraph", isActive: state.formattingState.activeBlockType == .paragraph) {
+                formatIconBtn("paragraph", isActive: state.formattingState.blockType == .paragraph) {
                     state.toggleBlockType(.paragraph)
                     Haptics.impact(.light)
                 }
