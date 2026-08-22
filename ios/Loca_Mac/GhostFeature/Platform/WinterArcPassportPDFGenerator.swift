@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import PDFKit
+import UniformTypeIdentifiers
 
 /// Vector PDF certificate and passport exporter for completed Winter Arc / Ghost seasons.
 @MainActor
