@@ -130,15 +130,18 @@ public struct NotesCanvasView: View {
     @ViewBuilder
     private var editorColumn: some View {
         if let noteID = selectedNoteID {
-            DocumentEditorView(
+            PlutoDocumentEditor(
                 repository: engine.repository,
                 documentID: noteID,
-                config: EditorConfig(
-                    showPin: true,
-                    showFolderPill: true,
-                    showMoveToFolder: true,
-                    markdownMagic: true,
-                    wordCount: false,
+                memory: .notes,
+                config: EditorChromeConfig(
+                    dateHeader: false,
+                    mediaBar: false,
+                    wordCountFooter: true,
+                    bookmarkButton: false,
+                    doneButton: false,
+                    aaPopover: true,
+                    calmAtRest: true,
                     folderName: folderName(for: activeNoteFolderID),
                     isNavigatorVisible: isNavigatorVisible,
                     onToggleNavigator: { toggleNavigator() }

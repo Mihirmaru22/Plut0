@@ -129,5 +129,64 @@ struct ProjectBriefTests {
         let tableCount = sqlite3_column_int(statement, 0)
         #expect(tableCount == 1)
     }
+    
+    @Test func testOneEngineThreeMemories() async throws {
+        let notesRepo = InMemoryNotesRepository()
+        let briefRepo = InMemoryProjectBriefRepository()
+        let journalRepo = InMemoryJournalDocumentRepository()
+        
+        let id1 = NoteID()
+        let id2 = NoteID()
+        let id3 = NoteID()
+        
+        let testContent = NoteContent(version: 1, blocks: [
+            .heading(HeadingBlock(text: "Universal Title", level: 1)),
+            .checklistItem(ChecklistItemBlock(text: "Unified Presentation", isChecked: true))
+        ])
+        
+        // Write to all 3 isolated repositories
+        try await notesRepo.apply(.createNote(id: id1, folderID: nil))
+        try await notesRepo.apply(.updateContent(id1, testContent))
+        
+        try await briefRepo.apply(.createNote(id: id2, folderID: nil))
+        try await briefRepo.apply(.updateContent(id2, testContent))
+        
+        try await journalRepo.apply(.createNote(id: id3, folderID: nil))
+        try await journalRepo.apply(.updateContent(id3, testContent))
+        
+        // Assert all 3 successfully fetched identical CRDT content through DocumentCoreRepository interface
+        let d1 = try await notesRepo.fetchDocument(id: id1)
+        let d2 = try await briefRepo.fetchDocument(id: id2)
+        let d3 = try await journalRepo.fetchDocument(id: id3)
+        
+        #expect(d1?.title == "Universal Title")
+        #expect(d2?.title == "Universal Title")
+        #expect(d3?.title == "Universal Title")
+        
+        #expect(d1?.content.blocks.count == 2)
+        #expect(d2?.content.blocks.count == 2)
+        #expect(d3?.content.blocks.count == 2)
+    }
+    
+    @Test func testEditorChromeConfigDefaults() {
+        let notesConfig = EditorChromeConfig.notesDefault
+        #expect(notesConfig.calmAtRest == true)
+        #expect(notesConfig.wordCountFooter == true)
+        #expect(notesConfig.mediaBar == false)
+        #expect(notesConfig.dateHeader == false)
+        #expect(notesConfig.aaPopover == true)
+        
+        let briefConfig = EditorChromeConfig.briefDefault
+        #expect(briefConfig.calmAtRest == true)
+        #expect(briefConfig.wordCountFooter == true)
+        #expect(briefConfig.mediaBar == false)
+        #expect(briefConfig.dateHeader == false)
+        
+        let journalConfig = EditorChromeConfig.journalDefault
+        #expect(journalConfig.dateHeader == true)
+        #expect(journalConfig.mediaBar == true)
+        #expect(journalConfig.bookmarkButton == true)
+        #expect(journalConfig.doneButton == true)
+    }
 }
 #endif

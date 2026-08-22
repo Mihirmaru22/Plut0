@@ -338,10 +338,11 @@ struct MacProjectDetailView: View {
     }
     
     private var briefEditorSurface: some View {
-        DocumentEditorView(
+        PlutoDocumentEditor(
             repository: ProjectBriefEngine.shared,
             documentID: NoteID(raw: project.id),
-            config: .projectBrief
+            memory: .brief,
+            config: .briefDefault
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
