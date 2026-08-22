@@ -79,6 +79,23 @@ public enum NotesMappers {
         )
     }
     
+    public static func noteSummary(from row: NoteRow) -> NoteSummary {
+        summary(from: row)
+    }
+    
+    public static func noteSummary(from note: Note) -> NoteSummary {
+        NoteSummary(
+            id: note.id,
+            title: note.title,
+            preview: note.preview,
+            folderID: note.folderID,
+            isPinned: note.isPinned,
+            isLocked: note.isLocked,
+            isDeleted: note.isDeleted,
+            updatedAt: note.updatedAt
+        )
+    }
+    
     // MARK: - Folder <-> FolderRow
     
     public static func folder(from row: FolderRow) -> Folder {
