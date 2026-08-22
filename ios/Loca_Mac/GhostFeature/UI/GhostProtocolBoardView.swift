@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 /// Daily Protocol Board for executing and verifying Ghost Season rules with authentic proof receipts.
 /// Organized by Morning Forge, Day Grind, and Night Seal.
