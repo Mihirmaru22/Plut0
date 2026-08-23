@@ -35,9 +35,7 @@ struct MacRootView: View {
     @State private var selectedSection:     MacSection?      = .today
     @State private var selectedHabit:       HabitBoard?      = nil
     @State private var selectedTodo:        TodoItem?        = nil
-    @State private var selectedJournalRow:  JournalRow?      = .todaysLog
     @State private var selectedJournalNote: JournalNote?     = nil
-    @State private var selectedLifeRow:     LifeRow?         = .trekAtlas
     @State private var columnVisibility:    NavigationSplitViewVisibility = .all
     @AppStorage("has_completed_onboarding_v3") private var hasCompletedOnboarding: Bool = false
     @State private var showOnboarding:      Bool             = false
@@ -122,8 +120,6 @@ struct MacRootView: View {
         .onChange(of: selectedSection) { _, _ in
             selectedHabit      = nil
             selectedTodo       = nil
-            selectedJournalRow = .todaysLog
-            selectedLifeRow    = .trekAtlas
         }
         .onReceive(NotificationCenter.default.publisher(for: .locaJumpToSection)) { note in
             if let section = note.object as? MacSection {
