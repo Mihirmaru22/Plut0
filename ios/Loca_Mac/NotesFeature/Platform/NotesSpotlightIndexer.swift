@@ -81,7 +81,7 @@ public final class NotesSpotlightIndexer: Sendable {
     
     /// Starts real-time observation of the Notes engine to sync all changes to Spotlight.
     public func startObserving(engine: NotesEngine) {
-        Task {
+        Task { @MainActor in
             for await notesList in engine.observeNotes() {
                 self.batchIndex(summaries: notesList)
             }

@@ -185,18 +185,21 @@ public actor ShadowSyncCoordinator {
             var remaining: [BufferedSyncMessage] = []
             
             for msg in causalBuffer {
-                if msg.noteID == noteID && (await canApply(vectorClock: msg.vectorClock, senderID: msg.remoteDeviceID, for: noteID)) {
-                    try? await applyRemoteDelta(
-                        messageID: msg.messageID,
-                        noteID: msg.noteID,
-                        encryptedPayload: msg.encryptedPayload,
-                        vectorClock: msg.vectorClock,
-                        remoteDeviceID: msg.remoteDeviceID
-                    )
-                    progress = true
-                } else {
-                    remaining.append(msg)
+                if msg.noteID == noteID {
+                    let eligible = await canApply(vectorClock: msg.vectorClock, senderID: msg.remoteDeviceID, for: noteID)
+                    if eligible {
+                        try? await applyRemoteDelta(
+                            messageID: msg.messageID,
+                            noteID: msg.noteID,
+                            encryptedPayload: msg.encryptedPayload,
+                            vectorClock: msg.vectorClock,
+                            remoteDeviceID: msg.remoteDeviceID
+                        )
+                        progress = true
+                        continue
+                    }
                 }
+                remaining.append(msg)
             }
             causalBuffer = remaining
         }
@@ -283,19 +286,7 @@ public actor ShadowSyncCoordinator {
     }
     
     private func targetNoteID(from mutation: NoteMutation) -> NoteID {
-        switch mutation {
-        case .createNote(let id, _): return id
-        case .setTitle(let id, _): return id
-        case .updateContent(let id, _): return id
-        case .move(let id, _): return id
-        case .setPinned(let id, _): return id
-        case .setLocked(let id, _): return id
-        case .markDeleted(let id): return id
-        case .restore(let id): return id
-        case .permanentlyDelete(let id): return id
-        case .toggleChecklistItem(let id, _): return id
-        case .materializeFromSync(let id, _, _, _, _): return id
-        }
+        mutation.noteID
     }
     
     private func startListeningToRemoteMessages() {
