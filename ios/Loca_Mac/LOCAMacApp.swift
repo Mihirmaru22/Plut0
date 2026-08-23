@@ -58,11 +58,22 @@ struct LOCAMacApp: App {
         }
     }
 
+    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "dark"
+
+    private var preferredScheme: ColorScheme? {
+        switch appearanceMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
     var body: some Scene {
         WindowGroup("Pluto") {
             if let container {
                 MacRootView()
                     .modelContainer(container)
+                    .preferredColorScheme(preferredScheme)
                     .background(PlutoWindowAccessor())
                     .frame(minWidth: DS.Mac.windowMinWidth, minHeight: DS.Mac.windowMinHeight)
                     .onAppear {

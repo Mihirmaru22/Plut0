@@ -1,42 +1,78 @@
 import SwiftUI
 import AppKit
 
-// MARK: - DS.Theme (Linear / Raycast Precision Theme Tokens)
+// MARK: - DS.Theme (Dynamic Linear / Raycast Precision Theme Tokens)
 
 extension DS {
 
-    enum Theme {
+    public enum Theme {
 
-        // MARK: - Canvas & Surfaces (Obsidian Slate Hierarchy)
+        // MARK: - Dynamic Color Factory Helper
+        
+        private static func dynamic(dark: NSColor, light: NSColor) -> SwiftUI.Color {
+            SwiftUI.Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+                let match = appearance.bestMatch(from: [.darkAqua, .aqua])
+                return match == .darkAqua ? dark : light
+            }))
+        }
 
-        /// Deepest background canvas (e.g. Window body, behind split panes). `#0C0D0F`
-        public static let canvas = SwiftUI.Color(nsColor: NSColor(red: 0.048, green: 0.052, blue: 0.059, alpha: 1.0))
+        // MARK: - Canvas & Surfaces (Dynamic Obsidian Slate / Studio Hierarchy)
 
-        /// Sidebar background tone. `#101215`
-        public static let sidebar = SwiftUI.Color(nsColor: NSColor(red: 0.063, green: 0.071, blue: 0.082, alpha: 1.0))
+        /// Deepest background canvas (e.g. Window body, behind split panes).
+        public static let canvas = dynamic(
+            dark: NSColor(red: 0.048, green: 0.052, blue: 0.059, alpha: 1.0),
+            light: NSColor(red: 0.965, green: 0.970, blue: 0.978, alpha: 1.0)
+        )
 
-        /// Content column surface. `#14171B`
-        public static let surface = SwiftUI.Color(nsColor: NSColor(red: 0.078, green: 0.090, blue: 0.106, alpha: 1.0))
+        /// Sidebar background tone.
+        public static let sidebar = dynamic(
+            dark: NSColor(red: 0.063, green: 0.071, blue: 0.082, alpha: 1.0),
+            light: NSColor(red: 0.925, green: 0.935, blue: 0.948, alpha: 1.0)
+        )
 
-        /// Elevated bento card fill. `#191D22`
-        public static let card = SwiftUI.Color(nsColor: NSColor(red: 0.098, green: 0.114, blue: 0.133, alpha: 1.0))
+        /// Content column surface.
+        public static let surface = dynamic(
+            dark: NSColor(red: 0.078, green: 0.090, blue: 0.106, alpha: 1.0),
+            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        )
 
-        /// Interactive card hover state. `#1F242B`
-        public static let cardHover = SwiftUI.Color(nsColor: NSColor(red: 0.122, green: 0.141, blue: 0.169, alpha: 1.0))
+        /// Elevated bento card fill.
+        public static let card = dynamic(
+            dark: NSColor(red: 0.098, green: 0.114, blue: 0.133, alpha: 1.0),
+            light: NSColor(red: 0.955, green: 0.962, blue: 0.972, alpha: 1.0)
+        )
 
-        /// Selected item background. `#242A33`
-        public static let cardSelected = SwiftUI.Color(nsColor: NSColor(red: 0.141, green: 0.165, blue: 0.200, alpha: 1.0))
+        /// Interactive card hover state.
+        public static let cardHover = dynamic(
+            dark: NSColor(red: 0.122, green: 0.141, blue: 0.169, alpha: 1.0),
+            light: NSColor(red: 0.915, green: 0.925, blue: 0.938, alpha: 1.0)
+        )
+
+        /// Selected item background.
+        public static let cardSelected = dynamic(
+            dark: NSColor(red: 0.141, green: 0.165, blue: 0.200, alpha: 1.0),
+            light: NSColor(red: 0.875, green: 0.890, blue: 0.910, alpha: 1.0)
+        )
 
         // MARK: - Machined Borders & Rim Lighting
 
         /// Standard 1px precision boundary stroke.
-        public static let border = SwiftUI.Color.white.opacity(0.08)
+        public static let border = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.08),
+            light: NSColor(white: 0.0, alpha: 0.09)
+        )
 
         /// Extremely subtle internal divider.
-        public static let borderSubtle = SwiftUI.Color.white.opacity(0.04)
+        public static let borderSubtle = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.04),
+            light: NSColor(white: 0.0, alpha: 0.05)
+        )
 
         /// Focused / Active element outline.
-        public static let borderActive = SwiftUI.Color.white.opacity(0.20)
+        public static let borderActive = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.20),
+            light: NSColor(white: 0.0, alpha: 0.22)
+        )
 
         // MARK: - Vivid Precision Accents
 
@@ -60,22 +96,41 @@ extension DS {
 
         // MARK: - Typography Shades
 
-        public static let textPrimary = SwiftUI.Color.white
-        public static let textSecondary = SwiftUI.Color.white.opacity(0.68)
-        public static let textTertiary = SwiftUI.Color.white.opacity(0.40)
-        public static let textMuted = SwiftUI.Color.white.opacity(0.22)
+        public static let textPrimary = dynamic(
+            dark: NSColor(white: 1.0, alpha: 1.0),
+            light: NSColor(red: 0.10, green: 0.11, blue: 0.13, alpha: 1.0)
+        )
+        
+        public static let textSecondary = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.68),
+            light: NSColor(red: 0.36, green: 0.38, blue: 0.42, alpha: 1.0)
+        )
+        
+        public static let textTertiary = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.40),
+            light: NSColor(red: 0.56, green: 0.58, blue: 0.62, alpha: 1.0)
+        )
+        
+        public static let textMuted = dynamic(
+            dark: NSColor(white: 1.0, alpha: 0.22),
+            light: NSColor(red: 0.72, green: 0.74, blue: 0.78, alpha: 1.0)
+        )
     }
 }
 
 // MARK: - Machined Precision Card ViewModifier
 
 public struct MachinedCardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
     var isHovered: Bool = false
     var isSelected: Bool = false
     var cornerRadius: CGFloat = 10
     var accentColor: SwiftUI.Color? = nil
 
     public func body(content: Content) -> some View {
+        let isDark = colorScheme == .dark
+        let strokeBase = isDark ? SwiftUI.Color.white : SwiftUI.Color.black
+
         content
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -90,8 +145,8 @@ public struct MachinedCardModifier: ViewModifier {
                     .stroke(
                         LinearGradient(
                             stops: [
-                                .init(color: (accentColor ?? SwiftUI.Color.white).opacity(isSelected ? 0.35 : (isHovered ? 0.22 : 0.10)), location: 0.0),
-                                .init(color: SwiftUI.Color.white.opacity(isSelected ? 0.12 : (isHovered ? 0.06 : 0.03)), location: 1.0)
+                                .init(color: (accentColor ?? strokeBase).opacity(isSelected ? 0.35 : (isHovered ? 0.22 : 0.10)), location: 0.0),
+                                .init(color: strokeBase.opacity(isSelected ? 0.12 : (isHovered ? 0.06 : 0.03)), location: 1.0)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -100,7 +155,7 @@ public struct MachinedCardModifier: ViewModifier {
                     )
             )
             .shadow(
-                color: SwiftUI.Color.black.opacity(isHovered ? 0.35 : 0.18),
+                color: SwiftUI.Color.black.opacity(isDark ? (isHovered ? 0.35 : 0.18) : (isHovered ? 0.10 : 0.04)),
                 radius: isHovered ? 8 : 4,
                 x: 0,
                 y: isHovered ? 3 : 1.5
@@ -123,8 +178,8 @@ extension View {
                 .foregroundStyle(DS.Theme.textTertiary)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(SwiftUI.Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(SwiftUI.Color.white.opacity(0.08), lineWidth: 0.8))
+                .background(DS.Theme.borderSubtle, in: RoundedRectangle(cornerRadius: 4))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(DS.Theme.border, lineWidth: 0.8))
         }
     }
 }

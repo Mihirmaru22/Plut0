@@ -97,6 +97,28 @@ struct LOCACommands: Commands {
             .keyboardShortcut(.delete, modifiers: [.command])
         }
 
+        // MARK: - View & Appearance Menu
+        CommandMenu("View") {
+            Menu("Appearance") {
+                Button("Dark Mode (Obsidian)") {
+                    UserDefaults.standard.set("dark", forKey: "mac_appearance_mode")
+                    PlutoDynamicAppIconManager.shared.updateDockIcon()
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+
+                Button("Light Mode (Studio)") {
+                    UserDefaults.standard.set("light", forKey: "mac_appearance_mode")
+                    PlutoDynamicAppIconManager.shared.updateDockIcon()
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+
+                Button("System Default") {
+                    UserDefaults.standard.set("system", forKey: "mac_appearance_mode")
+                    PlutoDynamicAppIconManager.shared.updateDockIcon()
+                }
+            }
+        }
+
         // MARK: - App Info Menu
         CommandGroup(replacing: .appInfo) {
             Button("About Pluto") {

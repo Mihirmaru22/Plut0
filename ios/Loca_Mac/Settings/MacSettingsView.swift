@@ -22,6 +22,7 @@ struct MacSettingsView: View {
     @Query private var allTreks: [TrekRecord]
 
     // Settings Storage
+    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "dark"
     @AppStorage("mac_sound_effects_enabled") private var soundEffectsEnabled: Bool = true
     @AppStorage("mac_open_full_window_on_launch") private var openFullWindow: Bool = true
     @AppStorage("mac_enable_haptics") private var enableHaptics: Bool = true
@@ -375,39 +376,59 @@ struct MacSettingsView: View {
 
     // 3. Appearance & Colors
     private var appearanceControlBlock: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Executive 8-Color Palette")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(DS.Color.textPrimary)
+        VStack(alignment: .leading, spacing: 16) {
+            // Theme Mode Selector
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Interface Appearance")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(DS.Color.textPrimary)
 
-            let palette: [Color] = [
-                Color(red: 0.95, green: 0.77, blue: 0.25),
-                Color(red: 0.35, green: 0.65, blue: 0.95),
-                Color(red: 0.85, green: 0.40, blue: 0.40),
-                Color(red: 0.45, green: 0.85, blue: 0.55),
-                Color(red: 0.75, green: 0.55, blue: 0.95),
-                Color(red: 0.95, green: 0.55, blue: 0.35),
-                Color(red: 0.30, green: 0.85, blue: 0.80),
-                Color(red: 0.80, green: 0.80, blue: 0.85),
-            ]
-
-            HStack(spacing: 10) {
-                ForEach(0..<palette.count, id: \.self) { idx in
-                    Button {
-                        selectedAccentIndex = idx
-                        PlutoSoundEngine.shared.play(.tabSwitch)
-                        Haptics.impact(.light)
-                    } label: {
-                        Circle()
-                            .fill(palette[idx])
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                Circle().stroke(Color.white, lineWidth: selectedAccentIndex == idx ? 2 : 0)
-                            )
-                    }
-                    .buttonStyle(.plain)
+                HStack(spacing: 8) {
+                    themeModeButton(title: "Dark", icon: "moon.stars.fill", mode: "dark")
+                    themeModeButton(title: "Light", icon: "sun.max.fill", mode: "light")
+                    themeModeButton(title: "System", icon: "laptopcomputer", mode: "system")
                 }
             }
+
+            Divider().opacity(0.15)
+
+            // Executive Accent Palette
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Executive Accent Palette")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(DS.Color.textPrimary)
+
+                let palette: [Color] = [
+                    Color(red: 0.95, green: 0.77, blue: 0.25),
+                    Color(red: 0.35, green: 0.65, blue: 0.95),
+                    Color(red: 0.85, green: 0.40, blue: 0.40),
+                    Color(red: 0.45, green: 0.85, blue: 0.55),
+                    Color(red: 0.75, green: 0.55, blue: 0.95),
+                    Color(red: 0.95, green: 0.55, blue: 0.35),
+                    Color(red: 0.30, green: 0.85, blue: 0.80),
+                    Color(red: 0.80, green: 0.80, blue: 0.85),
+                ]
+
+                HStack(spacing: 10) {
+                    ForEach(0..<palette.count, id: \.self) { idx in
+                        Button {
+                            selectedAccentIndex = idx
+                            PlutoSoundEngine.shared.play(.tabSwitch)
+                            Haptics.impact(.light)
+                        } label: {
+                            Circle()
+                                .fill(palette[idx])
+                                .frame(width: 24, height: 24)
+                                .overlay(
+                                    Circle().stroke(Color.primary, lineWidth: selectedAccentIndex == idx ? 2 : 0)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Divider().opacity(0.15)
 
             Toggle(isOn: $enableHaptics) {
                 Text("Force Touch Trackpad Haptics")
@@ -416,6 +437,36 @@ struct MacSettingsView: View {
             .toggleStyle(.switch)
             .tint(accentColor)
         }
+    }
+
+    private func themeModeButton(title: String, icon: String, mode: String) -> some View {
+        let isSelected = appearanceMode == mode
+        return Button {
+            appearanceMode = mode
+            PlutoDynamicAppIconManager.shared.updateDockIcon()
+            PlutoSoundEngine.shared.play(.tabSwitch)
+            Haptics.impact(.light)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .bold))
+                Text(title)
+                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity)
+            .background(
+                isSelected ? accentColor.opacity(0.18) : DS.Theme.card,
+                in: RoundedRectangle(cornerRadius: 6)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? accentColor : DS.Theme.border, lineWidth: 1)
+            )
+            .foregroundStyle(isSelected ? accentColor : DS.Theme.textSecondary)
+        }
+        .buttonStyle(.plain)
     }
 
     // 4. General & System
