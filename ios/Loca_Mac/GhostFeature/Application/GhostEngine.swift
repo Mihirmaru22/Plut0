@@ -49,6 +49,7 @@ public actor GhostEngine {
         try await store.saveSeason(season)
 
         if let rules = customRules {
+            try? await store.deleteAllCustomRules(seasonID: season.id)
             for rule in rules {
                 try await store.saveCustomRule(rule, seasonID: season.id)
             }
@@ -74,31 +75,49 @@ public actor GhostEngine {
     }
 
     public func fetchRules(for season: GhostSeason?) async -> [GhostProtocolRule] {
-        let kind = season?.protocolKind ?? .the120
-        var presets = GhostProtocolRule.defaultRules(for: kind)
-        for i in presets.indices { presets[i].sortOrder = i }
-        guard let season = season else { return presets }
-        let customRules = (try? await store.fetchCustomRules(seasonID: season.id)) ?? []
-        if customRules.isEmpty {
+        guard let season = season else {
+            let presets = GhostProtocolRule.defaultRules(for: .the120)
             return presets.filter { $0.isEnabled }
         }
-
-        let customIDs = Set(customRules.map(\.id))
-        let filteredPresets = presets.filter { !customIDs.contains($0.id) }
-        let allRules = filteredPresets + customRules
-        return allRules
-            .filter { $0.isEnabled }
-            .sorted { ($0.sortOrder, $0.ring.rawValue) < ($1.sortOrder, $1.ring.rawValue) }
-    }
-
-    public func allRulesIncludingDisabled(for season: GhostSeason) async -> [GhostProtocolRule] {
+        let customRules = (try? await store.fetchCustomRules(seasonID: season.id)) ?? []
+        if !customRules.isEmpty {
+            var seen = Set<String>()
+            var deduped: [GhostProtocolRule] = []
+            for rule in customRules {
+                let key = "\(rule.ring.rawValue)_\(rule.title.lowercased())"
+                if !seen.contains(key) {
+                    seen.insert(key)
+                    deduped.append(rule)
+                }
+            }
+            return deduped
+                .filter { $0.isEnabled }
+                .sorted { ($0.sortOrder, $0.ring.rawValue) < ($1.sortOrder, $1.ring.rawValue) }
+        }
         let kind = season.protocolKind
         var presets = GhostProtocolRule.defaultRules(for: kind)
         for i in presets.indices { presets[i].sortOrder = i }
+        return presets.filter { $0.isEnabled }
+    }
+
+    public func allRulesIncludingDisabled(for season: GhostSeason) async -> [GhostProtocolRule] {
         let customRules = (try? await store.fetchCustomRules(seasonID: season.id)) ?? []
-        let customIDs = Set(customRules.map(\.id))
-        let filteredPresets = presets.filter { !customIDs.contains($0.id) }
-        return filteredPresets + customRules
+        if !customRules.isEmpty {
+            var seen = Set<String>()
+            var deduped: [GhostProtocolRule] = []
+            for rule in customRules {
+                let key = "\(rule.ring.rawValue)_\(rule.title.lowercased())"
+                if !seen.contains(key) {
+                    seen.insert(key)
+                    deduped.append(rule)
+                }
+            }
+            return deduped.sorted { ($0.sortOrder, $0.ring.rawValue) < ($1.sortOrder, $1.ring.rawValue) }
+        }
+        let kind = season.protocolKind
+        var presets = GhostProtocolRule.defaultRules(for: kind)
+        for i in presets.indices { presets[i].sortOrder = i }
+        return presets
     }
 
     // MARK: - Receipts & Live Ring Re-Evaluation (Migration v5)

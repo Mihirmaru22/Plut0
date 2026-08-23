@@ -376,6 +376,16 @@ public actor GhostStore {
         }
     }
 
+    public func deleteAllCustomRules(seasonID: String) throws {
+        try database.write { db in
+            let sql = "DELETE FROM ghost_custom_rules WHERE season_id = ?;"
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
+            _ = sqlite3_step(statement)
+        }
+    }
+
     // MARK: - Mappers
 
     private func extractSeason(from statement: OpaquePointer) -> GhostSeason? {

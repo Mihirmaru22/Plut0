@@ -22,15 +22,16 @@ public struct ContractOnboardingView: View {
     @State private var workoutMinutes: Int = 45
     @State private var isOutdoorWorkoutRequired: Bool = false
     @State private var includeSecondWorkout: Bool = false
-    @State private var include10kSteps: Bool = true
+    @State private var include10kSteps: Bool = false
+    @State private var includeWaterTarget: Bool = false
     @State private var waterTargetGlasses: Int = 8 // 8 glasses = 3.0 Litres
-    @State private var includeStrictDiet: Bool = true
+    @State private var includeStrictDiet: Bool = false
     @State private var includeDailyPhoto: Bool = false
 
     // 3. Silence Ring
     @State private var deepFocusMinutes: Int = 45
     @State private var includeSocialMediaFast: Bool = true
-    @State private var includeOfflineSleepMode: Bool = true
+    @State private var includeOfflineSleepMode: Bool = false
 
     // MARK: - Legal / Covenant Authorization State
     @State private var signatureName: String = ""
@@ -538,34 +539,42 @@ public struct ContractOnboardingView: View {
 
             // Hydration Target Selection
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Daily Hydration Target:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                    Spacer()
-                    Text(waterLabel(waterTargetGlasses))
-                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#0091FF"))
-                }
-
-                HStack(spacing: 6) {
-                    ForEach([6, 8, 10, 12], id: \.self) { glasses in
-                        Button {
-                            waterTargetGlasses = glasses
-                            Haptics.selection()
-                        } label: {
-                            Text(waterShortLabel(glasses))
-                                .font(.system(size: 10.5, weight: waterTargetGlasses == glasses ? .bold : .medium))
-                                .foregroundStyle(waterTargetGlasses == glasses ? Color.white : DS.Theme.textSecondary)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 4)
-                                .background(
-                                    waterTargetGlasses == glasses ? Color(hex: "#0091FF") : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 5)
-                                )
+                Toggle(isOn: $includeWaterTarget) {
+                    HStack {
+                        Text("Daily Hydration Target")
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(DS.Theme.textPrimary)
+                        Spacer()
+                        if includeWaterTarget {
+                            Text(waterLabel(waterTargetGlasses))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color(hex: "#0091FF"))
                         }
-                        .buttonStyle(.plain)
                     }
+                }
+                .toggleStyle(.checkbox)
+
+                if includeWaterTarget {
+                    HStack(spacing: 6) {
+                        ForEach([6, 8, 10, 12], id: \.self) { glasses in
+                            Button {
+                                waterTargetGlasses = glasses
+                                Haptics.selection()
+                            } label: {
+                                Text(waterShortLabel(glasses))
+                                    .font(.system(size: 10.5, weight: waterTargetGlasses == glasses ? .bold : .medium))
+                                    .foregroundStyle(waterTargetGlasses == glasses ? Color.white : DS.Theme.textSecondary)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        waterTargetGlasses == glasses ? Color(hex: "#0091FF") : Color.white.opacity(0.06),
+                                        in: RoundedRectangle(cornerRadius: 5)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.leading, 20)
                 }
             }
 
@@ -769,7 +778,7 @@ public struct ContractOnboardingView: View {
 
             VStack(spacing: 6) {
                 summaryRow(icon: "brain.head.profile", color: Color(hex: "#3E63DD"), title: "Mind Ring", detail: "Read \(readingPages) pages" + (includeEveningSynthesis ? " · Evening Synthesis Note" : ""))
-                summaryRow(icon: "figure.run", color: Color(hex: "#E54D2E"), title: "Body Ring", detail: "\(workoutMinutes)m Workout" + (isOutdoorWorkoutRequired ? " (Outdoor)" : "") + (includeSecondWorkout ? " + 2nd 45m Session" : "") + " · \(waterShortLabel(waterTargetGlasses)) Water" + (includeStrictDiet ? " · Strict Diet" : ""))
+                summaryRow(icon: "figure.run", color: Color(hex: "#E54D2E"), title: "Body Ring", detail: "\(workoutMinutes)m Workout" + (isOutdoorWorkoutRequired ? " (Outdoor)" : "") + (includeSecondWorkout ? " + 2nd 45m Session" : "") + (includeWaterTarget ? " · \(waterShortLabel(waterTargetGlasses)) Water" : "") + (includeStrictDiet ? " · Strict Diet" : ""))
                 summaryRow(icon: "speaker.slash.fill", color: Color(hex: "#0091FF"), title: "Silence Ring", detail: "\(deepFocusMinutes)m Deep Focus Silence" + (includeSocialMediaFast ? " · Social Media Fast" : "") + (includeOfflineSleepMode ? " · Screen-Free Sleep" : ""))
             }
         }
@@ -882,14 +891,15 @@ public struct ContractOnboardingView: View {
             workoutMinutes = 45
             isOutdoorWorkoutRequired = false
             includeSecondWorkout = false
-            include10kSteps = true
+            include10kSteps = false
+            includeWaterTarget = false
             waterTargetGlasses = 8
-            includeStrictDiet = true
+            includeStrictDiet = false
             includeDailyPhoto = false
             deepFocusMinutes = 45
             includeSocialMediaFast = true
             includeEveningSynthesis = true
-            includeOfflineSleepMode = true
+            includeOfflineSleepMode = false
         case .seventyFiveHard:
             seasonName = "75 Hard Season"
             readingPages = 10
@@ -897,6 +907,7 @@ public struct ContractOnboardingView: View {
             isOutdoorWorkoutRequired = true
             includeSecondWorkout = true
             include10kSteps = false
+            includeWaterTarget = true
             waterTargetGlasses = 10 // 1 Gallon
             includeStrictDiet = true
             includeDailyPhoto = true
@@ -985,20 +996,22 @@ public struct ContractOnboardingView: View {
         }
 
         // 5. Body Ring - Water
-        rules.append(GhostProtocolRule(
-            id: "body_water_custom",
-            title: waterTargetGlasses >= 10 ? "1 Gallon Water" : "\(waterLabel(waterTargetGlasses))",
-            subtitle: "Hydration target: \(waterTargetGlasses) full glasses.",
-            ring: .body,
-            phase: .day,
-            proofKind: .quantity,
-            targetValue: Double(waterTargetGlasses),
-            unitLabel: "glasses",
-            icon: "drop.fill",
-            isCustom: true,
-            sortOrder: order
-        ))
-        order += 1
+        if includeWaterTarget {
+            rules.append(GhostProtocolRule(
+                id: "body_water_custom",
+                title: waterTargetGlasses >= 10 ? "1 Gallon Water" : "\(waterLabel(waterTargetGlasses))",
+                subtitle: "Hydration target: \(waterTargetGlasses) full glasses.",
+                ring: .body,
+                phase: .day,
+                proofKind: .quantity,
+                targetValue: Double(waterTargetGlasses),
+                unitLabel: "glasses",
+                icon: "drop.fill",
+                isCustom: true,
+                sortOrder: order
+            ))
+            order += 1
+        }
 
         // 6. Body Ring - Steps / Basal Forge
         if include10kSteps {

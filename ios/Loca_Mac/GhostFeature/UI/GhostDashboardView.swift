@@ -152,6 +152,24 @@ public struct GhostDashboardView: View {
                     .padding(.vertical, 8)
                     .background(Color(red: 0.08, green: 0.08, blue: 0.11), in: RoundedRectangle(cornerRadius: 10))
 
+                    // Reconfigure Covenant Button
+                    Button {
+                        showOnboardingModal = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Covenant")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reconfigure Sovereign Covenant Protocol & Rules")
+
                     // Photo Wall Button
                     Button {
                         showPhotoWallModal = true
