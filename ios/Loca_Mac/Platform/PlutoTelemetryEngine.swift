@@ -49,7 +49,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
         ISO8601DateFormatter().string(from: sessionStartedAt)
     }
 
-    private var eventBuffer: [PlutoAlphaEvent] = []
+    nonisolated(unsafe) private var eventBuffer: [PlutoAlphaEvent] = []
     private let bufferLock = NSLock()
     private var flushTimer: Timer?
     private var snapshotTimer: Timer?
