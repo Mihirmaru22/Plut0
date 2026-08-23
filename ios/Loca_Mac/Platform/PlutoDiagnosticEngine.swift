@@ -20,20 +20,6 @@ final class PlutoDiagnosticEngine: @unchecked Sendable {
     private let logger = Logger(subsystem: "com.mihirmaru.pluto.telemetry", category: "diagnostics")
     private let lock = NSLock()
 
-    private var _currentScreen: String = "launch"
-    var currentScreen: String {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return _currentScreen
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            _currentScreen = newValue
-        }
-    }
-
     private var breadcrumbBuffer: [String] = []
     private let maxBreadcrumbs = 100
     private var isConfigured = false

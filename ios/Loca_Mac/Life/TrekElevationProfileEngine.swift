@@ -15,17 +15,8 @@ struct ElevationPoint: Identifiable, Sendable, Codable, Equatable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    var elevationFeet: Double {
-        elevationMeters * 3.28084
-    }
-
     var formattedElevation: String {
         "\(Int(elevationMeters).formatted()) m"
-    }
-
-    var formattedGrade: String {
-        let prefix = gradePercentage >= 0 ? "+" : ""
-        return String(format: "%@%.1f%%", prefix, gradePercentage)
     }
 
     init(distanceKm: Double, elevationMeters: Double, gradePercentage: Double, latitude: Double, longitude: Double) {

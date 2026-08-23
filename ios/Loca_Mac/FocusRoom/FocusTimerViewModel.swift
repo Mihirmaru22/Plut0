@@ -123,6 +123,9 @@ final class FocusTimerViewModel: ObservableObject {
         lastResumeDate = Date()
         targetEndDate = Date().addingTimeInterval(TimeInterval(secondsRemaining))
         isRunning = true
+        if mode == .focus {
+            LocaPowerManager.shared.beginFocusSleepAssertion()
+        }
     }
 
     func pause() {
@@ -132,6 +135,7 @@ final class FocusTimerViewModel: ObservableObject {
         lastResumeDate = nil
         targetEndDate = nil
         isRunning = false
+        LocaPowerManager.shared.endFocusSleepAssertion()
     }
 
     func resetTimer() {
