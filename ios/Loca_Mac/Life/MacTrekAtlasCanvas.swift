@@ -30,6 +30,7 @@ struct MacTrekAtlasCanvas: View {
     @State private var isLogModalPresented: Bool = false
     @State private var isTrophyCabinetPresented: Bool = false
     @State private var passportTrek: TrekRecord? = nil
+    @State private var showResetDialog: Bool = false
 
     // Filtered Treks
     private var activeTreks: [TrekRecord] {
@@ -136,7 +137,7 @@ struct MacTrekAtlasCanvas: View {
         }
         .sheet(isPresented: $isTrophyCabinetPresented) {
             MountaineerTrophyCabinetModal(conqueredTreks: conqueredTreks, allTreks: activeTreks, onDismiss: { isTrophyCabinetPresented = false })
-                .frame(minWidth: 640, minHeight: 520)
+                .frame(minWidth: 780, idealWidth: 840, minHeight: 560, idealHeight: 620)
         }
         .sheet(isPresented: $isLogModalPresented) {
             MacLogPeakModal(
@@ -173,6 +174,40 @@ struct MacTrekAtlasCanvas: View {
             }
 
             Spacer()
+
+            // Reset Mountain Data Button
+            Button {
+                showResetDialog = true
+                Haptics.impact(.light)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 10, weight: .bold))
+                    Text("Reset Data")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(Color.red.opacity(0.85))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(Color.red.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.red.opacity(0.20), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .confirmationDialog("Reset Mountain Data?", isPresented: $showResetDialog, titleVisibility: .visible) {
+                Button("Reset All Peaks to Unclimbed", role: .destructive) {
+                    TrekSeeder.resetAllTreks(context: modelContext)
+                    PlutoSoundEngine.shared.play(.deleteTrash)
+                    Haptics.notify(.success)
+                }
+                Button("Reseed Default Mountain Catalog", role: .destructive) {
+                    TrekSeeder.reseedAllTreks(context: modelContext)
+                    PlutoSoundEngine.shared.play(.completePop)
+                    Haptics.notify(.success)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Choose whether to mark all peaks as unclimbed (0 summits) or completely reseed the clean mountain catalog.")
+            }
 
             // Trophies Button
             Button {

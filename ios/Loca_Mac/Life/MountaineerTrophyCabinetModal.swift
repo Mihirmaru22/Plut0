@@ -7,12 +7,15 @@ import SwiftData
 /// Features dynamic Explorer Mountaineer ranks, progress bars, and 12 expedition achievement shields.
 struct MountaineerTrophyCabinetModal: View {
 
+    @Environment(\.modelContext) private var modelContext
+
     let conqueredTreks: [TrekRecord]
     let allTreks: [TrekRecord]
     let onDismiss: () -> Void
 
     @State private var selectedCategory: TrophyCategory = .all
     @State private var inspectedBadge: MountaineerBadge? = nil
+    @State private var showResetConfirmation: Bool = false
 
     enum TrophyCategory: String, CaseIterable, Identifiable {
         case all        = "All Trophies"
@@ -63,7 +66,7 @@ struct MountaineerTrophyCabinetModal: View {
     var body: some View {
         VStack(spacing: 0) {
 
-            // Top Header with Close Button
+            // Top Header with Reset and Close Buttons
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "trophy.fill")
@@ -76,6 +79,38 @@ struct MountaineerTrophyCabinetModal: View {
                 }
 
                 Spacer()
+
+                // Reset Mountain Data Button
+                Button {
+                    showResetConfirmation = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("Reset Progress")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(Color.red.opacity(0.85))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain)
+                .confirmationDialog("Reset Mountain Progress?", isPresented: $showResetConfirmation, titleVisibility: .visible) {
+                    Button("Reset All to Unclimbed", role: .destructive) {
+                        TrekSeeder.resetAllTreks(context: modelContext)
+                        PlutoSoundEngine.shared.play(.deleteTrash)
+                        Haptics.notify(.success)
+                    }
+                    Button("Reseed Default Catalog", role: .destructive) {
+                        TrekSeeder.reseedAllTreks(context: modelContext)
+                        PlutoSoundEngine.shared.play(.completePop)
+                        Haptics.notify(.success)
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will mark all mountain peaks as unclimbed and reset your summit trophies, altitude, and ascent records.")
+                }
 
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
@@ -114,7 +149,7 @@ struct MountaineerTrophyCabinetModal: View {
                 .padding(DS.Space.xl)
             }
         }
-        .frame(width: 820, height: 620)
+        .frame(minWidth: 780, idealWidth: 840, maxWidth: .infinity, minHeight: 560, idealHeight: 620, maxHeight: .infinity)
         .background(DS.Color.background)
         .popover(item: $inspectedBadge) { badge in
             badgeDetailPopover(badge: badge)
