@@ -12,7 +12,6 @@ struct MacOnboardingView: View {
     @AppStorage("has_completed_onboarding_v3") private var hasCompletedOnboarding: Bool = false
     @AppStorage("mac_time_ambient_sound_v2") private var selectedAmbientSound: String = "Lo-Fi Focus Chords"
     @AppStorage("mac_vault_biometrics_enabled") private var enableVaultSecurity: Bool = false
-    @AppStorage("mac_selected_palette_idx") private var selectedPaletteIdx: Int = 0
 
     @ObservedObject private var notificationManager = PlutoNotificationManager.shared
     @ObservedObject private var calendarSync        = PlutoCalendarSync.shared
