@@ -19,6 +19,11 @@ struct ElevationPoint: Identifiable, Sendable, Codable, Equatable {
         "\(Int(elevationMeters).formatted()) m"
     }
 
+    var formattedGrade: String {
+        let prefix = gradePercentage >= 0 ? "+" : ""
+        return String(format: "%@%.1f%%", prefix, gradePercentage)
+    }
+
     init(distanceKm: Double, elevationMeters: Double, gradePercentage: Double, latitude: Double, longitude: Double) {
         self.distanceKm = distanceKm
         self.elevationMeters = elevationMeters
