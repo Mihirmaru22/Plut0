@@ -180,9 +180,9 @@ public enum CRDTTranslator {
                 lastSortKey = sortKey
                 
                 if var existing = existingMap[block.id] {
-                    // Update text if changed
+                    // Update text if changed (preserving atom origins with character diff)
                     if existing.text.string != block.text {
-                        existing.text = CRDTText(string: block.text, deviceID: deviceID)
+                        existing.text.applyDiff(to: block.text, deviceID: deviceID, counter: &doc.localCounter)
                     }
                     if case .checklistItem(let item) = block {
                         existing.attributes["isChecked"] = item.isChecked ? "true" : "false"

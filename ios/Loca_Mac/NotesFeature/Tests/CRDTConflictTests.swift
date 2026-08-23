@@ -109,5 +109,71 @@ struct CRDTConflictTests {
         #expect(!contentA.blocks.contains(where: { $0.id == blockID }))
         #expect(!contentB.blocks.contains(where: { $0.id == blockID }))
     }
+    
+    // MARK: - Scenario 4: Character-Level Diff Atom Preservation (B-19)
+    @Test func testCharacterLevelDiffPreservesOrigins() throws {
+        let deviceA = "device-a"
+        let deviceB = "device-b"
+        let noteID = NoteID()
+        let blockID = UUID()
+        
+        // Initial setup: Document has "Hello" created by device A
+        var docA = CRDTDoc(id: noteID, deviceID: deviceA)
+        let initialBlock = CRDTBlock(id: blockID, type: "paragraph", text: CRDTText(string: "Hello", deviceID: deviceA))
+        docA.addBlock(initialBlock)
+        
+        var docB = docA
+        docB.deviceID = deviceB
+        
+        // Peer A edits "Hello" -> "Hello World" via NoteMutation.updateContent
+        let noteContentA = NoteContent(blocks: [
+            .paragraph(BlockData(id: blockID, text: "Hello World"))
+        ])
+        CRDTTranslator.apply(mutation: .updateContent(noteID: noteID, content: noteContentA), to: &docA, deviceID: deviceA)
+        
+        // Peer B edits "Hello" -> "Hello!" via NoteMutation.updateContent
+        let noteContentB = NoteContent(blocks: [
+            .paragraph(BlockData(id: blockID, text: "Hello!"))
+        ])
+        CRDTTranslator.apply(mutation: .updateContent(noteID: noteID, content: noteContentB), to: &docB, deviceID: deviceB)
+        
+        // Merge both directions
+        docA.merge(with: docB)
+        docB.merge(with: docA)
+        
+        let resultA = docA.blocks.first?.text.string ?? ""
+        let resultB = docB.blocks.first?.text.string ?? ""
+        
+        // Assert convergence without duplication of "Hello"
+        #expect(resultA == resultB)
+        #expect(resultA.contains("Hello"))
+        #expect(resultA.contains("World"))
+        #expect(resultA.contains("!"))
+        
+        // Ensure "Hello" is not duplicated
+        let helloCount = resultA.components(separatedBy: "Hello").count - 1
+        #expect(helloCount == 1)
+        
+        // Verify atom origins: original 5 atoms ("Hello") still have deviceA's origin
+        let activeAtomsA = docA.blocks.first?.text.atoms.filter { !$0.isDeleted } ?? []
+        let helloAtoms = activeAtomsA.prefix(5)
+        #expect(helloAtoms.count == 5)
+        #expect(helloAtoms.allSatisfy { $0.id.deviceID == deviceA })
+    }
+    
+    @Test func testDiffAlgorithmCorrectness() {
+        let diff1 = Diff.compute(from: "Hello", to: "Hello World")
+        #expect(diff1.deletes.isEmpty)
+        #expect(diff1.inserts.count == 6)
+        
+        let diff2 = Diff.compute(from: "Hello World", to: "Hello")
+        #expect(diff2.deletes.count == 6)
+        #expect(diff2.inserts.isEmpty)
+        
+        let diff3 = Diff.compute(from: "cat", to: "car")
+        #expect(diff3.deletes.count == 1)
+        #expect(diff3.inserts.count == 1)
+        #expect(diff3.inserts.first?.character == "r")
+    }
 }
 #endif
