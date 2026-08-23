@@ -95,7 +95,7 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
 
             case .tinted(let color):
                 content
-                    .background(shape.fill(color.opacity(0.14)))
+                    .background(color.opacity(0.14), in: shape)
                     .background(glassFillGradient, in: shape)
                     .background(.ultraThinMaterial, in: shape)
                     .overlay(
@@ -137,7 +137,7 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
         }
     }
 
-    private var glassFillGradient: some View {
+    private var glassFillGradient: LinearGradient {
         LinearGradient(
             colors: [
                 Color.white.opacity(0.08),
