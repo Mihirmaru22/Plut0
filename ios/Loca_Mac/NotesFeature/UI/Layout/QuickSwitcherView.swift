@@ -108,13 +108,13 @@ public struct QuickSwitcherView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(note.title.isEmpty ? "New Note" : note.title)
                                                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                                                .foregroundStyle(.primary)
+                                                .foregroundStyle(isSelected ? Color.black.opacity(0.92) : Color.white)
                                                 .lineLimit(1)
                                             
                                             if !note.preview.isEmpty {
                                                 Text(note.preview)
                                                     .font(.system(size: 11))
-                                                    .foregroundStyle(.secondary)
+                                                    .foregroundStyle(isSelected ? Color.black.opacity(0.7) : Color.white.opacity(0.6))
                                                     .lineLimit(1)
                                             }
                                         }
@@ -124,7 +124,7 @@ public struct QuickSwitcherView: View {
                                         if isSelected {
                                             Image(systemName: "return")
                                                 .font(.system(size: 10, weight: .bold))
-                                                .foregroundStyle(DS.Theme.amber)
+                                                .foregroundStyle(Color.black.opacity(0.85))
                                         }
                                     }
                                     .padding(.horizontal, 12)
@@ -132,8 +132,15 @@ public struct QuickSwitcherView: View {
                                     .background {
                                         if isSelected {
                                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                .fill(DS.Theme.cardSelected)
-                                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 0.8))
+                                                .fill(
+                                                    LinearGradient(
+                                                        colors: [Color(white: 0.98), Color(white: 0.90)],
+                                                        startPoint: .top,
+                                                        endPoint: .bottom
+                                                    )
+                                                )
+                                                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.9), lineWidth: 1))
+                                                .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
                                                 .matchedGeometryEffect(id: "paletteSelectionPill", in: paletteSelectionNamespace)
                                         }
                                     }

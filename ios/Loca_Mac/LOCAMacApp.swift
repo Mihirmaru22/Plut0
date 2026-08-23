@@ -27,6 +27,16 @@ struct LOCAMacApp: App {
     nonisolated private let logger = Logger(subsystem: "com.mihirmaru.loca.mac", category: "app")
 
     init() {
+        // Runtime Reality Logging
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        let isGlassActive: Bool
+        if #available(macOS 26.0, *) {
+            isGlassActive = true
+        } else {
+            isGlassActive = false
+        }
+        print("🚀 [Pluto Runtime Reality] macOS \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion) | macOS 26+ Glass Active: \(isGlassActive)")
+
         // Initialize Apple Native Notification Delegate & Categories (A1-A8)
         PlutoNotificationManager.shared.configure()
 
@@ -53,6 +63,7 @@ struct LOCAMacApp: App {
             if let container {
                 MacRootView()
                     .modelContainer(container)
+                    .background(PlutoWindowAccessor())
                     .frame(minWidth: DS.Mac.windowMinWidth, minHeight: DS.Mac.windowMinHeight)
                     .onAppear {
                         // Seed calm initial workspace notes & projects if first launch

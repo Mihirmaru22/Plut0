@@ -221,6 +221,7 @@ public struct GhostDashboardView: View {
                         toggleRingAction(.silence)
                     }
                 }
+                .background(PlutoAmbientGlowView(accent: Color(red: 0.0, green: 0.85, blue: 1.0)))
 
                 // Daily Protocol Board
                 GhostProtocolBoardView(

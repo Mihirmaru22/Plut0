@@ -154,15 +154,22 @@ struct MacTodoListColumn: View {
                     } label: {
                         Image(systemName: variant.icon)
                             .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                            .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
+                            .foregroundStyle(isSelected ? Color.black.opacity(0.9) : DS.Theme.textSecondary)
                             .symbolEffect(.bounce, value: isSelected)
                             .frame(width: 26, height: 22)
                             .contentShape(Capsule())
                             .background {
                                 if isSelected {
                                     Capsule()
-                                        .fill(DS.Theme.cardSelected)
-                                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(white: 0.98), Color(white: 0.90)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
+                                        .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
                                         .matchedGeometryEffect(id: "activeLayoutPill", in: layoutPillNamespace)
                                 }
                             }
@@ -172,6 +179,7 @@ struct MacTodoListColumn: View {
                 }
             }
         }
+        .background(PlutoAmbientGlowView(accent: DS.Theme.amber))
     }
 }
 

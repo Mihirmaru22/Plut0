@@ -61,16 +61,23 @@ struct MacLifeView: View {
                                     .font(.system(size: 11, weight: isSelected ? .bold : .medium))
                                     .symbolEffect(.bounce, value: isSelected)
                                 Text(variant.shortTitle)
-                                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
                             }
-                            .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
+                            .foregroundStyle(isSelected ? Color.black.opacity(0.92) : DS.Theme.textSecondary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4.5)
                             .background {
                                 if isSelected {
                                     Capsule()
-                                        .fill(DS.Theme.cardSelected)
-                                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(white: 0.98), Color(white: 0.90)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
+                                        .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
                                         .matchedGeometryEffect(id: "activeLifeVariantPill", in: lifePillNamespace)
                                 }
                             }
@@ -83,6 +90,7 @@ struct MacLifeView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
             .background(DS.Theme.surface)
+            .background(PlutoAmbientGlowView(accent: Color(red: 0.18, green: 0.82, blue: 0.35)))
 
             Divider().opacity(0.12)
 

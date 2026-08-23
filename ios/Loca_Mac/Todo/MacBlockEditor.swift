@@ -388,14 +388,21 @@ struct MacBlockEditor: View {
                 Text(title)
                     .font(.system(size: 10, weight: isActive ? .bold : .medium))
             }
-            .foregroundStyle(isActive ? Color.white : DS.Theme.textSecondary)
+            .foregroundStyle(isActive ? Color.black.opacity(0.92) : DS.Theme.textSecondary)
             .padding(.horizontal, 7)
             .padding(.vertical, 3.5)
             .background {
                 if isActive {
                     Capsule()
-                        .fill(DS.Theme.cardSelected)
-                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.98), Color(white: 0.90)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
+                        .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
                         .matchedGeometryEffect(id: "activeBlockTypePill", in: blockTypeNamespace)
                 }
             }

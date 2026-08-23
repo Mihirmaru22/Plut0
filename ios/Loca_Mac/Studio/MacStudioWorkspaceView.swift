@@ -44,6 +44,7 @@ struct MacStudioWorkspaceView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color(nsColor: NSColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)))
+            .background(PlutoAmbientGlowView(accent: Color(red: 0.68, green: 0.32, blue: 0.88)))
 
             Divider().opacity(0.12)
 
@@ -75,16 +76,23 @@ struct MacStudioWorkspaceView: View {
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
                     .symbolEffect(.bounce, value: isSelected)
                 Text(tab.rawValue)
-                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
             }
-            .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
+            .foregroundStyle(isSelected ? Color.black.opacity(0.92) : DS.Theme.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
             .background {
                 if isSelected {
                     Capsule()
-                        .fill(DS.Theme.cardSelected)
-                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.98), Color(white: 0.90)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
+                        .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
                         .matchedGeometryEffect(id: "activeStudioTabPill", in: studioNamespace)
                 }
             }
