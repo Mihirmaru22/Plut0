@@ -35,7 +35,6 @@ struct MacTrekAtlasCanvas: View {
     @State private var searchText: String = ""
     @State private var selectedFilter: TrekFilter = .all
     @State private var isDirectoryOpen: Bool = false
-    @State private var isLogModalPresented: Bool = false
     @State private var isTrophyCabinetPresented: Bool = false
     @State private var passportTrek: TrekRecord? = nil
     @State private var showResetDialog: Bool = false
@@ -194,14 +193,6 @@ struct MacTrekAtlasCanvas: View {
             MountaineerTrophyCabinetModal(conqueredTreks: conqueredTreks, allTreks: activeTreks, onDismiss: { isTrophyCabinetPresented = false })
                 .frame(minWidth: 780, idealWidth: 840, minHeight: 560, idealHeight: 620)
         }
-        .sheet(isPresented: $isLogModalPresented) {
-            MacLogPeakModal(
-                onDismiss: { isLogModalPresented = false },
-                onPeakCreated: { newPeak in
-                    selectedTrek = newPeak
-                }
-            )
-        }
         .onAppear {
             TrekSeeder.seedIfNeeded(context: modelContext)
             if selectedTrek == nil {
@@ -303,25 +294,6 @@ struct MacTrekAtlasCanvas: View {
                 .padding(.vertical, 5)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.08), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
-            // Log Peak Action
-            Button {
-                isLogModalPresented = true
-                Haptics.impact(.light)
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("Log Peak")
-                        .font(.system(size: 11.5, weight: .bold))
-                }
-                .foregroundStyle(Color.black)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 5)
-                .background(DS.Theme.amber, in: RoundedRectangle(cornerRadius: 6))
-                .shadow(color: DS.Theme.amber.opacity(0.35), radius: 5, x: 0, y: 1)
             }
             .buttonStyle(.plain)
         }
