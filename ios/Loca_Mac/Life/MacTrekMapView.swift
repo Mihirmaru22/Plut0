@@ -168,10 +168,15 @@ struct MacTrekMapView: NSViewRepresentable {
             }
         }
 
-        // 3. Update Fog of War, Auras, and GPX Trail Overlays
-        updateMapOverlays(mapView: mapView)
+        // 3. Update Fog of War, Auras, and GPX Trail Overlays (Only when conquered set or selected trek changes)
+        let conqueredIDs = treks.filter { $0.status == .conquered }.map { $0.id.uuidString }.sorted().joined(separator: ",")
+        let currentSig = "\(conqueredIDs)_\(selectedTrek?.id.uuidString ?? "")"
+        if currentSig != context.coordinator.lastOverlaysSignature {
+            context.coordinator.lastOverlaysSignature = currentSig
+            updateMapOverlays(mapView: mapView)
+        }
 
-        // 3. Handle Active Trail Flyover
+        // 4. Handle Active Trail Flyover
         if isFlyingTrail, let selectedTrek, selectedTrek.hasGPXTrack {
             let coords = selectedTrek.trailCoordinates
             if coords.count >= 2 {
@@ -386,6 +391,7 @@ struct MacTrekMapView: NSViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MacTrekMapView
         var lastSelectedID: UUID?
+        var lastOverlaysSignature: String = ""
 
         init(parent: MacTrekMapView) {
             self.parent = parent
