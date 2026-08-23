@@ -170,4 +170,53 @@ struct Loca_MacTests {
         #expect(inAppJournalNotes.first?.title == "Ghost Reflection")
         #expect(inAppJournalNotes.first?.isPrivate == true)
     }
+
+    // MARK: - Invariant 6: Telemetry Privacy Barrier (SHA-256 PII Hashing)
+
+    @Test @MainActor func testTelemetryHashesPII() throws {
+        let engine = PlutoTelemetryEngine.shared
+        let originalName = NSFullUserName()
+        let testTitle = "Buy groceries"
+        
+        let testTask = TodoItem(title: testTitle)
+        engine.trackTaskCreated(task: testTask)
+        
+        let payload = engine.debugLastPayload()
+        let titleInPayload = payload["title"] as? String ?? ""
+        
+        // Assert payload does NOT contain plaintext
+        #expect(!titleInPayload.contains(testTitle))
+        #expect(titleInPayload != testTitle)
+        #expect(!engine.testerName.contains(originalName) || originalName.isEmpty)
+        
+        // Assert SHA-256 hex string characteristics
+        let expectedHash = PlutoPrivacy.hash(testTitle)
+        #expect(titleInPayload == expectedHash)
+        #expect(expectedHash.count == 64)
+        
+        // Verify determinism
+        let hash2 = PlutoPrivacy.hash(testTitle)
+        #expect(expectedHash == hash2)
+    }
+
+    @Test @MainActor func testTelemetryPreservesAnalytics() throws {
+        let engine = PlutoTelemetryEngine.shared
+        
+        let task1 = TodoItem(title: "Morning routine")
+        let task2 = TodoItem(title: "Morning routine")
+        
+        engine.trackTaskCreated(task: task1)
+        let payload1 = engine.debugLastPayload()
+        
+        engine.trackTaskCreated(task: task2)
+        let payload2 = engine.debugLastPayload()
+        
+        let title1 = payload1["title"] as? String
+        let title2 = payload2["title"] as? String
+        
+        // Both tasks share the same title, so their anonymized SHA-256 hashes must be identical
+        #expect(title1 != nil)
+        #expect(title1 == title2)
+        #expect(title1 == PlutoPrivacy.hash("Morning routine"))
+    }
 }

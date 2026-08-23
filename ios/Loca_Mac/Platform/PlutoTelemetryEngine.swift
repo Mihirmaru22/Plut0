@@ -11,7 +11,18 @@ import Foundation
 import SwiftData
 import SwiftUI
 import AppKit
+import CryptoKit
 import os.log
+
+// MARK: - Privacy Hasher
+
+public enum PlutoPrivacy {
+    public static func hash(_ value: String) -> String {
+        let data = Data(value.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
+    }
+}
 
 // MARK: - PlutoTelemetryEngine
 
@@ -42,6 +53,11 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     private var flushTimer: Timer?
     private var snapshotTimer: Timer?
 
+    #if DEBUG
+    private(set) var lastEnqueuedEvent: PlutoAlphaEvent?
+    private(set) var enqueuedEventsHistory: [PlutoAlphaEvent] = []
+    #endif
+
     private init() {
         // 1. Determine or persist unique Tester ID
         let defaults = UserDefaults.standard
@@ -53,8 +69,8 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
             self.testerID = newID
         }
 
-        self.testerName = NSFullUserName()
-        self.deviceName = Host.current().localizedName ?? "Mac"
+        self.testerName = PlutoPrivacy.hash(NSFullUserName())
+        self.deviceName = PlutoPrivacy.hash(Host.current().localizedName ?? "unknown")
         self.deviceModel = Self.getDeviceModelIdentifier()
         self.macosVersion = ProcessInfo.processInfo.operatingSystemVersionString
 
@@ -120,6 +136,11 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
             properties: props
         )
 
+        #if DEBUG
+        lastEnqueuedEvent = alphaEvent
+        enqueuedEventsHistory.append(alphaEvent)
+        #endif
+
         eventBuffer.append(alphaEvent)
         PlutoDiagnosticEngine.shared.leaveBreadcrumb("\(event) (\(properties.keys.joined(separator: ", ")))")
 
@@ -139,7 +160,32 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
         }
     }
 
-    // MARK: - Domain Specific Action Trackers (Unredacted)
+    // MARK: - Testing / Inspection Helpers
+
+    #if DEBUG
+    func debugLastPayload() -> [String: Any] {
+        guard let last = lastEnqueuedEvent ?? eventBuffer.last else { return [:] }
+        var result: [String: Any] = [:]
+        for (k, v) in last.properties {
+            result[k] = v.value
+        }
+        return result
+    }
+
+    func debugPayload(at index: Int) -> [String: Any] {
+        let history = enqueuedEventsHistory
+        let targetIndex = index < 0 ? (history.count + index) : index
+        guard targetIndex >= 0, targetIndex < history.count else { return [:] }
+        let event = history[targetIndex]
+        var result: [String: Any] = [:]
+        for (k, v) in event.properties {
+            result[k] = v.value
+        }
+        return result
+    }
+    #endif
+
+    // MARK: - Domain Specific Action Trackers (PII SHA-256 Hashed)
 
     func trackModeSwitched(isSimplified: Bool, reason: String = "user_toggle") {
         track(event: "workspace_mode_switched", properties: [
@@ -152,7 +198,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     func trackHabitCreated(board: HabitBoard) {
         track(event: "habit_created", properties: [
             "habit_id": AnyCodable(board.id.uuidString),
-            "habit_name": AnyCodable(board.name),
+            "habit_name": AnyCodable(PlutoPrivacy.hash(board.name)),
             "unit": AnyCodable(board.unitLabel ?? "Check"),
             "metric": AnyCodable(board.metric.rawValue),
             "target": AnyCodable(board.targetValue)
@@ -162,7 +208,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     func trackHabitCheckIn(board: HabitBoard, value: Double, isDone: Bool) {
         track(event: "habit_checked", properties: [
             "habit_id": AnyCodable(board.id.uuidString),
-            "habit_name": AnyCodable(board.name),
+            "habit_name": AnyCodable(PlutoPrivacy.hash(board.name)),
             "value_logged": AnyCodable(value),
             "is_target_met": AnyCodable(isDone),
             "current_streak": AnyCodable(board.currentStreak)
@@ -171,7 +217,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
 
     func trackHabitDeleted(habitName: String) {
         track(event: "habit_deleted", properties: [
-            "habit_name": AnyCodable(habitName)
+            "habit_name": AnyCodable(PlutoPrivacy.hash(habitName))
         ])
     }
 
@@ -179,7 +225,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     func trackTaskCreated(task: TodoItem) {
         track(event: "task_created", properties: [
             "task_id": AnyCodable(task.id.uuidString),
-            "title": AnyCodable(task.title),
+            "title": AnyCodable(PlutoPrivacy.hash(task.title)),
             "is_scheduled": AnyCodable(task.startTime != nil),
             "duration_minutes": AnyCodable(task.durationMinutes),
             "priority": AnyCodable(task.priority)
@@ -189,7 +235,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     func trackTaskCompleted(task: TodoItem) {
         track(event: "task_completed", properties: [
             "task_id": AnyCodable(task.id.uuidString),
-            "title": AnyCodable(task.title),
+            "title": AnyCodable(PlutoPrivacy.hash(task.title)),
             "duration_minutes": AnyCodable(task.durationMinutes),
             "was_scheduled": AnyCodable(task.startTime != nil)
         ])
@@ -198,7 +244,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     func trackTaskRescheduled(task: TodoItem, newStartTime: Date) {
         track(event: "task_rescheduled", properties: [
             "task_id": AnyCodable(task.id.uuidString),
-            "title": AnyCodable(task.title),
+            "title": AnyCodable(PlutoPrivacy.hash(task.title)),
             "new_start_time": AnyCodable(newStartTime)
         ])
     }
@@ -208,7 +254,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
         track(event: "focus_session_completed", properties: [
             "duration_seconds": AnyCodable(durationSeconds),
             "sound_name": AnyCodable(soundName),
-            "task_title": AnyCodable(taskTitle ?? "Untracked Sprint")
+            "task_title": AnyCodable(PlutoPrivacy.hash(taskTitle ?? "Untracked Sprint"))
         ])
     }
 
@@ -225,8 +271,8 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     // 5. Sleep & Routines
     func trackSleepLogged(bedtime: String, wakeTime: String, durationHours: Double) {
         track(event: "sleep_logged", properties: [
-            "bedtime": AnyCodable(bedtime),
-            "wake_time": AnyCodable(wakeTime),
+            "bedtime": AnyCodable(PlutoPrivacy.hash(bedtime)),
+            "wake_time": AnyCodable(PlutoPrivacy.hash(wakeTime)),
             "duration_hours": AnyCodable(durationHours)
         ])
     }
@@ -266,7 +312,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
             "total_habits": AnyCodable(habits.filter { $0.archivedAt == nil }.map { board in
                 [
                     "id": board.id.uuidString,
-                    "name": board.name,
+                    "name": PlutoPrivacy.hash(board.name),
                     "unit": board.unitLabel ?? "Check",
                     "metric": board.metric.rawValue,
                     "target": board.targetValue,
@@ -280,7 +326,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
             "total_tasks": AnyCodable(tasks.filter { !$0.isArchived }.map { t in
                 [
                     "id": t.id.uuidString,
-                    "title": t.title,
+                    "title": PlutoPrivacy.hash(t.title),
                     "is_completed": t.isCompleted,
                     "duration_minutes": t.durationMinutes,
                     "is_scheduled": t.startTime != nil,
