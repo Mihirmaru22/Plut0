@@ -138,6 +138,3 @@ public struct PlutoFastButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.75 : 1.0)
     }
 }
-
-
-
