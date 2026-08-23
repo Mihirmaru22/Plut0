@@ -54,6 +54,7 @@ struct MacSettingsView: View {
     @AppStorage("mac_today_enable_time") private var enableTodayTime: Bool = true
 
     // Local UI State
+    @ObservedObject private var notificationManager = PlutoNotificationManager.shared
     @State private var showExportSuccess = false
     @State private var exportMessage = ""
     @State private var showKeynoteJourneyModal = false
@@ -62,6 +63,7 @@ struct MacSettingsView: View {
     @State private var resetSuccessMessage = ""
     @State private var showingGhostResetConfirmation = false
     @State private var showGhostResetSuccess = false
+    @State private var testNotificationFeedback: String? = nil
 
     // Accent Palette
     private var accentColor: Color {
@@ -730,10 +732,63 @@ struct MacSettingsView: View {
             .padding(12)
             .background(DS.Color.background, in: RoundedRectangle(cornerRadius: 8))
 
+            // Notification Permission Banner if not authorized
+            if !notificationManager.isAuthorized {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color(red: 0.96, green: 0.65, blue: 0.18))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("macOS Notifications Not Authorized")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(DS.Color.textPrimary)
+                        Text("Grant permission to receive workday desk bio-breaks, streak alerts, and focus completions.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(DS.Color.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Button("Authorize Now") {
+                        Task {
+                            let granted = await PlutoNotificationManager.shared.requestAuthorization()
+                            if !granted {
+                                // If denied, open macOS notification settings directly
+                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+                                    NSWorkspace.shared.open(url)
+                                }
+                            }
+                            Haptics.impact(.medium)
+                        }
+                    }
+                    .font(.system(size: 11, weight: .bold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(accentColor)
+                    .foregroundStyle(.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .buttonStyle(.plain)
+                }
+                .padding(10)
+                .background(Color(red: 0.96, green: 0.65, blue: 0.18).opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(red: 0.96, green: 0.65, blue: 0.18).opacity(0.3), lineWidth: 1))
+            }
+
             HStack(spacing: 10) {
                 Button {
-                    PlutoNotificationManager.shared.scheduleFocusCompletionNotification(tag: "Deep Work Sprint", seconds: 5, mode: "Pomodoro")
-                    PlutoSoundEngine.shared.play(.timerComplete)
+                    Task {
+                        let sent = await PlutoNotificationManager.shared.sendImmediateTestNotification(
+                            title: "🔥 Focus Session Complete",
+                            body: "25 minutes of Deep Work logged to Sovereign Vault.",
+                            type: "focus"
+                        )
+                        await MainActor.run {
+                            testNotificationFeedback = sent ? "Focus alert banner dispatched (1s)" : "Permission denied — authorize in macOS Settings"
+                            PlutoSoundEngine.shared.play(.timerComplete)
+                            Haptics.impact(.medium)
+                        }
+                    }
                 } label: {
                     Label("Test Focus Alert", systemImage: "bell.badge")
                         .font(.system(size: 11, weight: .semibold))
@@ -747,13 +802,18 @@ struct MacSettingsView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    let content = UNMutableNotificationContent()
-                    content.title = "💧 Time to Hydrate"
-                    content.body = "Take a sip of water and reset."
-                    content.sound = .default
-                    let req = UNNotificationRequest(identifier: "test_hydrate", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
-                    UNUserNotificationCenter.current().add(req)
-                    PlutoSoundEngine.shared.play(.timerStart)
+                    Task {
+                        let sent = await PlutoNotificationManager.shared.sendImmediateTestNotification(
+                            title: "💧 Time to Hydrate",
+                            body: "Take a refreshing sip of water and reset your posture.",
+                            type: "hydrate"
+                        )
+                        await MainActor.run {
+                            testNotificationFeedback = sent ? "Hydrate prompt banner dispatched (1s)" : "Permission denied — authorize in macOS Settings"
+                            PlutoSoundEngine.shared.play(.timerStart)
+                            Haptics.impact(.medium)
+                        }
+                    }
                 } label: {
                     Label("Test Hydrate Prompt", systemImage: "drop.fill")
                         .font(.system(size: 11, weight: .semibold))
@@ -767,13 +827,18 @@ struct MacSettingsView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    let content = UNMutableNotificationContent()
-                    content.title = "🚶 Stand & Stretch"
-                    content.body = "Roll your shoulders and take a quick stretch."
-                    content.sound = .default
-                    let req = UNNotificationRequest(identifier: "test_stretch", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
-                    UNUserNotificationCenter.current().add(req)
-                    PlutoSoundEngine.shared.play(.timerStart)
+                    Task {
+                        let sent = await PlutoNotificationManager.shared.sendImmediateTestNotification(
+                            title: "🚶 Stand & Stretch",
+                            body: "Step away from your screen, roll your shoulders, and stretch.",
+                            type: "stretch"
+                        )
+                        await MainActor.run {
+                            testNotificationFeedback = sent ? "Stretch prompt banner dispatched (1s)" : "Permission denied — authorize in macOS Settings"
+                            PlutoSoundEngine.shared.play(.timerStart)
+                            Haptics.impact(.medium)
+                        }
+                    }
                 } label: {
                     Label("Test Stretch Prompt", systemImage: "figure.walk")
                         .font(.system(size: 11, weight: .semibold))
@@ -785,6 +850,18 @@ struct MacSettingsView: View {
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+            }
+
+            if let feedback = testNotificationFeedback {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.green)
+                    Text(feedback)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.green)
+                }
+                .transition(.opacity)
             }
         }
     }

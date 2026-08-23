@@ -218,6 +218,49 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
         }
     }
 
+    /// Sends an immediate test notification with auto-authorization request and 1s delivery.
+    @discardableResult
+    func sendImmediateTestNotification(
+        title: String,
+        body: String,
+        sound: UNNotificationSound = .default,
+        type: String = "general"
+    ) async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+
+        let settings = await center.notificationSettings()
+        if settings.authorizationStatus == .notDetermined {
+            let granted = await requestAuthorization()
+            guard granted else { return false }
+        } else if settings.authorizationStatus == .denied {
+            return false
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = sound
+        content.interruptionLevel = .timeSensitive
+        content.userInfo = ["target": "test", "type": type]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.0, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "pluto_test_\(UUID().uuidString.prefix(8))",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await center.add(request)
+            self.refreshPendingCount()
+            return true
+        } catch {
+            print("Failed to schedule test notification: \(error.localizedDescription)")
+            return false
+        }
+    }
+
     func refreshPendingCount() {
         UNUserNotificationCenter.current().getPendingNotificationRequests { [weak self] requests in
             DispatchQueue.main.async {
