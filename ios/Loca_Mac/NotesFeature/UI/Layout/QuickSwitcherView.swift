@@ -36,22 +36,24 @@ public struct QuickSwitcherView: View {
         }
     }
     
+    @Namespace private var paletteSelectionNamespace
+
     public var body: some View {
         ZStack {
             // Dismiss background overlay
-            Color.black.opacity(0.28)
+            Color.black.opacity(0.35)
                 .ignoresSafeArea()
                 .onTapGesture {
                     isPresented = false
                 }
             
-            // Centered Floating Palette
+            // Centered Floating Palette (Prominent Liquid Glass Panel)
             VStack(spacing: 0) {
                 // Search Input Header
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DS.Theme.amber)
                     
                     TextField("Search notes or type to create...", text: $query)
                         .textFieldStyle(.plain)
@@ -74,23 +76,24 @@ public struct QuickSwitcherView: View {
                     
                     Text("ESC")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color.secondary.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        .foregroundStyle(DS.Theme.textTertiary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 
                 Divider()
+                    .opacity(0.12)
                 
                 // Search Results
                 let results = filteredNotes
                 if !results.isEmpty {
                     ScrollView {
-                        LazyVStack(spacing: 2) {
+                        LazyVStack(spacing: 3) {
                             ForEach(Array(results.enumerated()), id: \.element.id) { index, note in
+                                let isSelected = index == selectedIndex
                                 Button {
                                     onSelectNote(note.id)
                                     isPresented = false
@@ -99,12 +102,12 @@ public struct QuickSwitcherView: View {
                                         if note.isPinned {
                                             Image(systemName: "pin.fill")
                                                 .font(.system(size: 10))
-                                                .foregroundStyle(.orange)
+                                                .foregroundStyle(DS.Theme.amber)
                                         }
                                         
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(note.title.isEmpty ? "New Note" : note.title)
-                                                .font(.system(size: 13, weight: .medium))
+                                                .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                                                 .foregroundStyle(.primary)
                                                 .lineLimit(1)
                                             
@@ -118,16 +121,22 @@ public struct QuickSwitcherView: View {
                                         
                                         Spacer()
                                         
-                                        if index == selectedIndex {
+                                        if isSelected {
                                             Image(systemName: "return")
-                                                .font(.system(size: 10, weight: .semibold))
-                                                .foregroundStyle(.secondary)
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundStyle(DS.Theme.amber)
                                         }
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 8)
-                                    .background(index == selectedIndex ? Color.accentColor.opacity(0.15) : Color.clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .background {
+                                        if isSelected {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .fill(DS.Theme.cardSelected)
+                                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.25), lineWidth: 0.8))
+                                                .matchedGeometryEffect(id: "paletteSelectionPill", in: paletteSelectionNamespace)
+                                        }
+                                    }
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -144,19 +153,18 @@ public struct QuickSwitcherView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 14))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(DS.Theme.amber)
                             Text("Create note \"\(query)\"")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
                             Image(systemName: "return")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(DS.Theme.amber)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .background(Color.accentColor.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .plutoGlass(.interactive, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .padding(10)
@@ -168,9 +176,9 @@ public struct QuickSwitcherView: View {
                 }
             }
             .frame(width: 520)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: Color.black.opacity(0.25), radius: 24, x: 0, y: 12)
+            .plutoGlass(.prominent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .shadow(color: Color.black.opacity(0.35), radius: 28, x: 0, y: 14)
+            .transition(.scale(scale: 0.96).combined(with: .opacity))
         }
         .onAppear {
             isFieldFocused = true

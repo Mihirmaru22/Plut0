@@ -62,11 +62,7 @@ public struct GhostProtocolBoardView: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.06, green: 0.06, blue: 0.08))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
-        )
+        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Phase Section
@@ -174,8 +170,9 @@ public struct GhostProtocolBoardView: View {
                 Text("\(Int(currentValue))/\(Int(rule.targetValue)) \(rule.unitLabel)")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(isDone ? Color(red: 0.0, green: 0.85, blue: 1.0) : Color.white.opacity(0.6))
+                    .contentTransition(.numericText())
 
-                HStack(spacing: 2) {
+                HStack(spacing: 4) {
                     Button {
                         Haptics.impact(.light)
                         let next = max(0.0, currentValue - 1.0)
@@ -184,7 +181,7 @@ public struct GhostProtocolBoardView: View {
                         Image(systemName: "minus")
                             .font(.system(size: 9, weight: .bold))
                             .frame(width: 20, height: 20)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
 
@@ -196,27 +193,18 @@ public struct GhostProtocolBoardView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 9, weight: .bold))
                             .frame(width: 20, height: 20)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
                 }
             }
 
         case .duration:
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Text("\(Int(currentValue))m")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(isDone ? Color(red: 0.0, green: 0.85, blue: 1.0) : Color.white.opacity(0.6))
-
-                Button("+15m") {
-                    Haptics.impact(.light)
-                    onLogReceipt(rule, .duration, currentValue + 15.0, nil)
-                }
-                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                .buttonStyle(.plain)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                    .contentTransition(.numericText())
 
                 Button("+45m") {
                     Haptics.impact(.medium)
@@ -226,7 +214,7 @@ public struct GhostProtocolBoardView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
             }
 
         case .artifact:
@@ -251,7 +239,7 @@ public struct GhostProtocolBoardView: View {
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 5))
+                        .plutoGlass(.interactive, in: RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(.plain)
                 }

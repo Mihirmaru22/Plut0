@@ -7,12 +7,13 @@ struct MacSidebarView: View {
 
     @Binding var selection: MacSection?
     @State private var hoveredSection: MacSection? = nil
+    @Namespace private var sidebarNamespace
 
     private let mainSections: [MacSection] = [.today, .notes, .studio, .life, .ghost]
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Dark Obsidian Backing
+            // Liquid Glass Sidebar Backing
             VStack(spacing: 0) {
 
                 // Top Workspace Brand Header
@@ -50,9 +51,9 @@ struct MacSidebarView: View {
                         .padding(.bottom, 12)
                 }
             }
-            .background(DS.Theme.sidebar)
+            .plutoGlass(.regular, in: Rectangle())
 
-            // Right-hand 1px Machined Boundary Divider
+            // Right-hand 1px Boundary Divider
             Rectangle()
                 .fill(DS.Theme.border)
                 .frame(width: 1)
@@ -64,7 +65,7 @@ struct MacSidebarView: View {
 
     private var brandHeader: some View {
         HStack(spacing: 9) {
-            // Illuminated Precision Monolith Icon
+            // Illuminated Monolith Icon
             ZStack {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(
@@ -102,7 +103,7 @@ struct MacSidebarView: View {
         .padding(.vertical, 2)
     }
 
-    // MARK: - Sidebar Item Button
+    // MARK: - Sidebar Item Button (Sliding Glass Selection Pill)
 
     private func sidebarItemButton(section: MacSection) -> some View {
         let isSelected = selection == section
@@ -110,14 +111,17 @@ struct MacSidebarView: View {
         let accent = sectionAccent(section)
 
         return Button {
-            selection = section
+            withAnimation(PlutoSpring.snappy) {
+                selection = section
+            }
             Haptics.impact(.light)
         } label: {
             HStack(spacing: 10) {
-                // Section Icon with subtle tinting
+                // Section Icon with subtle tinting and bounce
                 Image(systemName: section.systemImage)
                     .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                     .foregroundStyle(isSelected ? accent : (isHovered ? Color.white : DS.Theme.textSecondary))
+                    .symbolEffect(.bounce, value: isSelected)
                     .frame(width: 20, height: 20)
 
                 // Section Title
@@ -128,7 +132,7 @@ struct MacSidebarView: View {
 
                 Spacer(minLength: 4)
 
-                // Monospaced Keyboard Shortcut Pill (Linear style)
+                // Monospaced Keyboard Shortcut Pill
                 if let kbd = shortcutFor(section) {
                     Text(kbd)
                         .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
@@ -148,32 +152,30 @@ struct MacSidebarView: View {
             .contentShape(Rectangle())
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(
-                ZStack(alignment: .leading) {
-                    if isSelected {
-                        // Selected Card Fill
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .background {
+                if isSelected {
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(DS.Theme.cardSelected)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.30), lineWidth: 0.85))
 
-                        // Left Active Indicator Bar
                         RoundedRectangle(cornerRadius: 2)
                             .fill(accent)
                             .frame(width: 3, height: 16)
                             .padding(.leading, 2)
                             .shadow(color: accent.opacity(0.8), radius: 4)
-                    } else if isHovered {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(Color.white.opacity(0.05))
                     }
+                    .matchedGeometryEffect(id: "sidebarSelectionPill", in: sidebarNamespace)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
                 }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(isSelected ? Color.white.opacity(0.12) : Color.clear, lineWidth: 1)
-            )
+            }
+            .animation(PlutoSpring.snappy, value: isHovered)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
+            isHovered ? (hoveredSection = section) : (hoveredSection = nil)
             hoveredSection = hovering ? section : nil
         }
     }

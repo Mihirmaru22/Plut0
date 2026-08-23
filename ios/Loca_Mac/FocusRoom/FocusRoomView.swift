@@ -359,16 +359,12 @@ struct FocusRoomView: View {
                                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
                                 .monospacedDigit()
                                 .foregroundStyle(.white)
+                                .contentTransition(.numericText())
                         }
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                    .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(showTimerModal ? timerVM.mode.themeColor.opacity(0.8) : Color.white.opacity(0.15), lineWidth: 1)
-                    )
+                    .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
                 .help("Toggle Pomodoro Timer (⌘T)")
@@ -699,6 +695,7 @@ struct FocusRoomView: View {
                         .font(.system(size: 38, weight: .heavy, design: .monospaced))
                         .monospacedDigit()
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText())
 
                     Spacer()
 
@@ -711,7 +708,7 @@ struct FocusRoomView: View {
                             .foregroundStyle(.white.opacity(0.6))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.08), in: Capsule())
+                            .plutoGlass(.regular, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .help("Increase 5 minutes")

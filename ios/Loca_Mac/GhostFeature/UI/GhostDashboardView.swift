@@ -163,8 +163,8 @@ public struct GhostDashboardView: View {
                         }
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 7))
+                        .padding(.vertical, 8)
+                        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
 
@@ -180,8 +180,8 @@ public struct GhostDashboardView: View {
                         }
                         .foregroundStyle(Color.black)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(Color(red: 0.0, green: 0.85, blue: 1.0), in: RoundedRectangle(cornerRadius: 7))
+                        .padding(.vertical, 8)
+                        .background(Color(red: 0.0, green: 0.85, blue: 1.0), in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
@@ -268,14 +268,7 @@ public struct GhostDashboardView: View {
                             Spacer()
                         }
                         .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(isOfflineDark ? Color.orange.opacity(0.08) : Color.white.opacity(0.03))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(isOfflineDark ? Color.orange.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
-                                )
-                        )
+                        .plutoGlass(isOfflineDark ? .tinted(.orange) : .regular, in: RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
 
@@ -298,11 +291,7 @@ public struct GhostDashboardView: View {
                             Spacer()
                         }
                         .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.white.opacity(0.03))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.08), lineWidth: 1))
-                        )
+                        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
                 }
@@ -321,7 +310,8 @@ public struct GhostDashboardView: View {
         statusText: String,
         onToggle: @escaping () -> Void
     ) -> some View {
-        Button(action: onToggle) {
+        let ringColor = Color(hex: ring.accentHex) ?? Color.white
+        return Button(action: onToggle) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -331,7 +321,7 @@ public struct GhostDashboardView: View {
                     Circle()
                         .trim(from: 0, to: isClosed ? 1.0 : 0.2)
                         .stroke(
-                            isClosed ? Color(hex: ring.accentHex) ?? Color.white : Color.white.opacity(0.2),
+                            isClosed ? ringColor : Color.white.opacity(0.2),
                             style: StrokeStyle(lineWidth: 3.5, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
@@ -339,7 +329,8 @@ public struct GhostDashboardView: View {
 
                     Image(systemName: isClosed ? "checkmark" : ring.icon)
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(isClosed ? Color(hex: ring.accentHex) ?? Color.white : Color.white.opacity(0.4))
+                        .foregroundStyle(isClosed ? ringColor : Color.white.opacity(0.4))
+                        .symbolEffect(.bounce, value: isClosed)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -351,23 +342,17 @@ public struct GhostDashboardView: View {
                         .foregroundStyle(Color.white.opacity(0.5))
                     Text(statusText)
                         .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(isClosed ? Color(hex: ring.accentHex) ?? Color.white : Color.white.opacity(0.6))
+                        .foregroundStyle(isClosed ? ringColor : Color.white.opacity(0.6))
                         .lineLimit(1)
                 }
 
                 Spacer()
             }
             .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isClosed ? (Color(hex: ring.accentHex) ?? Color.white).opacity(0.07) : Color.white.opacity(0.03))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(isClosed ? (Color(hex: ring.accentHex) ?? Color.white).opacity(0.35) : Color.white.opacity(0.06), lineWidth: 1)
-                    )
-            )
+            .plutoGlass(isClosed ? .tinted(ringColor) : .regular, in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
+        .sensoryFeedback(.success, trigger: isClosed)
     }
 
     private var neuralValenceInsightCard: some View {
@@ -519,7 +504,7 @@ public struct GhostDashboardView: View {
             let day = try? await GhostEngine.shared.getOrCreateDayRecord(for: Date())
             let streak = (try? await GhostEngine.shared.computeStreakStatus()) ?? streakStatus
             let ridge = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
-            let rules = GhostEngine.shared.fetchRules(for: season)
+            let rules = await GhostEngine.shared.fetchRules(for: season)
             let receipts = (try? await GhostEngine.shared.fetchReceipts(for: Date())) ?? []
             let grid = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
             let dark = (try? await GhostEngine.shared.fetchDarkHoursSummary()) ?? darkHoursSummary

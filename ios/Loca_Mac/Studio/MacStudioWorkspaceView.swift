@@ -7,6 +7,7 @@ import SwiftData
 struct MacStudioWorkspaceView: View {
 
     @AppStorage("mac_studio_active_tab") private var activeTab: StudioTab = .projects
+    @Namespace private var studioNamespace
 
     enum StudioTab: String, CaseIterable, Identifiable {
         case projects = "Projects"
@@ -25,7 +26,7 @@ struct MacStudioWorkspaceView: View {
     var body: some View {
         VStack(spacing: 0) {
             
-            // Top Studio Segmented Switcher
+            // Top Studio Liquid Glass Switcher Bar
             HStack {
                 Text("Studio")
                     .font(.system(size: 15, weight: .bold))
@@ -33,21 +34,18 @@ struct MacStudioWorkspaceView: View {
 
                 Spacer()
 
-                // High-Speed Segmented Switcher
-                HStack(spacing: 2) {
+                // Liquid Glass Segmented Switcher
+                GlassEffectContainer(spacing: 2) {
                     ForEach(StudioTab.allCases) { tab in
                         tabButton(for: tab)
                     }
                 }
-                .padding(3)
-                .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.10), lineWidth: 1))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color(nsColor: NSColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)))
 
-            Divider().opacity(0.20)
+            Divider().opacity(0.12)
 
             // Active Workspace Content
             Group {
@@ -67,7 +65,7 @@ struct MacStudioWorkspaceView: View {
     private func tabButton(for tab: StudioTab) -> some View {
         let isSelected = activeTab == tab
         Button {
-            withAnimation(.easeInOut(duration: 0.12)) {
+            withAnimation(PlutoSpring.snappy) {
                 activeTab = tab
             }
             Haptics.impact(.light)
@@ -75,20 +73,23 @@ struct MacStudioWorkspaceView: View {
             HStack(spacing: 6) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                    .symbolEffect(.bounce, value: isSelected)
                 Text(tab.rawValue)
                     .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
             }
-            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.6))
+            .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background(
-                isSelected
-                    ? Color.white.opacity(0.12)
-                    : Color.clear,
-                in: RoundedRectangle(cornerRadius: 6)
-            )
-            .contentShape(Rectangle())
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(DS.Theme.cardSelected)
+                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                        .matchedGeometryEffect(id: "activeStudioTabPill", in: studioNamespace)
+                }
+            }
+            .contentShape(Capsule())
         }
-        .buttonStyle(PlutoFastButtonStyle())
+        .buttonStyle(.plain)
     }
 }

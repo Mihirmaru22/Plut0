@@ -2047,22 +2047,22 @@ struct AppleJournalLocationPopover: View {
     }
 }
 
-// MARK: - AppleJournalTypographyPopover (With Live Active Highlights Matching Screenshot 3)
+// MARK: - AppleJournalTypographyPopover (Liquid Glass Formatting Controls)
 
 struct AppleJournalTypographyPopover: View {
     @ObservedObject var controller: AppleJournalRichTextController
 
     var body: some View {
         VStack(spacing: 8) {
-            // Row 1: B, I, U, S (With live active pill highlights)
+            // Row 1: B, I, U, S (With live active glass pill highlights)
             HStack(spacing: 3) {
                 formatBtn("B", isActive: controller.isBoldActive) { controller.toggleBold() }
                 formatBtn("I", isActive: controller.isItalicActive) { controller.toggleItalic() }
                 formatBtn("U", isActive: controller.isUnderlineActive) { controller.toggleUnderline() }
                 formatBtn("S", isActive: controller.isStrikethroughActive) { controller.toggleStrikethrough() }
             }
-            .padding(2)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+            .padding(3)
+            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
 
             // Row 2: List Formats (Bullets, Checklist, Numbered, Blockquote, Divider)
             HStack(spacing: 3) {
@@ -2072,11 +2072,11 @@ struct AppleJournalTypographyPopover: View {
                 formatIconBtn("quote.opening", isActive: controller.isQuoteActive) { controller.insertBlockquote() }
                 formatIconBtn("switch.2", isActive: false) { controller.insertDivider() }
             }
-            .padding(2)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+            .padding(3)
+            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(8)
-        .background(Color(red: 0.16, green: 0.15, blue: 0.22))
+        .padding(10)
+        .plutoGlass(.prominent, in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func formatBtn(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
@@ -2086,13 +2086,17 @@ struct AppleJournalTypographyPopover: View {
                 .italic(title == "I")
                 .underline(title == "U")
                 .strikethrough(title == "S")
-                .foregroundStyle(isActive ? Color.white : DS.Color.textSecondary)
+                .foregroundStyle(isActive ? Color.white : DS.Theme.textSecondary)
                 .frame(width: 36, height: 26)
                 .background(
                     isActive
-                        ? Color(red: 0.38, green: 0.45, blue: 0.98)
-                        : Color.white.opacity(0.06),
-                    in: RoundedRectangle(cornerRadius: 4)
+                        ? DS.Theme.amber
+                        : Color.white.opacity(0.04),
+                    in: RoundedRectangle(cornerRadius: 6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isActive ? Color.white.opacity(0.35) : Color.clear, lineWidth: 0.8)
                 )
         }
         .buttonStyle(.plain)
@@ -2102,13 +2106,18 @@ struct AppleJournalTypographyPopover: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: isActive ? .bold : .regular))
-                .foregroundStyle(isActive ? Color.white : DS.Color.textSecondary)
+                .foregroundStyle(isActive ? Color.white : DS.Theme.textSecondary)
+                .symbolEffect(.bounce, value: isActive)
                 .frame(width: 28, height: 26)
                 .background(
                     isActive
-                        ? Color(red: 0.38, green: 0.45, blue: 0.98)
-                        : Color.white.opacity(0.06),
-                    in: RoundedRectangle(cornerRadius: 4)
+                        ? DS.Theme.amber
+                        : Color.white.opacity(0.04),
+                    in: RoundedRectangle(cornerRadius: 6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isActive ? Color.white.opacity(0.35) : Color.clear, lineWidth: 0.8)
                 )
         }
         .buttonStyle(.plain)

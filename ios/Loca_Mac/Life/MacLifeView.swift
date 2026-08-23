@@ -27,11 +27,12 @@ enum LifeDesignVariant: String, CaseIterable, Identifiable {
 struct MacLifeView: View {
 
     @AppStorage("mac_life_layout_v4") private var selectedVariant: LifeDesignVariant = .mountainAtlas
+    @Namespace private var lifePillNamespace
 
     var body: some View {
         VStack(spacing: 0) {
 
-            // Top Header: Linear Obsidian Minimalist Precision Bar
+            // Top Header: Linear Minimalist Precision Bar with Liquid Glass Switcher
             HStack(alignment: .center, spacing: 14) {
                 HStack(spacing: 8) {
                     Image(systemName: selectedVariant.icon)
@@ -45,12 +46,12 @@ struct MacLifeView: View {
 
                 Spacer()
 
-                // Sleek Segmented Switcher
-                HStack(spacing: 2) {
+                // Liquid Glass Segmented Switcher
+                GlassEffectContainer(spacing: 2) {
                     ForEach(LifeDesignVariant.allCases) { variant in
                         let isSelected = selectedVariant == variant
                         Button {
-                            withAnimation(.easeInOut(duration: 0.12)) {
+                            withAnimation(PlutoSpring.snappy) {
                                 selectedVariant = variant
                             }
                             Haptics.impact(.light)
@@ -58,30 +59,32 @@ struct MacLifeView: View {
                             HStack(spacing: 5) {
                                 Image(systemName: variant.icon)
                                     .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                    .symbolEffect(.bounce, value: isSelected)
                                 Text(variant.shortTitle)
                                     .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
                             }
                             .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4.5)
-                            .background(
-                                isSelected ? Color.white.opacity(0.12) : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 5)
-                            )
-                            .contentShape(Rectangle())
+                            .background {
+                                if isSelected {
+                                    Capsule()
+                                        .fill(DS.Theme.cardSelected)
+                                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                                        .matchedGeometryEffect(id: "activeLifeVariantPill", in: lifePillNamespace)
+                                }
+                            }
+                            .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(2.5)
-                .background(DS.Theme.sidebar, in: RoundedRectangle(cornerRadius: 7))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(DS.Theme.border, lineWidth: 1))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
             .background(DS.Theme.surface)
 
-            Divider().opacity(0.20)
+            Divider().opacity(0.12)
 
             // Main Body: Full Canvas for Mountain & Travel Atlas, Scrollable Body for Bucket List
             Group {

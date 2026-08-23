@@ -205,8 +205,7 @@ struct MacSettingsView: View {
             content()
         }
         .padding(18)
-        .background(DS.Color.surface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(DS.Color.border.opacity(0.6), lineWidth: 1))
+        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Control Blocks
