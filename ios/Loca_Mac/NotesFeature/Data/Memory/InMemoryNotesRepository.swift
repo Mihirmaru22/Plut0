@@ -81,6 +81,7 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
                 isPinned: note.isPinned,
                 isLocked: note.isLocked,
                 isDeleted: note.isDeleted,
+                isPrivate: note.isPrivate,
                 updatedAt: note.updatedAt
             )
         }
@@ -209,6 +210,7 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
                 isPinned: false,
                 isLocked: false,
                 isDeleted: false,
+                isPrivate: false,
                 createdAt: now,
                 updatedAt: now,
                 deletedAt: nil,
@@ -340,6 +342,17 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
             }
             return .noteUpdated(noteID)
             
+        case .setPrivate(let noteID, let isPrivate):
+            guard var note = notes[noteID] else {
+                throw NotesError.noteNotFound(noteID)
+            }
+            let now = Date()
+            note.isPrivate = isPrivate
+            note.updatedAt = now
+            note.clientUpdatedAt = now
+            notes[noteID] = note
+            return .noteUpdated(noteID)
+            
         case .materializeFromSync(let noteID, let title, let content, let plainTextCache, let preview):
             let now = Date()
             if var note = notes[noteID] {
@@ -362,6 +375,7 @@ public final class InMemoryNotesRepository: NotesRepository, @unchecked Sendable
                     isPinned: false,
                     isLocked: false,
                     isDeleted: false,
+                    isPrivate: false,
                     createdAt: now,
                     updatedAt: now,
                     deletedAt: nil,

@@ -97,5 +97,21 @@ struct InMemoryRepositoryTests {
         let fetched2 = try await repo.fetchNote(id: note2)
         #expect(fetched2?.title == "")
     }
+    
+    @Test func testInMemoryPrivacyMutation() async throws {
+        let repo = InMemoryNotesRepository()
+        let noteID = NoteID()
+        
+        try await repo.apply(.createNote(noteID: noteID, folderID: nil))
+        let initialNote = try await repo.fetchNote(id: noteID)
+        #expect(initialNote?.isPrivate == false)
+        
+        try await repo.apply(.setPrivate(noteID: noteID, isPrivate: true))
+        let privateNote = try await repo.fetchNote(id: noteID)
+        #expect(privateNote?.isPrivate == true)
+        
+        let summaries = try await repo.fetchNotes(matching: .all)
+        #expect(summaries.first?.isPrivate == true)
+    }
 }
 #endif
