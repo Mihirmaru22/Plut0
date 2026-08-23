@@ -141,6 +141,11 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         self.deviceID = deviceID
     }
     
+    public convenience init(deviceID: String = "local-device") {
+        let emptyDoc = CRDTDoc(id: NoteID(), deviceID: deviceID)
+        self.init(doc: emptyDoc, deviceID: deviceID)
+    }
+    
     // MARK: - Undo / Redo History Management (Delta-Based)
     
     private func recordUndo(operations: [CRDTOperation] = [], beforeSelection: NSRange, isTyping: Bool = false, blockID: UUID? = nil) {
@@ -298,6 +303,38 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return doc.blocks.first(where: { $0.id == id && !$0.isDeleted })
+    }
+    
+    @discardableResult
+    public func splitBlock(atBlockID blockID: UUID, position: Int) -> SplitResult? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let idx = doc.blocks.firstIndex(where: { $0.id == blockID && !$0.isDeleted }) else { return nil }
+        let block = doc.blocks[idx]
+        let currentString = block.text.string
+        let textAfter = (position < currentString.count) ? String(currentString.dropFirst(position)) : ""
+        
+        var ops: [CRDTOperation] = []
+        if position < currentString.count {
+            ops.append(.deleteText(blockID: blockID, position: position, length: textAfter.count, deletedText: textAfter))
+            doc.deleteText(at: position, length: currentString.count - position, in: blockID)
+        }
+        
+        let newBlockID = UUID()
+        let newBlock = CRDTBlock(
+            id: newBlockID,
+            type: block.type,
+            text: CRDTText(string: textAfter, deviceID: deviceID),
+            attributes: block.attributes,
+            lastModified: Date().timeIntervalSince1970
+        )
+        
+        ops.append(.createBlock(block: newBlock, afterBlockID: blockID))
+        recordUndo(operations: ops, beforeSelection: lastKnownSelection, isTyping: false)
+        
+        doc.insertBlock(newBlock, afterBlockID: blockID)
+        return SplitResult(newBlockID: newBlockID, newCursor: position + 1, oldBlockType: block.type, newBlockType: block.type)
     }
     
     public func merge(from otherDoc: CRDTDoc) {

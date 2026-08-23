@@ -296,5 +296,112 @@ struct CRDTConflictTests {
         #expect(b1 != nil && b1?.text.string == "", "Local undo must work after remote merge")
         #expect(b2 != nil && b2?.text.string == "World", "Remote edit must be preserved")
     }
+
+    // MARK: - Scenario 8: Multi-Peer Convergence Suite (B-22)
+    
+    @Test func testThreePeerConvergence() throws {
+        let harness = MultiPeerTestHarness(peerCount: 3)
+        let blockID = harness.peers[0].bridge.createBlock(text: "")
+        
+        // Share initial block to peers 1 and 2
+        for i in 1..<3 {
+            _ = harness.peers[i].bridge.createBlock(id: blockID, text: "")
+        }
+        
+        // Peer 0 types "A"
+        harness.type(on: 0, text: "A", atBlockID: blockID, position: 0)
+        
+        // Peer 1 types "B"
+        harness.type(on: 1, text: "B", atBlockID: blockID, position: 0)
+        
+        // Peer 2 types "C"
+        harness.type(on: 2, text: "C", atBlockID: blockID, position: 0)
+        
+        // Merge all peers
+        harness.mergeAll()
+        
+        // Verify convergence
+        #expect(harness.converge(), "All 3 peers should converge to the exact same state")
+        
+        let results = harness.getDocumentStrings()
+        #expect(results[0] == results[1], "Peer 0 and Peer 1 should match")
+        #expect(results[1] == results[2], "Peer 1 and Peer 2 should match")
+        
+        let finalDoc = results[0]
+        #expect(
+            ["ABC", "ACB", "BAC", "BCA", "CAB", "CBA"].contains(finalDoc),
+            "Final state should be a valid deterministic permutation"
+        )
+    }
+
+    @Test func testOutOfOrderDeliveryThreePeers() throws {
+        let harness = MultiPeerTestHarness(peerCount: 3)
+        let blockID = harness.peers[0].bridge.createBlock(text: "")
+        for i in 1..<3 {
+            _ = harness.peers[i].bridge.createBlock(id: blockID, text: "")
+        }
+        
+        // Peer 0 sends Op1, then Op2
+        harness.type(on: 0, text: "Op1", atBlockID: blockID, position: 0)
+        let docAfterOp1 = harness.peers[0].bridge.doc
+        
+        harness.type(on: 0, text: "Op2", atBlockID: blockID, position: 3)
+        let docAfterOp2 = harness.peers[0].bridge.doc
+        
+        // Peer 1 receives Op2 first (out of order)
+        harness.peers[1].bridge.merge(from: docAfterOp2)
+        // Peer 1 receives Op1 second
+        harness.peers[1].bridge.merge(from: docAfterOp1)
+        
+        // Peer 2 receives in regular order
+        harness.peers[2].bridge.merge(from: docAfterOp1)
+        harness.peers[2].bridge.merge(from: docAfterOp2)
+        
+        harness.mergeAll()
+        #expect(harness.converge(), "Out-of-order delivery should still converge")
+    }
+
+    @Test func testConcurrentSplitAndMerge() throws {
+        let harness = MultiPeerTestHarness(peerCount: 3)
+        let blockID = harness.peers[0].bridge.createBlock(text: "Hello World")
+        for i in 1..<3 {
+            _ = harness.peers[i].bridge.createBlock(id: blockID, text: "Hello World")
+        }
+        
+        // Peer 0 splits at position 5 (after "Hello")
+        harness.peers[0].bridge.splitBlock(atBlockID: blockID, position: 5)
+        
+        // Peer 1 types "!" at end of original block
+        harness.type(on: 1, text: "!", atBlockID: blockID, position: 11)
+        
+        // Peer 2 deletes "World"
+        harness.peers[2].bridge.deleteText(atBlockID: blockID, position: 6, length: 5)
+        
+        harness.mergeAll()
+        #expect(harness.converge(), "Concurrent split/merge should converge")
+    }
+
+    @Test func testRandomizedMultiPeerConvergence() throws {
+        // Run 50 randomized multi-peer fuzzing scenarios
+        for _ in 0..<50 {
+            let peerCount = Int.random(in: 3...5)
+            let harness = MultiPeerTestHarness(peerCount: peerCount)
+            let blockID = harness.peers[0].bridge.createBlock(text: "")
+            for i in 1..<peerCount {
+                _ = harness.peers[i].bridge.createBlock(id: blockID, text: "")
+            }
+            
+            // Random operations across peers
+            for _ in 0..<10 {
+                let peerIndex = Int.random(in: 0..<peerCount)
+                let char = String(UnicodeScalar(Int.random(in: 65...90))!) // A-Z
+                let pos = Int.random(in: 0...5)
+                harness.type(on: peerIndex, text: char, atBlockID: blockID, position: pos)
+            }
+            
+            harness.mergeAll()
+            #expect(harness.converge(), "Randomized multi-peer operations must converge deterministically")
+        }
+    }
 }
 #endif
