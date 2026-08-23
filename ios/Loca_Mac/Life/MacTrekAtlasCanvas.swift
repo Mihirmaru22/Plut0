@@ -133,7 +133,7 @@ struct MacTrekAtlasCanvas: View {
         }
         .sheet(item: $passportTrek) { trek in
             ExpeditionPassportModal(trek: trek, onDismiss: { passportTrek = nil })
-                .frame(minWidth: 700, minHeight: 600)
+                .frame(minWidth: 940, idealWidth: 1000, minHeight: 740, idealHeight: 840)
         }
         .sheet(isPresented: $isTrophyCabinetPresented) {
             MountaineerTrophyCabinetModal(conqueredTreks: conqueredTreks, allTreks: activeTreks, onDismiss: { isTrophyCabinetPresented = false })
