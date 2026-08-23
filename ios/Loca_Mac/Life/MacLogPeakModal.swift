@@ -100,7 +100,7 @@ struct MacLogPeakModal: View {
                             .foregroundStyle(DS.Theme.textTertiary)
 
                         HStack(spacing: 14) {
-                            // Status Picker
+                            // Status Picker (Binary Summit Status)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Status")
                                     .font(.system(size: 10, weight: .medium))
@@ -108,8 +108,7 @@ struct MacLogPeakModal: View {
 
                                 Picker("", selection: $status) {
                                     Text("Conquered 🏆").tag(TrekStatus.conquered)
-                                    Text("Wishlist 📍").tag(TrekStatus.wishlist)
-                                    Text("In Progress ⏳").tag(TrekStatus.inProgress)
+                                    Text("Unclimbed").tag(TrekStatus.wishlist)
                                 }
                                 .pickerStyle(.segmented)
                             }
