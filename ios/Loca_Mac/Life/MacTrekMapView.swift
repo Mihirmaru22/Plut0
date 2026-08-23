@@ -137,6 +137,8 @@ struct MacTrekMapView: NSViewRepresentable {
     func updateNSView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
 
+        guard mapView.frame.width > 20 && mapView.frame.height > 20 else { return }
+
         // 1. Update Annotations
         let currentAnnotations = mapView.annotations.compactMap { $0 as? TrekAnnotation }
         let currentIDs = Set(currentAnnotations.map { $0.trek.id })

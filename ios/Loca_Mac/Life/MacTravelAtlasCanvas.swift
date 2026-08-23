@@ -218,7 +218,7 @@ struct MacTravelAtlasCanvas: View {
 
     private var mapView: some View {
         GeometryReader { proxy in
-            if proxy.size.width > 0 && proxy.size.height > 0 {
+            if proxy.size.width > 20 && proxy.size.height > 20 {
                 Map(position: $mapCameraPosition) {
                     // Pre-cached Polygon Rings (Single combined MapPolygon for 120 FPS performance)
                     ForEach(cachedTerritoryRings) { ring in
