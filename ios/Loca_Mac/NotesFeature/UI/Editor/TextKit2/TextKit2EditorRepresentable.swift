@@ -808,8 +808,9 @@ public final class EditorBridgeState: ObservableObject {
     }
     
     public func updateDocFromRemote(_ newDoc: CRDTDoc) {
-        bridge.doc = newDoc
-        bridge.clearUndoHistory()
+        let oldDoc = bridge.doc
+        bridge.merge(from: newDoc)
+        bridge.adjustUndoStackAfterRemoteMerge(oldDoc: oldDoc, newDoc: newDoc)
         needsRemoteRefresh = true
         refreshFormattingState()
     }

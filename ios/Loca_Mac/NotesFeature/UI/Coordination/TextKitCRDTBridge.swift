@@ -306,6 +306,68 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
         doc.merge(with: otherDoc)
     }
     
+    public func adjustUndoStackAfterRemoteMerge(oldDoc: CRDTDoc, newDoc: CRDTDoc) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        var adjustedUndoStack: [UndoRecord] = []
+        
+        for record in undoStack {
+            var validOperations: [CRDTOperation] = []
+            
+            for op in record.operations {
+                switch op {
+                case .insertText(let blockID, _, _, _):
+                    if doc.blocks.contains(where: { $0.id == blockID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                    
+                case .deleteText(let blockID, _, _, _):
+                    if doc.blocks.contains(where: { $0.id == blockID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                    
+                case .createBlock, .removeBlock:
+                    validOperations.append(op)
+                    
+                case .updateBlockMetadata(let blockID, _, _, _, _):
+                    if doc.blocks.contains(where: { $0.id == blockID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                    
+                case .splitBlock(let origID, _, _, _, _, _):
+                    if doc.blocks.contains(where: { $0.id == origID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                    
+                case .mergeBlocks(let firstID, _, _, _):
+                    if doc.blocks.contains(where: { $0.id == firstID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                    
+                case .toggleChecklist(let blockID):
+                    if doc.blocks.contains(where: { $0.id == blockID && !$0.isDeleted }) {
+                        validOperations.append(op)
+                    }
+                }
+            }
+            
+            if !validOperations.isEmpty {
+                adjustedUndoStack.append(
+                    UndoRecord(
+                        operations: validOperations,
+                        selection: record.selection,
+                        timestamp: record.timestamp,
+                        isTyping: record.isTyping,
+                        blockID: record.blockID
+                    )
+                )
+            }
+        }
+        
+        undoStack = adjustedUndoStack
+    }
+    
     public func clearUndoHistory() {
         lock.lock()
         defer { lock.unlock() }

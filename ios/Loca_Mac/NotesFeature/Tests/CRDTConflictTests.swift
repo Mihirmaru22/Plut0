@@ -261,5 +261,40 @@ struct CRDTConflictTests {
         #expect(textAfterRedo.contains("Hello"))
         #expect(textAfterRedo.contains("World"))
     }
+
+    // MARK: - Scenario 7: Remote Doc Merge Preserves Undo History (B-20)
+    @Test func testRemoteMergePreservesLocalUndoHistory() throws {
+        let deviceA = "device-a"
+        let deviceB = "device-b"
+        let noteID = NoteID()
+        
+        // Peer A types "Hello" (builds local undo history)
+        let docA = CRDTDoc(id: noteID, deviceID: deviceA)
+        let bridgeA = TextKitCRDTBridge(doc: docA, deviceID: deviceA)
+        let blockID1 = bridgeA.createBlock(text: "")
+        bridgeA.insertText("Hello", atBlockID: blockID1, position: 0)
+        
+        // Peer B creates a different block with "World"
+        let docB = CRDTDoc(id: noteID, deviceID: deviceB)
+        let bridgeB = TextKitCRDTBridge(doc: docB, deviceID: deviceB)
+        let blockID2 = bridgeB.createBlock(text: "")
+        bridgeB.insertText("World", atBlockID: blockID2, position: 0)
+        
+        // Remote delta from B arrives at A
+        let oldDoc = bridgeA.doc
+        bridgeA.merge(from: bridgeB.doc)
+        bridgeA.adjustUndoStackAfterRemoteMerge(oldDoc: oldDoc, newDoc: bridgeB.doc)
+        
+        // Peer A undoes "Hello" insertion
+        let undoResult = bridgeA.undo(currentSelection: NSRange(location: 0, length: 0))
+        #expect(undoResult != nil)
+        
+        // Result: Block 1 has "Hello" undone (empty), Block 2 retains "World" completely intact
+        let b1 = bridgeA.getBlock(id: blockID1)
+        let b2 = bridgeA.getBlock(id: blockID2)
+        
+        #expect(b1 != nil && b1?.text.string == "", "Local undo must work after remote merge")
+        #expect(b2 != nil && b2?.text.string == "World", "Remote edit must be preserved")
+    }
 }
 #endif
