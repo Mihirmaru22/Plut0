@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 // MARK: - MacSettingsView (Executive Bento Grid Settings Studio)
 
