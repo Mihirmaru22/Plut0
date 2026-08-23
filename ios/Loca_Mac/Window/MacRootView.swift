@@ -156,7 +156,8 @@ struct MacRootView: View {
             // 3. Opaque Content Plane (Solid #161618 Obsidian, covering under titlebar)
             contentPane
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DS.Theme.canvas.ignoresSafeArea())
+                .background(DS.Theme.canvas)
+                .ignoresSafeArea()
         }
     }
 

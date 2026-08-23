@@ -51,7 +51,8 @@ struct MacSidebarView: View {
                         .padding(.bottom, 12)
                 }
             }
-            .background(.ultraThinMaterial.ignoresSafeArea())
+            .background(.ultraThinMaterial)
+            .ignoresSafeArea()
 
             // Right-hand 1px Boundary Divider
             Rectangle()
