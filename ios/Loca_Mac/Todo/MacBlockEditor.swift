@@ -25,20 +25,40 @@ struct MacBlockEditor: View {
     @FocusState private var focusedFieldID: UUID?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.xs) {
-            if blocks.isEmpty {
-                emptyStatePlaceholder
-            } else {
-                ForEach($blocks) { $block in
-                    blockRow(for: $block)
-                        .id(block.id)
+        VStack(alignment: .leading, spacing: 10) {
+            // Full Writing Surface
+            VStack(alignment: .leading, spacing: 4) {
+                if blocks.isEmpty {
+                    emptyStatePlaceholder
+                } else {
+                    ForEach($blocks) { $block in
+                        blockRow(for: $block)
+                            .id(block.id)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if let last = blocks.last {
+                    activeBlockID = last.id
+                    focusedFieldID = last.id
+                } else {
+                    let newBlock = TodoContentBlock(type: .paragraph, text: "")
+                    blocks.append(newBlock)
+                    activeBlockID = newBlock.id
+                    focusedFieldID = newBlock.id
+                    persistChanges()
+                }
+            }
+
+            Divider()
+                .opacity(0.12)
 
             // Quick Add Block Bar
             addBlockBar
         }
-        .padding(.vertical, DS.Space.xs)
+        .padding(.vertical, 2)
         .onAppear {
             loadBlocks()
         }
@@ -110,21 +130,39 @@ struct MacBlockEditor: View {
     private func blockRow(for block: Binding<TodoContentBlock>) -> some View {
         let blockID = block.wrappedValue.id
         let isHovered = hoveredBlockID == blockID
+        let isParagraph = block.wrappedValue.type == .paragraph
 
-        HStack(alignment: .top, spacing: DS.Space.xs) {
+        HStack(alignment: .top, spacing: 6) {
             // Drag / Block Type Menu Handle
-            Menu {
-                blockTypeMenu(for: block)
-            } label: {
-                Image(systemName: blockTypeIcon(block.wrappedValue.type))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(isHovered ? DS.Color.textSecondary : DS.Color.textTertiary.opacity(0.3))
-                    .frame(width: 18, height: 22)
-                    .contentShape(Rectangle())
+            if isParagraph {
+                // For normal text, hide glyph by default to keep canvas clean; show on hover
+                Menu {
+                    blockTypeMenu(for: block)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(isHovered ? DS.Color.textSecondary : Color.clear)
+                        .frame(width: 16, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 16)
+                .opacity(isHovered ? 1.0 : 0.0)
+            } else {
+                Menu {
+                    blockTypeMenu(for: block)
+                } label: {
+                    Image(systemName: blockTypeIcon(block.wrappedValue.type))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(isHovered ? DS.Color.textPrimary : DS.Color.textSecondary)
+                        .frame(width: 16, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 16)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .frame(width: 18)
 
             // Block Content
             blockContent(for: block)
@@ -136,20 +174,20 @@ struct MacBlockEditor: View {
                     deleteBlock(id: blockID)
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
-                        .padding(4)
-                        .background(Color.primary.opacity(0.06), in: Circle())
+                        .padding(3)
+                        .background(Color.white.opacity(0.08), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .transition(.opacity)
             }
         }
         .padding(.vertical, 2)
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 2)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(isHovered ? Color.primary.opacity(0.03) : Color.clear)
+                .fill(isHovered ? Color.white.opacity(0.03) : Color.clear)
         )
         .onHover { isHovering in
             hoveredBlockID = isHovering ? blockID : nil
@@ -160,9 +198,12 @@ struct MacBlockEditor: View {
 
     @ViewBuilder
     private func blockContent(for block: Binding<TodoContentBlock>) -> some View {
+        let isFirstBlock = blocks.first?.id == block.wrappedValue.id
+        let placeholder = isFirstBlock ? "Add notes or description…" : ""
+
         switch block.wrappedValue.type {
         case .paragraph:
-            TextField("Type something…", text: block.text, axis: .vertical)
+            TextField(placeholder, text: block.text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(DS.Text.body)
                 .foregroundStyle(DS.Color.textPrimary)
@@ -415,6 +456,20 @@ struct MacBlockEditor: View {
 
     private func handleBlockReturn(after blockID: UUID, inheritType: TodoBlockType? = nil) {
         guard let index = blocks.firstIndex(where: { $0.id == blockID }) else { return }
+        let currentBlock = blocks[index]
+
+        // If current block is empty and is a list/check, convert to paragraph on return
+        if currentBlock.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && currentBlock.type != .paragraph {
+            blocks[index].type = .paragraph
+            persistChanges()
+            return
+        }
+
+        // If current block is already an empty paragraph, keep focus without creating redundant blocks
+        if currentBlock.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && currentBlock.type == .paragraph {
+            return
+        }
+
         let nextType = inheritType ?? .paragraph
         let newBlock = TodoContentBlock(type: nextType, text: "")
 
