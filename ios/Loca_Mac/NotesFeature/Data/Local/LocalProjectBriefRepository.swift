@@ -1,7 +1,7 @@
 import Foundation
 
 /// Isolated DocumentCoreRepository implementation managing Project Briefs backed by SQLite `project_briefs`.
-public final class LocalProjectBriefRepository: DocumentCoreRepository, @unchecked Sendable {
+public final class LocalProjectBriefRepository: DocumentCoreRepository, Sendable {
     
     private let store: LocalProjectBriefStore
     private let eventBus: NotesEventBus

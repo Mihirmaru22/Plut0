@@ -8,7 +8,7 @@ extension Notification.Name {
 
 /// Automatically donates and indexes rich notes into native macOS Spotlight (`CSSearchableIndex`).
 /// Enables direct search from anywhere in macOS (`⌘Space`) with instant deep linking (`pluto://note/{uuid}`).
-public final class NotesSpotlightIndexer: @unchecked Sendable {
+public final class NotesSpotlightIndexer: Sendable {
     
     public static let shared = NotesSpotlightIndexer()
     public let domainIdentifier = "com.mihirmaru.pluto.notes"

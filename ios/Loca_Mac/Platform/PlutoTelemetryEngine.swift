@@ -50,6 +50,7 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     }
 
     private var eventBuffer: [PlutoAlphaEvent] = []
+    private let bufferLock = NSLock()
     private var flushTimer: Timer?
     private var snapshotTimer: Timer?
 
@@ -116,6 +117,12 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
 
     // MARK: - Core Event Tracking
 
+    nonisolated func trackEvent(_ event: PlutoAlphaEvent) {
+        bufferLock.lock()
+        eventBuffer.append(event)
+        bufferLock.unlock()
+    }
+
     func track(event: String, properties: [String: AnyCodable] = [:]) {
         // Privacy Opt-In Check
         if let optIn = UserDefaults.standard.object(forKey: "mac_telemetry_opt_in") as? Bool, !optIn {
@@ -141,7 +148,10 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
         enqueuedEventsHistory.append(alphaEvent)
         #endif
 
+        bufferLock.lock()
         eventBuffer.append(alphaEvent)
+        bufferLock.unlock()
+
         PlutoDiagnosticEngine.shared.leaveBreadcrumb("\(event) (\(properties.keys.joined(separator: ", ")))")
 
         // Flush immediately for real-time live transmission
@@ -149,9 +159,14 @@ final class PlutoTelemetryEngine: @unchecked Sendable {
     }
 
     func flushBuffer() {
-        guard !eventBuffer.isEmpty else { return }
+        bufferLock.lock()
+        guard !eventBuffer.isEmpty else {
+            bufferLock.unlock()
+            return
+        }
         let toFlush = eventBuffer
         eventBuffer.removeAll()
+        bufferLock.unlock()
 
         PlutoTelemetryStorage.shared.enqueue(events: toFlush)
 

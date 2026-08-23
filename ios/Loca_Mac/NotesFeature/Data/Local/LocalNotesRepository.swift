@@ -1,7 +1,7 @@
 import Foundation
 
 /// Concrete repository implementation combining SQLite LocalStore with reactive NotesEventBus.
-public final class LocalNotesRepository: NotesRepository, @unchecked Sendable {
+public final class LocalNotesRepository: NotesRepository, Sendable {
     
     private let store: LocalNotesStore
     private let eventBus: NotesEventBus

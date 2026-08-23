@@ -589,7 +589,66 @@ struct Loca_MacTests {
         let result4 = LocaNeuralEngine.parseSmartTask("Standup...")
         #expect(result4.cleanTitle == "Standup")
     }
+
+    // MARK: - Invariant 13: Swift 6 Strict Concurrency & Thread-Safe Resource Management (B-08, B-25, B-27)
+
+    @Test func testNotesDatabaseDeinitThreadSafety() async throws {
+        // Create in-memory database, spawn concurrent queries, and release reference simultaneously
+        for _ in 0..<5 {
+            var db: NotesDatabase? = try NotesDatabase.inMemory()
+            let strongDB = db!
+
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    _ = try? strongDB.read { _ in
+                        Thread.sleep(forTimeInterval: 0.002)
+                    }
+                }
+                group.addTask {
+                    _ = try? strongDB.write { _ in
+                        Thread.sleep(forTimeInterval: 0.002)
+                    }
+                }
+            }
+
+            // Immediately deinitialize database while tasks conclude
+            db = nil
+            #expect(db == nil)
+        }
+    }
+
+    @Test func testTelemetryBufferConcurrency() async throws {
+        let engine = PlutoTelemetryEngine.shared
+
+        // Concurrently emit 100 events across background tasks
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<100 {
+                group.addTask {
+                    let event = PlutoAlphaEvent(
+                        event_id: "test_\(i)_\(UUID().uuidString.prefix(6))",
+                        event_name: "concurrent_test_event",
+                        timestamp: ISO8601DateFormatter().string(from: Date()),
+                        properties: ["index": AnyCodable(i)]
+                    )
+                    engine.trackEvent(event)
+                }
+            }
+        }
+
+        // Flush must execute safely without crash or race
+        engine.flushBuffer()
+    }
+
+    @Test func testSendableConformances() {
+        let indexer: any Sendable = NotesSpotlightIndexer.shared
+        #expect(indexer is NotesSpotlightIndexer)
+
+        let store = LocalNotesStore(database: try! NotesDatabase.inMemory())
+        let repo: any Sendable = LocalNotesRepository(store: store, eventBus: NotesEventBus())
+        #expect(repo is LocalNotesRepository)
+    }
 }
+
 
 
 

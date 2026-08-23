@@ -22,8 +22,11 @@ public final class NotesDatabase: @unchecked Sendable {
     }
     
     deinit {
-        if let db = dbPointer {
-            sqlite3_close_v2(db)
+        queue.sync {
+            if let db = dbPointer {
+                sqlite3_close_v2(db)
+                dbPointer = nil
+            }
         }
     }
     
