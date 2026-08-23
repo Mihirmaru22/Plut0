@@ -541,6 +541,55 @@ struct Loca_MacTests {
         let expectedDay = calendar.startOfDay(for: date)
         #expect(normalizedDay == expectedDay)
     }
+
+    // MARK: - Invariant 12: Natural Language Duration, Prepositions & Punctuation (B-06, B-17, B-27)
+
+    @Test func testFractionalDurations() {
+        let result1 = LocaNeuralEngine.parseSmartTask("Workout for 1.5h")
+        #expect(result1.durationMinutes == 90)
+        #expect(result1.cleanTitle == "Workout")
+
+        let result2 = LocaNeuralEngine.parseSmartTask("Meditate 0.5hr")
+        #expect(result2.durationMinutes == 30)
+        #expect(result2.cleanTitle == "Meditate")
+
+        let result3 = LocaNeuralEngine.parseSmartTask("Focus 90min")
+        #expect(result3.durationMinutes == 90)
+        #expect(result3.cleanTitle == "Focus")
+
+        let result4 = LocaNeuralEngine.parseSmartTask("Design review for 2.5 hours")
+        #expect(result4.durationMinutes == 150)
+        #expect(result4.cleanTitle == "Design review")
+    }
+
+    @Test func testCompoundPrepositions() {
+        let result1 = LocaNeuralEngine.parseSmartTask("Meeting on next Tuesday")
+        #expect(result1.cleanTitle == "Meeting")
+        #expect(result1.dueDate != nil)
+
+        let result2 = LocaNeuralEngine.parseSmartTask("Call by tomorrow morning")
+        #expect(result2.cleanTitle == "Call")
+        #expect(result2.dueDate != nil)
+
+        let result3 = LocaNeuralEngine.parseSmartTask("Review notes on tomorrow")
+        #expect(result3.cleanTitle == "Review notes")
+        #expect(result3.dueDate != nil)
+    }
+
+    @Test func testTrailingPunctuation() {
+        let result1 = LocaNeuralEngine.parseSmartTask("Meeting!")
+        #expect(result1.cleanTitle == "Meeting")
+
+        let result2 = LocaNeuralEngine.parseSmartTask("Call?")
+        #expect(result2.cleanTitle == "Call")
+
+        let result3 = LocaNeuralEngine.parseSmartTask("Review,")
+        #expect(result3.cleanTitle == "Review")
+
+        let result4 = LocaNeuralEngine.parseSmartTask("Standup...")
+        #expect(result4.cleanTitle == "Standup")
+    }
 }
+
 
 

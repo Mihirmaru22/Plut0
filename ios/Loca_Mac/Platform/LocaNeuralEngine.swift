@@ -177,7 +177,7 @@ enum LocaNeuralEngine {
         }
         text = wordsToKeep.joined(separator: " ")
 
-        // 2. Detect Duration ("30m", "45min", "1h", "1.5h", "2hr", "for 45m")
+        // 2. Detect Duration ("30m", "45min", "1h", "1.5h", "0.5hr", "90min", "2hr", "for 45m")
         if let durationRange = text.range(of: #"(?:for\s+)?(\d+(?:\.\d+)?)\s*(m|min|mins|minutes|h|hr|hrs|hours)\b"#, options: [.regularExpression, .caseInsensitive]) {
             let matched = String(text[durationRange])
             if let mins = parseDurationString(matched) {
@@ -185,6 +185,9 @@ enum LocaNeuralEngine {
                 text.removeSubrange(durationRange)
             }
         }
+
+        // Normalize compound prepositions before Date recognition
+        text = normalizePrepositions(text)
 
         // 3. Apple NSDataDetector for Date & Time Recognition
         if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) {
@@ -209,16 +212,33 @@ enum LocaNeuralEngine {
         }
 
         // 4. Clean and normalize remaining title
-        // Remove trailing or leading prepositions like "at", "on", "for" left behind
         var cleanTitle = text
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        for prep in [" at", " on", " for", " by"] {
+        // Strip trailing punctuation
+        cleanTitle = cleanTitle.replacingOccurrences(
+            of: #"[!?.,;:]+$"#,
+            with: "",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Strip leading/trailing prepositions
+        for prep in [" at", " on", " for", " by", " in", " the"] {
             if cleanTitle.hasSuffix(prep) {
-                cleanTitle = String(cleanTitle.dropLast(prep.count))
+                cleanTitle = String(cleanTitle.dropLast(prep.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            let trimmedPrep = prep.trimmingCharacters(in: .whitespaces)
+            if cleanTitle.lowercased().hasPrefix(trimmedPrep + " ") {
+                cleanTitle = String(cleanTitle.dropFirst(trimmedPrep.count + 1)).trimmingCharacters(in: .whitespacesAndNewlines)
             }
         }
+
+        cleanTitle = cleanTitle.replacingOccurrences(
+            of: #"[!?.,;:]+$"#,
+            with: "",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
 
         if cleanTitle.isEmpty { cleanTitle = trimmed }
 
@@ -232,8 +252,38 @@ enum LocaNeuralEngine {
         )
     }
 
+    private static func normalizePrepositions(_ text: String) -> String {
+        var result = text
+
+        // "on next Tuesday" -> "next Tuesday"
+        result = result.replacingOccurrences(
+            of: #"\bon\s+(next|this|last)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"#,
+            with: "$1 $2",
+            options: [.regularExpression, .caseInsensitive]
+        )
+
+        // "by tomorrow morning" -> "tomorrow morning"
+        result = result.replacingOccurrences(
+            of: #"\bby\s+(today|tomorrow|tonight)\b"#,
+            with: "$1",
+            options: [.regularExpression, .caseInsensitive]
+        )
+
+        // "on tomorrow" -> "tomorrow"
+        result = result.replacingOccurrences(
+            of: #"\bon\s+(today|tomorrow|tonight)\b"#,
+            with: "$1",
+            options: [.regularExpression, .caseInsensitive]
+        )
+
+        return result
+    }
+
     private static func parseDurationString(_ raw: String) -> Int? {
-        let s = raw.lowercased().replacingOccurrences(of: "for ", with: "").trimmingCharacters(in: .whitespaces)
+        let s = raw.lowercased()
+            .replacingOccurrences(of: "for ", with: "")
+            .trimmingCharacters(in: .whitespaces)
+
         for suffix in ["hours", "hour", "hrs", "hr", "h"] {
             if s.hasSuffix(suffix) {
                 let n = String(s.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
@@ -243,7 +293,7 @@ enum LocaNeuralEngine {
         for suffix in ["minutes", "minute", "mins", "min", "m"] {
             if s.hasSuffix(suffix) {
                 let n = String(s.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
-                if let i = Int(n), i > 0 { return i }
+                if let d = Double(n), d > 0 { return Int(d.rounded()) }
             }
         }
         return nil
