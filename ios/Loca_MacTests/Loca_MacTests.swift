@@ -475,5 +475,72 @@ struct Loca_MacTests {
         switcher.moveSelectionUp()
         #expect(switcher.selectedIndex == 0)
     }
+
+    // MARK: - Invariant 11: Habit & Streak Calculation Across Timezone / DST Boundaries (B-13, B-18)
+
+    @Test func testStreakNearMidnight() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+
+        // Check-in at 23:59 on Day 1
+        let lateNight = calendar.date(from: DateComponents(year: 2024, month: 1, day: 15, hour: 23, minute: 59))!
+        // Check-in at 00:01 on Day 2
+        let earlyMorning = calendar.date(from: DateComponents(year: 2024, month: 1, day: 16, hour: 0, minute: 1))!
+
+        let streak = calculateStreak(for: [lateNight, earlyMorning], calendar: calendar)
+        #expect(streak == 2, "Midnight boundary must count as 2 consecutive days")
+        #expect(isConsecutiveDay(lateNight, earlyMorning, calendar: calendar))
+    }
+
+    @Test func testStreakAcrossDSTTransition() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+
+        // 1. Spring forward: March 12, 2023 at 2am -> 3am (23-hour day)
+        let beforeSpring = calendar.date(from: DateComponents(year: 2023, month: 3, day: 11, hour: 23))!
+        let duringSpring = calendar.date(from: DateComponents(year: 2023, month: 3, day: 12, hour: 10))!
+        let afterSpring = calendar.date(from: DateComponents(year: 2023, month: 3, day: 13, hour: 1))!
+
+        let springStreak2 = calculateStreak(for: [beforeSpring, duringSpring], calendar: calendar)
+        #expect(springStreak2 == 2, "Spring forward 2-day streak should not break")
+
+        let springStreak3 = calculateStreak(for: [beforeSpring, duringSpring, afterSpring], calendar: calendar)
+        #expect(springStreak3 == 3, "Spring forward 3-day streak should not break")
+
+        // 2. Fall back: November 5, 2023 at 2am -> 1am (25-hour day)
+        let beforeFall = calendar.date(from: DateComponents(year: 2023, month: 11, day: 4, hour: 22))!
+        let duringFall = calendar.date(from: DateComponents(year: 2023, month: 11, day: 5, hour: 23))!
+        let afterFall = calendar.date(from: DateComponents(year: 2023, month: 11, day: 6, hour: 1))!
+
+        let fallStreak3 = calculateStreak(for: [beforeFall, duringFall, afterFall], calendar: calendar)
+        #expect(fallStreak3 == 3, "Fall back 3-day streak should not break")
+    }
+
+    @Test func testStreakAcrossTimezoneShift() {
+        var pstCal = Calendar(identifier: .gregorian)
+        pstCal.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let day1PST = pstCal.date(from: DateComponents(year: 2023, month: 8, day: 23, hour: 14, minute: 0))!
+
+        var estCal = Calendar(identifier: .gregorian)
+        estCal.timeZone = TimeZone(identifier: "America/New_York")!
+        let day2EST = estCal.date(from: DateComponents(year: 2023, month: 8, day: 24, hour: 14, minute: 0))!
+
+        // When evaluated in user's current calendar (EST), day1 is Aug 23 and day2 is Aug 24
+        let streak = calculateStreak(for: [day1PST, day2EST], calendar: estCal)
+        #expect(streak == 2, "Timezone shift should maintain consecutive streak in current calendar")
+    }
+
+    @Test func testHabitCheckInDayNormalization() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+
+        let date = calendar.date(from: DateComponents(year: 2024, month: 6, day: 15, hour: 18, minute: 30))!
+        let checkIn = HabitCheckIn(timestamp: date, timezoneOffset: -14400)
+
+        let normalizedDay = checkIn.day(in: calendar)
+        let expectedDay = calendar.startOfDay(for: date)
+        #expect(normalizedDay == expectedDay)
+    }
 }
+
 

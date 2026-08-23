@@ -655,14 +655,86 @@ enum StreakCalculator {
     /// Both dates must be `calendar.startOfDay`-normalised (as guaranteed by
     /// `aggregateByDayWithGrace`). Returns `false` if `calendar.date(byAdding:)` fails,
     /// which is not expected for any timezone or calendar supported by the system.
-    private static func areConsecutiveDays(
+    public static func areConsecutiveDays(
         _ earlier: Date,
         _ later:   Date,
-        calendar:  Calendar
+        calendar:  Calendar = .current
     ) -> Bool {
         guard let expectedNext = calendar.date(byAdding: .day, value: 1, to: earlier) else {
             return false
         }
         return expectedNext == later
     }
+
+    /// Determines whether two dates fall on consecutive calendar days using normalized day boundaries.
+    public static func isConsecutiveDay(
+        _ date1: Date,
+        _ date2: Date,
+        calendar: Calendar = .current
+    ) -> Bool {
+        let day1 = calendar.startOfDay(for: date1)
+        let day2 = calendar.startOfDay(for: date2)
+        let diff = calendar.dateComponents([.day], from: day1, to: day2).day ?? 0
+        return abs(diff) == 1
+    }
+
+    /// Calculates the current consecutive day streak from a list of check-in dates.
+    ///
+    /// Normalizes each timestamp to `calendar.startOfDay(for:)`, deduplicates multiple check-ins
+    /// on the same day, and computes the contiguous run of consecutive days leading up to the most recent check-in.
+    public static func calculateStreak(
+        for checkIns: [Date],
+        calendar: Calendar = .current
+    ) -> Int {
+        guard !checkIns.isEmpty else { return 0 }
+
+        let uniqueDays = Set(checkIns.map { calendar.startOfDay(for: $0) })
+        let sortedDays = uniqueDays.sorted(by: >) // Most recent first
+
+        guard !sortedDays.isEmpty else { return 0 }
+        var streak = 1
+        var previousDay = sortedDays[0]
+
+        for day in sortedDays.dropFirst() {
+            let diff = calendar.dateComponents([.day], from: day, to: previousDay).day ?? 0
+            if diff == 1 {
+                streak += 1
+                previousDay = day
+            } else {
+                break // Streak broken
+            }
+        }
+
+        return streak
+    }
 }
+
+// MARK: - HabitCheckIn
+
+/// Represents a single habit check-in event with timestamp and timezone metadata.
+public struct HabitCheckIn: Codable, Sendable, Hashable {
+    public let timestamp: Date // UTC timestamp
+    public let timezoneOffset: Int // Offset in seconds from UTC at check-in time
+
+    public init(timestamp: Date, timezoneOffset: Int = TimeZone.current.secondsFromGMT()) {
+        self.timestamp = timestamp
+        self.timezoneOffset = timezoneOffset
+    }
+
+    public func day(in calendar: Calendar = .current) -> Date {
+        return calendar.startOfDay(for: timestamp)
+    }
+}
+
+// MARK: - Global Convenience Helpers
+
+/// Determines whether two dates fall on consecutive calendar days using normalized day boundaries.
+public func isConsecutiveDay(_ date1: Date, _ date2: Date, calendar: Calendar = .current) -> Bool {
+    StreakCalculator.isConsecutiveDay(date1, date2, calendar: calendar)
+}
+
+/// Calculates the current consecutive day streak from a list of check-in dates.
+public func calculateStreak(for checkIns: [Date], calendar: Calendar = .current) -> Int {
+    StreakCalculator.calculateStreak(for: checkIns, calendar: calendar)
+}
+
