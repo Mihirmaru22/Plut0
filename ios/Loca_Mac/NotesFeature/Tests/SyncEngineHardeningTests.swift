@@ -219,5 +219,60 @@ struct SyncEngineHardeningTests {
         #expect(titlesA.count == 3)
         #expect(titlesA.first == "Block 1")
     }
+    
+    // MARK: - Fix 4 Tests: Causal Dependency Buffer (B-21)
+    
+    @Test func testCausalBufferHandlesOutOfOrderDelivery() async throws {
+        let (coordinator, repo, _, _, _, tempDir) = try makeTestEnvironment(autoAck: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let noteID = NoteID()
+        let deviceA = "device-A"
+        let vault = NoteVault()
+        
+        // Peer A produces Edit 1 (Clock A:1)
+        var docA = CRDTDoc(id: noteID, deviceID: deviceA)
+        docA.title = "First Draft"
+        _ = docA.vectorClock.increment(for: deviceA) // {device-A: 1}
+        let payload1 = try vault.encrypt(data: try JSONEncoder().encode(docA), for: noteID)
+        let clock1 = docA.vectorClock
+        
+        // Peer A produces Edit 2 (Clock A:2)
+        docA.title = "Final Polish"
+        _ = docA.vectorClock.increment(for: deviceA) // {device-A: 2}
+        let payload2 = try vault.encrypt(data: try JSONEncoder().encode(docA), for: noteID)
+        let clock2 = docA.vectorClock
+        
+        // 1. Network delivers Op2 first (Out of Order delivery)
+        try await coordinator.applyWithCausalCheck(
+            messageID: UUID(),
+            noteID: noteID,
+            encryptedPayload: payload2,
+            vectorClock: clock2,
+            remoteDeviceID: deviceA
+        )
+        
+        // Op2 must be held in causal buffer because A:1 has not yet arrived
+        let bufferCount1 = await coordinator.causalBuffer.count
+        #expect(bufferCount1 == 1)
+        
+        // 2. Network delivers Op1 second (Prerequisite arrives)
+        try await coordinator.applyWithCausalCheck(
+            messageID: UUID(),
+            noteID: noteID,
+            encryptedPayload: payload1,
+            vectorClock: clock1,
+            remoteDeviceID: deviceA
+        )
+        
+        // Causal buffer should drain automatically and apply both in sequence
+        let bufferCount2 = await coordinator.causalBuffer.count
+        #expect(bufferCount2 == 0)
+        
+        // Final materialized state has applied up through Op2
+        let finalNote = try await repo.fetchNote(id: noteID)
+        #expect(finalNote != nil)
+        #expect(finalNote?.title == "Final Polish")
+    }
 }
 #endif

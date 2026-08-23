@@ -1,5 +1,31 @@
 import Foundation
 
+/// Buffered incoming delta waiting on causal dependencies before application.
+public struct BufferedSyncMessage: Sendable {
+    public let messageID: UUID
+    public let noteID: NoteID
+    public let encryptedPayload: EncryptedPayload
+    public let vectorClock: CRDTVectorClock
+    public let remoteDeviceID: String
+    public let receivedAt: Date
+    
+    public init(
+        messageID: UUID,
+        noteID: NoteID,
+        encryptedPayload: EncryptedPayload,
+        vectorClock: CRDTVectorClock,
+        remoteDeviceID: String,
+        receivedAt: Date = Date()
+    ) {
+        self.messageID = messageID
+        self.noteID = noteID
+        self.encryptedPayload = encryptedPayload
+        self.vectorClock = vectorClock
+        self.remoteDeviceID = remoteDeviceID
+        self.receivedAt = receivedAt
+    }
+}
+
 /// Central coordinator managing the distributed CRDT lifecycle, E2EE encryption, WebSocket sync, ACK gating, and materialization.
 public actor ShadowSyncCoordinator {
     
@@ -13,6 +39,7 @@ public actor ShadowSyncCoordinator {
     private let networkMonitor: NetworkMonitor
     
     private var docCache: [NoteID: CRDTDoc] = [:]
+    public private(set) var causalBuffer: [BufferedSyncMessage] = []
     private var listeningTask: Task<Void, Never>?
     private var networkTask: Task<Void, Never>?
     
@@ -86,6 +113,93 @@ public actor ShadowSyncCoordinator {
         }
         
         return materializedNote
+    }
+    
+    // MARK: - Causal Dependency Checking & Buffer Management (B-21)
+    
+    public func canApply(vectorClock: CRDTVectorClock, senderID: String, for noteID: NoteID) async -> Bool {
+        let localDoc: CRDTDoc
+        if let cached = docCache[noteID] {
+            localDoc = cached
+        } else if let loaded = try? await loadOrCreateDoc(for: noteID) {
+            localDoc = loaded
+        } else {
+            return true
+        }
+        
+        let localClock = localDoc.vectorClock.clock
+        let remoteClock = vectorClock.clock
+        guard !remoteClock.isEmpty else { return true }
+        
+        for (devID, remoteCounter) in remoteClock {
+            let localCounter = localClock[devID, default: 0]
+            if devID == senderID {
+                // Next sequential operation from sender must not skip ahead (counter <= local + 1)
+                if remoteCounter > localCounter + 1 {
+                    return false
+                }
+            } else {
+                // All other causal dependencies must already be met locally
+                if remoteCounter > localCounter {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    public func applyWithCausalCheck(
+        messageID: UUID,
+        noteID: NoteID,
+        encryptedPayload: EncryptedPayload,
+        vectorClock: CRDTVectorClock,
+        remoteDeviceID: String
+    ) async throws {
+        guard remoteDeviceID != deviceID else { return }
+        
+        if await canApply(vectorClock: vectorClock, senderID: remoteDeviceID, for: noteID) {
+            try await applyRemoteDelta(
+                messageID: messageID,
+                noteID: noteID,
+                encryptedPayload: encryptedPayload,
+                vectorClock: vectorClock,
+                remoteDeviceID: remoteDeviceID
+            )
+            await processCausalBuffer(for: noteID)
+        } else {
+            let buffered = BufferedSyncMessage(
+                messageID: messageID,
+                noteID: noteID,
+                encryptedPayload: encryptedPayload,
+                vectorClock: vectorClock,
+                remoteDeviceID: remoteDeviceID
+            )
+            causalBuffer.append(buffered)
+        }
+    }
+    
+    private func processCausalBuffer(for noteID: NoteID) async {
+        var progress = true
+        while progress {
+            progress = false
+            var remaining: [BufferedSyncMessage] = []
+            
+            for msg in causalBuffer {
+                if msg.noteID == noteID && (await canApply(vectorClock: msg.vectorClock, senderID: msg.remoteDeviceID, for: noteID)) {
+                    try? await applyRemoteDelta(
+                        messageID: msg.messageID,
+                        noteID: msg.noteID,
+                        encryptedPayload: msg.encryptedPayload,
+                        vectorClock: msg.vectorClock,
+                        remoteDeviceID: msg.remoteDeviceID
+                    )
+                    progress = true
+                } else {
+                    remaining.append(msg)
+                }
+            }
+            causalBuffer = remaining
+        }
     }
     
     // MARK: - Remote Message Ingestion (CRDT Merge & Decryption)
@@ -196,7 +310,7 @@ public actor ShadowSyncCoordinator {
                     
                 case .broadcastDelta(let messageID, let noteID, let payload, let clock, let devID),
                      .pushDelta(let messageID, let noteID, let payload, let clock, let devID):
-                    try? await self.applyRemoteDelta(
+                    try? await self.applyWithCausalCheck(
                         messageID: messageID,
                         noteID: noteID,
                         encryptedPayload: payload,
