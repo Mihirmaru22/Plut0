@@ -56,108 +56,117 @@ private struct MacTodoEditor: View {
     private var isListTask: Bool { item.startTime == nil }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-
-                // MARK: Hero — glass glyph tile + display title + glass actions
-                HStack(alignment: .center, spacing: DS.Space.md) {
-                    Button { showIconPicker.toggle() } label: {
-                        Image(systemName: item.iconName ?? "checklist")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(item.isCompleted ? DS.Theme.emerald : DS.Theme.amber)
-                            .symbolEffect(.bounce, value: item.isCompleted)
-                            .frame(width: 38, height: 38)
-                            .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .regular, in: RoundedRectangle(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Change icon")
-                    .popover(isPresented: $showIconPicker, arrowEdge: .bottom) {
-                        IconPickerPopover(
-                            selected: Binding(
-                                get: { item.iconName },
-                                set: { item.iconName = $0; showIconPicker = false; autosave() }
-                            )
-                        )
-                    }
-
-                    TextField("Task title", text: $item.title, axis: .vertical)
-                        .font(.system(size: 24, weight: .bold))
-                        .tracking(-0.4)
-                        .textFieldStyle(.plain)
-                        .foregroundStyle(item.isCompleted ? DS.Theme.textTertiary : DS.Theme.textPrimary)
-                        .strikethrough(item.isCompleted, color: DS.Theme.textTertiary)
-                        .animation(.easeInOut(duration: 0.15), value: item.isCompleted)
-                        .onChange(of: item.title) { _, _ in autosave() }
-
-                    Spacer()
-
-                    // Complete Toggle Button
-                    Button(action: toggleComplete) {
-                        HStack(spacing: 5) {
-                            Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 14, weight: .bold))
-                                .symbolEffect(.bounce, value: item.isCompleted)
-                            Text(item.isCompleted ? "Done" : "Mark Done")
-                                .font(.system(size: 11.5, weight: .semibold))
-                                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        }
-                        .foregroundStyle(item.isCompleted ? DS.Theme.emerald : Color.white)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 6)
-                        .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .interactive, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .animation(PlutoSpring.smooth, value: item.isCompleted)
-                    .help(item.isCompleted ? "Mark not done" : "Mark done")
-
-                    // Priority Flag Menu
-                    if isListTask {
-                        Menu {
-                            Button("None")   { item.priority = 0; autosave() }
-                            Divider()
-                            Button("Low")    { item.priority = 1; autosave() }
-                            Button("Medium") { item.priority = 2; autosave() }
-                            Button("High")   { item.priority = 3; autosave() }
-                        } label: {
-                            Image(systemName: item.priority > 0 ? "flag.fill" : "flag")
-                                .font(.system(size: 13))
-                                .foregroundStyle(item.priority > 0 ? DS.Theme.amber : DS.Theme.textTertiary)
-                                .frame(width: 28, height: 28)
-                                .plutoGlass(.regular, in: Circle())
-                        }
-                        .menuStyle(.borderlessButton)
-                        .help(item.priority > 0 ? "Priority: \(priorityLabel(item.priority))" : "Set priority")
-                    }
-
-                    // Archive (Delete) Glass Button
-                    Button(role: .destructive) { showDeleteConfirm = true } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 13))
-                            .foregroundStyle(isDeleteHovered ? Color.red : DS.Theme.textTertiary)
-                            .frame(width: 28, height: 28)
-                            .plutoGlass(isDeleteHovered ? .tinted(.red) : .regular, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Archive this task")
-                    .onHover { isDeleteHovered = $0 }
+        VStack(alignment: .leading, spacing: 0) {
+            // MARK: Hero — glass glyph tile + display title + glass actions
+            HStack(alignment: .center, spacing: DS.Space.md) {
+                Button { showIconPicker.toggle() } label: {
+                    Image(systemName: item.iconName ?? "checklist")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(item.isCompleted ? DS.Theme.emerald : DS.Theme.amber)
+                        .symbolEffect(.bounce, value: item.isCompleted)
+                        .frame(width: 38, height: 38)
+                        .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .regular, in: RoundedRectangle(cornerRadius: 8))
                 }
-                .padding(.top, DS.Space.xl)
-                .padding(.bottom, DS.Space.md)
+                .buttonStyle(.plain)
+                .help("Change icon")
+                .popover(isPresented: $showIconPicker, arrowEdge: .bottom) {
+                    IconPickerPopover(
+                        selected: Binding(
+                            get: { item.iconName },
+                            set: { item.iconName = $0; showIconPicker = false; autosave() }
+                        )
+                    )
+                }
 
-                // MARK: Chip row — date · time · flag
-                chipRow
-                    .padding(.bottom, DS.Space.xl)
+                TextField("Task title", text: $item.title, axis: .vertical)
+                    .font(.system(size: 24, weight: .bold))
+                    .tracking(-0.4)
+                    .textFieldStyle(.plain)
+                    .foregroundStyle(item.isCompleted ? DS.Theme.textTertiary : DS.Theme.textPrimary)
+                    .strikethrough(item.isCompleted, color: DS.Theme.textTertiary)
+                    .animation(.easeInOut(duration: 0.15), value: item.isCompleted)
+                    .onChange(of: item.title) { _, _ in autosave() }
 
-                // MARK: Schedule card
-                scheduleCard
-                    .padding(.bottom, DS.Space.md)
+                Spacer()
 
-                // MARK: Note Editor (Calm opaque surface)
-                noteSection
-                    .padding(.bottom, DS.Space.xxxl)
+                // Complete Toggle Button
+                Button(action: toggleComplete) {
+                    HStack(spacing: 5) {
+                        Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 14, weight: .bold))
+                            .symbolEffect(.bounce, value: item.isCompleted)
+                        Text(item.isCompleted ? "Done" : "Mark Done")
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    }
+                    .foregroundStyle(item.isCompleted ? DS.Theme.emerald : Color.white)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 6)
+                    .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .interactive, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .animation(PlutoSpring.smooth, value: item.isCompleted)
+                .help(item.isCompleted ? "Mark not done" : "Mark done")
+
+                // Priority Flag Menu
+                if isListTask {
+                    Menu {
+                        Button("None")   { item.priority = 0; autosave() }
+                        Divider()
+                        Button("Low")    { item.priority = 1; autosave() }
+                        Button("Medium") { item.priority = 2; autosave() }
+                        Button("High")   { item.priority = 3; autosave() }
+                    } label: {
+                        Image(systemName: item.priority > 0 ? "flag.fill" : "flag")
+                            .font(.system(size: 13))
+                            .foregroundStyle(item.priority > 0 ? DS.Theme.amber : DS.Theme.textTertiary)
+                            .frame(width: 28, height: 28)
+                            .plutoGlass(.regular, in: Circle())
+                    }
+                    .menuStyle(.borderlessButton)
+                    .help(item.priority > 0 ? "Priority: \(priorityLabel(item.priority))" : "Set priority")
+                }
+
+                // Archive (Delete) Glass Button
+                Button(role: .destructive) { showDeleteConfirm = true } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13))
+                        .foregroundStyle(isDeleteHovered ? Color.red : DS.Theme.textTertiary)
+                        .frame(width: 28, height: 28)
+                        .plutoGlass(isDeleteHovered ? .tinted(.red) : .regular, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .help("Archive this task")
+                .onHover { isDeleteHovered = $0 }
             }
+            .padding(.top, DS.Space.xl)
+            .padding(.bottom, DS.Space.md)
             .padding(.horizontal, DS.Space.xl)
+
+            // MARK: Chip row — date · time · flag
+            chipRow
+                .padding(.bottom, item.startTime != nil ? DS.Space.md : DS.Space.sm)
+                .padding(.horizontal, DS.Space.xl)
+
+            // MARK: Schedule card (if task is scheduled on timeline)
+            if item.startTime != nil {
+                scheduleCard
+                    .padding(.bottom, DS.Space.sm)
+                    .padding(.horizontal, DS.Space.xl)
+            }
+
+            Divider()
+                .opacity(0.08)
+                .padding(.horizontal, DS.Space.xl)
+                .padding(.vertical, 4)
+
+            // MARK: Note Editor (Takes entire remaining section)
+            MacBlockEditor(item: item, activeBlockID: $activeBlockID, allItems: allItems, onSave: autosave)
+                .id(item.id)
+                .padding(.horizontal, DS.Space.xl)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DS.Theme.canvas)
         .confirmationDialog(
             "Delete \"\(item.title)\"?",
@@ -369,13 +378,6 @@ private struct MacTodoEditor: View {
                     )
                 }
             }
-        }
-    }
-
-    private var noteSection: some View {
-        GroupedCard(label: "NOTE") {
-            MacBlockEditor(item: item, activeBlockID: $activeBlockID, allItems: allItems, onSave: autosave)
-                .id(item.id)
         }
     }
 

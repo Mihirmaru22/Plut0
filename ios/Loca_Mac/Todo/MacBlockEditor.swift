@@ -26,29 +26,27 @@ struct MacBlockEditor: View {
     @State private var editorKey: UUID = UUID()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Open-World Document Canvas
+        VStack(alignment: .leading, spacing: 6) {
+            // Open-World Document Canvas taking full section
             MacRichTextEditor(
                 initialAttributedText: initialAttributed,
                 initialPlainText: initialPlain,
                 preset: .standard,
-                contentInset: NSSize(width: 6, height: 6),
+                contentInset: NSSize(width: 0, height: 6),
                 isEditable: true,
                 controller: controller,
                 onTextChangeDebounced: { attributed, plain in
                     persistNote(attributed: attributed, plain: plain)
                 }
             )
-            .frame(minHeight: 140, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(editorKey)
-
-            Divider()
-                .opacity(0.12)
 
             // Modern Formatting Bar (Open World Tools)
             noteFormatToolbar
+                .padding(.bottom, 6)
         }
-        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             loadInitialNote()
         }
