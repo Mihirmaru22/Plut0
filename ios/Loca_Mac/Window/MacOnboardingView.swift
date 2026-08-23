@@ -10,7 +10,6 @@ struct MacOnboardingView: View {
     @Binding var isPresented: Bool
 
     @AppStorage("has_completed_onboarding_v3") private var hasCompletedOnboarding: Bool = false
-    @AppStorage("mac_habit_layout_v2") private var selectedHabitLayout: HabitDesignVariant = .habit1
     @AppStorage("mac_time_ambient_sound_v2") private var selectedAmbientSound: String = "Lo-Fi Focus Chords"
     @AppStorage("mac_vault_biometrics_enabled") private var enableVaultSecurity: Bool = false
     @AppStorage("mac_selected_palette_idx") private var selectedPaletteIdx: Int = 0
@@ -555,52 +554,6 @@ struct MacOnboardingView: View {
             }
 
             Divider()
-
-            // Habit Layout Choice
-            VStack(alignment: .leading, spacing: DS.Space.sm) {
-                Text("DEFAULT HABIT CARDS LAYOUT")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.6)
-
-                HStack(spacing: DS.Space.md) {
-                    ForEach(HabitDesignVariant.allCases) { layout in
-                        let isSelected = selectedHabitLayout == layout
-                        Button {
-                            selectedHabitLayout = layout
-                            Haptics.impact(.light)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Image(systemName: layout.icon)
-                                        .font(.system(size: 14))
-                                    Spacer()
-                                    if isSelected {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(DS.Color.success)
-                                    }
-                                }
-
-                                Text(layout.rawValue)
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(DS.Color.textPrimary)
-                            }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                isSelected ? DS.Color.surfaceRecessed : DS.Color.surface,
-                                in: RoundedRectangle(cornerRadius: 8)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isSelected ? DS.Color.textPrimary : DS.Color.border.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
 
             // Ambient Sound & Touch ID Preferences
             VStack(alignment: .leading, spacing: DS.Space.sm) {
