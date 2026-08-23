@@ -63,8 +63,9 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
         static let eveningReflection  = "pluto_evening_reflection"
         static let streakBreakAlert   = "pluto_streak_break_alert"
         static let snoozePrefix       = "pluto_snooze_"
-        static let focusTimer         = "pluto_focus_timer"
-        static let weeklyDigest       = "pluto_weekly_digest"
+        static let focusTimer             = "pluto_focus_timer"
+        static let weeklyDigest           = "pluto_weekly_digest"
+        static let workdayWellnessPrefix  = "pluto_workday_wellness_"
     }
 
     // MARK: - Deep Link Payload (A7)
@@ -454,6 +455,88 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
     func cancelWeeklyProgressDigest() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Identifier.weeklyDigest])
         refreshPendingCount()
+    }
+
+    // MARK: - Workday Alternating Wellness Reminders (Mon-Sat, 9 AM - 6 PM)
+
+    /// Schedules alternating Hydration (💧) and Stretch (🚶) reminders across the workday.
+    func scheduleWorkdayWellnessReminders(
+        enabled: Bool = true,
+        startHour: Int = 9,
+        endHour: Int = 18,
+        intervalMinutes: Int = 60,
+        days: [Int] = [2, 3, 4, 5, 6, 7] // Mon(2) to Sat(7)
+    ) {
+        let center = UNUserNotificationCenter.current()
+
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix(Identifier.workdayWellnessPrefix) }
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+            }
+
+            guard enabled else {
+                DispatchQueue.main.async { self.refreshPendingCount() }
+                return
+            }
+
+            var promptIndex = 0
+            for weekday in days {
+                var currentMinute = startHour * 60 + intervalMinutes
+                let endMinute = endHour * 60
+
+                while currentMinute <= endMinute {
+                    let hour = currentMinute / 60
+                    let minute = currentMinute % 60
+
+                    let isHydrate = (promptIndex % 2 == 0)
+                    let title = isHydrate ? "💧 Time to Hydrate" : "🚶 Stand & Stretch"
+                    let body = isHydrate ? "Take a sip of water and reset." : "Roll your shoulders and take a quick stretch."
+
+                    let content = UNMutableNotificationContent()
+                    content.title = title
+                    content.body = body
+                    content.sound = .default
+                    content.categoryIdentifier = Category.habitReminder
+                    content.interruptionLevel = .timeSensitive
+                    content.userInfo = [
+                        "target": "wellness",
+                        "type": isHydrate ? "hydrate" : "stretch"
+                    ]
+
+                    var dateComponents = DateComponents()
+                    dateComponents.weekday = weekday
+                    dateComponents.hour = hour
+                    dateComponents.minute = minute
+
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+                    let reqId = "\(Identifier.workdayWellnessPrefix)\(weekday)_\(hour)_\(minute)"
+                    let request = UNNotificationRequest(identifier: reqId, content: content, trigger: trigger)
+
+                    center.add(request)
+
+                    promptIndex += 1
+                    currentMinute += intervalMinutes
+                }
+            }
+
+            DispatchQueue.main.async { self.refreshPendingCount() }
+        }
+    }
+
+    func cancelWorkdayWellnessReminders() {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let idsToRemove = requests
+                .map(\.identifier)
+                .filter { $0.hasPrefix(Identifier.workdayWellnessPrefix) }
+            if !idsToRemove.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: idsToRemove)
+            }
+            DispatchQueue.main.async { self.refreshPendingCount() }
+        }
     }
 
     // MARK: - A7: Deep Link URL Scheme Parser

@@ -34,6 +34,12 @@ struct MacSettingsView: View {
     @AppStorage("mac_streak_alert_enabled") private var streakAlertEnabled: Bool = true
     @AppStorage("mac_weekly_digest_enabled") private var weeklyDigestEnabled: Bool = true
 
+    // Workday Wellness Storage (Option B: Alternating 💧 Hydrate / 🚶 Stretch)
+    @AppStorage("mac_workday_wellness_enabled") private var workdayWellnessEnabled: Bool = true
+    @AppStorage("mac_workday_start_hour") private var workdayStartHour: Int = 9
+    @AppStorage("mac_workday_end_hour") private var workdayEndHour: Int = 18
+    @AppStorage("mac_workday_interval_mins") private var workdayIntervalMins: Int = 60
+
     // Vault Security Storage
     @AppStorage("mac_vault_biometrics_enabled") private var isVaultSecurityEnabled: Bool = false
 
@@ -522,20 +528,144 @@ struct MacSettingsView: View {
                 .tint(accentColor)
             }
 
-            Button {
-                PlutoNotificationManager.shared.scheduleFocusCompletionNotification(tag: "Deep Work Sprint", seconds: 5, mode: "Pomodoro")
-                PlutoSoundEngine.shared.play(.timerComplete)
-            } label: {
-                Label("Trigger Test macOS Notification", systemImage: "bell.badge")
-                    .font(.system(size: 11, weight: .semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(DS.Color.background)
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
+            Divider().opacity(0.15)
+
+            // Workday Desk Bio-Breaks (Option B: Alternating 💧 Hydrate & 🚶 Stretch)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("💧 🚶 Workday Desk Bio-Breaks")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(DS.Color.textPrimary)
+                            Text("Mon – Sat · 9 AM – 6 PM")
+                                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.12))
+                                .foregroundStyle(Color.blue)
+                                .clipShape(Capsule())
+                        }
+
+                        Text("Alternates between \"Time to Hydrate\" and \"Stand & Stretch\" during office hours.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(DS.Color.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Toggle("", isOn: Binding(
+                        get: { workdayWellnessEnabled },
+                        set: { newVal in
+                            workdayWellnessEnabled = newVal
+                            PlutoNotificationManager.shared.scheduleWorkdayWellnessReminders(
+                                enabled: newVal,
+                                startHour: workdayStartHour,
+                                endHour: workdayEndHour,
+                                intervalMinutes: workdayIntervalMins
+                            )
+                            Haptics.impact(.light)
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    .tint(accentColor)
+                }
+
+                if workdayWellnessEnabled {
+                    HStack(spacing: 12) {
+                        Text("Interval Cadence:")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(DS.Color.textTertiary)
+
+                        ForEach([45, 60, 90, 120], id: \.self) { mins in
+                            let isSelected = workdayIntervalMins == mins
+                            Button {
+                                workdayIntervalMins = mins
+                                PlutoNotificationManager.shared.scheduleWorkdayWellnessReminders(
+                                    enabled: true,
+                                    startHour: workdayStartHour,
+                                    endHour: workdayEndHour,
+                                    intervalMinutes: mins
+                                )
+                                Haptics.impact(.light)
+                            } label: {
+                                Text(mins >= 60 ? (mins == 60 ? "Every 1 hr" : "Every \(mins / 60) hrs") : "Every \(mins)m")
+                                    .font(.system(size: 10.5, weight: isSelected ? .bold : .medium))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(isSelected ? accentColor.opacity(0.15) : DS.Color.surface)
+                                    .foregroundStyle(isSelected ? accentColor : DS.Color.textSecondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(isSelected ? accentColor.opacity(0.4) : DS.Color.border, lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
-            .buttonStyle(.plain)
+            .padding(12)
+            .background(DS.Color.background, in: RoundedRectangle(cornerRadius: 8))
+
+            HStack(spacing: 10) {
+                Button {
+                    PlutoNotificationManager.shared.scheduleFocusCompletionNotification(tag: "Deep Work Sprint", seconds: 5, mode: "Pomodoro")
+                    PlutoSoundEngine.shared.play(.timerComplete)
+                } label: {
+                    Label("Test Focus Alert", systemImage: "bell.badge")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(DS.Color.background)
+                        .foregroundStyle(DS.Color.textPrimary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    let content = UNMutableNotificationContent()
+                    content.title = "💧 Time to Hydrate"
+                    content.body = "Take a sip of water and reset."
+                    content.sound = .default
+                    let req = UNNotificationRequest(identifier: "test_hydrate", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
+                    UNUserNotificationCenter.current().add(req)
+                    PlutoSoundEngine.shared.play(.timerStart)
+                } label: {
+                    Label("Test Hydrate Prompt", systemImage: "drop.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(DS.Color.background)
+                        .foregroundStyle(Color.blue)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    let content = UNMutableNotificationContent()
+                    content.title = "🚶 Stand & Stretch"
+                    content.body = "Roll your shoulders and take a quick stretch."
+                    content.sound = .default
+                    let req = UNNotificationRequest(identifier: "test_stretch", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
+                    UNUserNotificationCenter.current().add(req)
+                    PlutoSoundEngine.shared.play(.timerStart)
+                } label: {
+                    Label("Test Stretch Prompt", systemImage: "figure.walk")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(DS.Color.background)
+                        .foregroundStyle(Color.green)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Color.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
