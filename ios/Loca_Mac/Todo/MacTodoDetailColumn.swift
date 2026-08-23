@@ -471,3 +471,95 @@ private struct GroupedCard<Content: View>: View {
         }
     }
 }
+
+// MARK: - DurationStepper (Liquid Glass Control)
+
+private struct DurationStepper: View {
+
+    @Binding var minutes: Int
+
+    var body: some View {
+        HStack(spacing: DS.Space.sm) {
+            Button {
+                withAnimation(PlutoSpring.snappy) { minutes = max(0, minutes - 15) }
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(DS.Theme.textSecondary)
+                    .frame(width: 24, height: 24)
+                    .plutoGlass(.regular, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(minutes <= 0)
+
+            Text(minutes == 0 ? "None" : durationText)
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .frame(minWidth: 52, alignment: .center)
+                .foregroundStyle(minutes == 0 ? DS.Theme.textTertiary : DS.Theme.textPrimary)
+
+            Button {
+                withAnimation(PlutoSpring.snappy) { minutes += 15 }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(DS.Theme.textSecondary)
+                    .frame(width: 24, height: 24)
+                    .plutoGlass(.regular, in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var durationText: String {
+        let h = minutes / 60, m = minutes % 60
+        if h > 0 && m > 0 { return "\(h)h \(m)m" }
+        if h > 0 { return "\(h)h" }
+        return "\(m)m"
+    }
+}
+
+// MARK: - SubtaskRow
+
+private struct SubtaskRow: View {
+
+    @Bindable var sub: TodoItem
+    @Environment(\.modelContext) private var modelContext
+    @State private var isHovered = false
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: DS.Space.sm) {
+            Button {
+                withAnimation(PlutoSpring.bouncy) {
+                    sub.completedAt = sub.isCompleted ? nil : Date()
+                    try? modelContext.save()
+                }
+                Haptics.impact(.light)
+            } label: {
+                Image(systemName: sub.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(sub.isCompleted ? DS.Theme.emerald : DS.Theme.textSecondary)
+            }
+            .buttonStyle(.plain)
+
+            TextField("Subtask", text: $sub.title)
+                .font(DS.Text.body)
+                .textFieldStyle(.plain)
+                .strikethrough(sub.isCompleted, color: DS.Theme.textTertiary)
+                .foregroundStyle(sub.isCompleted ? DS.Theme.textTertiary : DS.Theme.textPrimary)
+                .onChange(of: sub.title) { _, _ in try? modelContext.save() }
+
+            if isHovered {
+                Button(action: onDelete) {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                        .foregroundStyle(DS.Theme.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Remove subtask")
+                .transition(.opacity)
+            }
+        }
+        .padding(.vertical, DS.Space.xs)
+        .onHover { isHovered = $0 }
+    }
+}
