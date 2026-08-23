@@ -8,8 +8,12 @@ struct MacTodoDetailColumn: View {
     @Binding var item: TodoItem?
 
     var body: some View {
-        if let currentItem = item {
-            MacTodoEditor(item: currentItem)
+        if let currentItem = item, !currentItem.isArchived {
+            MacTodoEditor(item: currentItem, onDelete: {
+                withAnimation(PlutoSpring.smooth) {
+                    item = nil
+                }
+            })
                 .id(currentItem.id)
                 .transition(.asymmetric(
                     insertion: .opacity.combined(with: .scale(scale: 0.99)),
@@ -33,6 +37,7 @@ struct MacTodoDetailColumn: View {
 private struct MacTodoEditor: View {
 
     @Bindable var item: TodoItem
+    var onDelete: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\TodoItem.createdAt)]) private var allItems: [TodoItem]
 
@@ -57,12 +62,12 @@ private struct MacTodoEditor: View {
                 // MARK: Hero — glass glyph tile + display title + glass actions
                 HStack(alignment: .center, spacing: DS.Space.md) {
                     Button { showIconPicker.toggle() } label: {
-                        Image(systemName: item.iconName ?? "checkmark")
-                            .font(.system(size: 16, weight: .semibold))
+                        Image(systemName: item.iconName ?? "checklist")
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(item.isCompleted ? DS.Theme.emerald : DS.Theme.amber)
                             .symbolEffect(.bounce, value: item.isCompleted)
                             .frame(width: 38, height: 38)
-                            .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .tinted(DS.Theme.amber), in: RoundedRectangle(cornerRadius: 8))
+                            .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .regular, in: RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                     .help("Change icon")
@@ -392,6 +397,9 @@ private struct MacTodoEditor: View {
     private func archiveItem() {
         item.archiveCascade(in: modelContext)
         autosave()
+        PlutoSoundEngine.shared.play(.deleteTrash)
+        Haptics.impact(.medium)
+        onDelete?()
     }
 
     private func autosave() {

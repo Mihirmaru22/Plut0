@@ -356,14 +356,18 @@ struct MacBlockEditor: View {
     // MARK: - Add Block Quick Bar (Liquid Glass Container)
 
     private var addBlockBar: some View {
-        PlutoGlassCluster(spacing: 3) {
-            quickAddButton(title: "Text", icon: "text.alignleft", type: .paragraph)
-            quickAddButton(title: "H1", icon: "textformat.size.larger", type: .h1)
-            quickAddButton(title: "Checklist", icon: "checkmark.square", type: .check)
-            quickAddButton(title: "Bullet", icon: "list.bullet", type: .bullet)
-            quickAddButton(title: "Heading", icon: "textformat.size", type: .h2)
-            quickAddButton(title: "Quote", icon: "quote.opening", type: .quote)
-            quickAddButton(title: "Divider", icon: "divide", type: .divider)
+        ScrollView(.horizontal, showsIndicators: false) {
+            PlutoGlassCluster(spacing: 3) {
+                quickAddButton(title: "Text", icon: "text.alignleft", type: .paragraph)
+                quickAddButton(title: "H1", icon: "textformat.size.larger", type: .h1)
+                quickAddButton(title: "Checklist", icon: "checkmark.square", type: .check)
+                quickAddButton(title: "Bullet", icon: "list.bullet", type: .bullet)
+                quickAddButton(title: "Heading", icon: "textformat.size", type: .h2)
+                quickAddButton(title: "Quote", icon: "quote.opening", type: .quote)
+                quickAddButton(title: "Divider", icon: "divide", type: .divider)
+            }
+            .padding(.horizontal, 2)
+            .padding(.vertical, 2)
         }
         .padding(.top, 6)
     }

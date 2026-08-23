@@ -198,10 +198,16 @@ private struct List1BentoCardsView: View {
                 List1CardRow(
                     item: item,
                     isSelected: selection?.id == item.id,
-                    selectionNamespace: selectionNamespace
-                ) {
-                    selection = item
-                }
+                    selectionNamespace: selectionNamespace,
+                    onSelect: {
+                        selection = item
+                    },
+                    onDelete: {
+                        if selection?.id == item.id {
+                            selection = nil
+                        }
+                    }
+                )
             }
 
             if !doneItems.isEmpty {
@@ -234,6 +240,9 @@ private struct List1BentoCardsView: View {
 
                 ClearCompletedGlassButton {
                     for item in doneItems {
+                        if selection?.id == item.id {
+                            selection = nil
+                        }
                         item.archiveCascade(in: modelContext)
                     }
                     try? modelContext.save()
@@ -248,10 +257,16 @@ private struct List1BentoCardsView: View {
                     List1CardRow(
                         item: item,
                         isSelected: selection?.id == item.id,
-                        selectionNamespace: selectionNamespace
-                    ) {
-                        selection = item
-                    }
+                        selectionNamespace: selectionNamespace,
+                        onSelect: {
+                            selection = item
+                        },
+                        onDelete: {
+                            if selection?.id == item.id {
+                                selection = nil
+                            }
+                        }
+                    )
                     .transition(.asymmetric(
                         insertion: .opacity.combined(with: .move(edge: .top)),
                         removal: .opacity
@@ -303,6 +318,7 @@ private struct List1CardRow: View {
     let isSelected: Bool
     var selectionNamespace: Namespace.ID
     let onSelect: () -> Void
+    var onDelete: (() -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\TodoItem.createdAt)]) private var allItems: [TodoItem]
@@ -400,6 +416,7 @@ private struct List1CardRow: View {
             // Delete Trash Button on Hover
             if item.isCompleted || isHovered {
                 Button {
+                    onDelete?()
                     item.archiveCascade(in: modelContext)
                     try? modelContext.save()
                     PlutoSoundEngine.shared.play(.deleteTrash)
@@ -526,10 +543,16 @@ private struct List2GroupedSectionsView: View {
                             List1CardRow(
                                 item: item,
                                 isSelected: selection?.id == item.id,
-                                selectionNamespace: selectionNamespace
-                            ) {
-                                selection = item
-                            }
+                                selectionNamespace: selectionNamespace,
+                                onSelect: {
+                                    selection = item
+                                },
+                                onDelete: {
+                                    if selection?.id == item.id {
+                                        selection = nil
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -564,10 +587,16 @@ private struct List2GroupedSectionsView: View {
                     List1CardRow(
                         item: item,
                         isSelected: selection?.id == item.id,
-                        selectionNamespace: selectionNamespace
-                    ) {
-                        selection = item
-                    }
+                        selectionNamespace: selectionNamespace,
+                        onSelect: {
+                            selection = item
+                        },
+                        onDelete: {
+                            if selection?.id == item.id {
+                                selection = nil
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -592,10 +621,16 @@ private struct List3FocusCardsView: View {
                 List1CardRow(
                     item: item,
                     isSelected: selection?.id == item.id,
-                    selectionNamespace: selectionNamespace
-                ) {
-                    selection = item
-                }
+                    selectionNamespace: selectionNamespace,
+                    onSelect: {
+                        selection = item
+                    },
+                    onDelete: {
+                        if selection?.id == item.id {
+                            selection = nil
+                        }
+                    }
+                )
             }
 
             if !doneItems.isEmpty {
@@ -623,10 +658,16 @@ private struct List3FocusCardsView: View {
                             List1CardRow(
                                 item: item,
                                 isSelected: selection?.id == item.id,
-                                selectionNamespace: selectionNamespace
-                            ) {
-                                selection = item
-                            }
+                                selectionNamespace: selectionNamespace,
+                                onSelect: {
+                                    selection = item
+                                },
+                                onDelete: {
+                                    if selection?.id == item.id {
+                                        selection = nil
+                                    }
+                                }
+                            )
                         }
                     }
                 }

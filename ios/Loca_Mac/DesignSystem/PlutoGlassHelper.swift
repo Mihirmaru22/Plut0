@@ -248,7 +248,9 @@ public struct PlutoGlassCluster<Content: View>: View {
     public var body: some View {
         if #available(macOS 26.0, *) {
             GlassEffectContainer(spacing: spacing) {
-                content()
+                HStack(spacing: spacing) {
+                    content()
+                }
             }
         } else {
             HStack(spacing: spacing) {
