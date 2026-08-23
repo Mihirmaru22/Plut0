@@ -55,4 +55,26 @@ final class WorkProject {
         self.isPinned = isPinned
         self.isArchived = isArchived
     }
+    
+    // MARK: - Cascade Archiving
+    
+    func archiveCascade(in context: ModelContext) {
+        self.isArchived = true
+        self.updatedAt = Date()
+        let projID = self.id
+        
+        // 1. Cascade archive child sections
+        if let sections = try? context.fetch(FetchDescriptor<WorkSection>(predicate: #Predicate { $0.projectID == projID })) {
+            for section in sections {
+                section.archiveCascade(in: context)
+            }
+        }
+        
+        // 2. Cascade archive child tasks
+        if let tasks = try? context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.projectID == projID })) {
+            for task in tasks {
+                task.archiveCascade(in: context)
+            }
+        }
+    }
 }

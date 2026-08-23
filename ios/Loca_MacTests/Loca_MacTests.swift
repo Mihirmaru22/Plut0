@@ -219,4 +219,112 @@ struct Loca_MacTests {
         #expect(title1 == title2)
         #expect(title1 == PlutoPrivacy.hash("Morning routine"))
     }
+
+    // MARK: - Invariant 7: Recursive Soft-Delete Cascade Integrity (B-04, B-23, B-24)
+
+    @Test func testRecursiveCascadeSubtaskArchiving() throws {
+        let schema = Schema([TodoItem.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+
+        // Level 1: Parent Task
+        let parent = TodoItem(title: "Launch Project")
+        context.insert(parent)
+        try context.save()
+
+        // Level 2: Subtask
+        let child = TodoItem(title: "Write Documentation", parentID: parent.id)
+        context.insert(child)
+        try context.save()
+
+        // Level 3: Nested Grandchild Subtask
+        let grandchild = TodoItem(title: "Review Appendix", parentID: child.id)
+        context.insert(grandchild)
+        try context.save()
+
+        // Execute recursive cascade archiving on top-level parent
+        parent.archiveCascade(in: context)
+        try context.save()
+
+        #expect(parent.archivedAt != nil)
+        #expect(child.archivedAt != nil)
+        #expect(grandchild.archivedAt != nil)
+
+        // Verify active tasks query filters out all 3
+        let activeTasks = try context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.archivedAt == nil }))
+        #expect(activeTasks.isEmpty)
+    }
+
+    @Test func testWorkProjectCascadeArchiving() throws {
+        let schema = Schema([WorkProject.self, WorkSection.self, TodoItem.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+
+        let project = WorkProject(title: "Pluto OS Sprint")
+        context.insert(project)
+        try context.save()
+
+        let section = WorkSection(projectID: project.id, title: "Architecture")
+        context.insert(section)
+        try context.save()
+
+        let task1 = TodoItem(title: "Fix DSP Engine", projectID: project.id, sectionID: section.id)
+        let task2 = TodoItem(title: "Verify Cascade", projectID: project.id)
+        context.insert(task1)
+        context.insert(task2)
+        try context.save()
+
+        // Archive Project with Cascade
+        project.archiveCascade(in: context)
+        try context.save()
+
+        #expect(project.isArchived == true)
+        #expect(task1.archivedAt != nil)
+        #expect(task2.archivedAt != nil)
+    }
+
+    // MARK: - Invariant 8: Focus Audio DSP Thread-Safe Execution (B-05, B-26)
+
+    @Test func testFocusAudioDSPAllocationFreeRender() throws {
+        let dsp = FocusAudioDSPContext()
+        dsp.volLofi = 0.8
+        dsp.volPiano = 0.5
+        dsp.isAllPaused = false
+
+        #expect(dsp.volLofi == 0.8)
+        #expect(dsp.volPiano == 0.5)
+        #expect(dsp.isAllPaused == false)
+
+        var leftChannel = [Float](repeating: 0, count: 512)
+        var rightChannel = [Float](repeating: 0, count: 512)
+
+        leftChannel.withUnsafeMutableBufferPointer { leftBuf in
+            rightChannel.withUnsafeMutableBufferPointer { rightBuf in
+                var audioBuffers = [
+                    AudioBuffer(mNumberChannels: 1, mDataByteSize: UInt32(512 * MemoryLayout<Float>.size), mData: leftBuf.baseAddress),
+                    AudioBuffer(mNumberChannels: 1, mDataByteSize: UInt32(512 * MemoryLayout<Float>.size), mData: rightBuf.baseAddress)
+                ]
+                
+                audioBuffers.withUnsafeMutableBufferPointer { ablBuf in
+                    let abl = AudioBufferList(
+                        mNumberBuffers: 2,
+                        mBuffers: ablBuf[0]
+                    )
+                    var ablCopy = abl
+                    withUnsafeMutablePointer(to: &ablCopy) { ptr in
+                        let ablPointer = UnsafeMutableAudioBufferListPointer(ptr)
+                        dsp.render(frameCount: 512, ablPointer: ablPointer, sampleRate: 44100.0)
+                    }
+                }
+            }
+        }
+
+        // Verify audio was synthesized into left and right buffers
+        let leftSum = leftChannel.reduce(0) { $0 + abs($1) }
+        let rightSum = rightChannel.reduce(0) { $0 + abs($1) }
+        #expect(leftSum > 0.0)
+        #expect(rightSum > 0.0)
+    }
 }

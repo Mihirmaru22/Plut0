@@ -28,4 +28,16 @@ final class WorkSection {
         self.isCollapsed = isCollapsed
         self.createdAt = createdAt
     }
+    
+    // MARK: - Cascade Archiving
+    
+    func archiveCascade(in context: ModelContext) {
+        let secID = self.id
+        if let tasks = try? context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.sectionID == secID })) {
+            for task in tasks {
+                task.archiveCascade(in: context)
+            }
+        }
+        context.delete(self)
+    }
 }

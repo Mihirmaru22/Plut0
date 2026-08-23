@@ -18,14 +18,60 @@ struct AmbientSoundTrack: Identifiable {
 
 final class FocusAudioDSPContext: @unchecked Sendable {
 
-    // Primitive Atomic Volume States (Zero Objective-C / Dictionary lookup on render thread)
-    var volLofi: Float = 0.0
-    var volNature: Float = 0.0
-    var volRain: Float = 0.0
-    var volFire: Float = 0.0
-    var volLibrary: Float = 0.0
-    var volPiano: Float = 0.0
-    var isAllPaused: Bool = false
+    // Primitive Atomic Volume States & Lock Protection
+    private var lock = os_unfair_lock_s()
+    
+    private var _volLofi: Float = 0.0
+    private var _volNature: Float = 0.0
+    private var _volRain: Float = 0.0
+    private var _volFire: Float = 0.0
+    private var _volLibrary: Float = 0.0
+    private var _volPiano: Float = 0.0
+    private var _isAllPaused: Bool = false
+
+    var volLofi: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volLofi }
+        set { os_unfair_lock_lock(&lock); _volLofi = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var volNature: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volNature }
+        set { os_unfair_lock_lock(&lock); _volNature = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var volRain: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volRain }
+        set { os_unfair_lock_lock(&lock); _volRain = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var volFire: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volFire }
+        set { os_unfair_lock_lock(&lock); _volFire = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var volLibrary: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volLibrary }
+        set { os_unfair_lock_lock(&lock); _volLibrary = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var volPiano: Float {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _volPiano }
+        set { os_unfair_lock_lock(&lock); _volPiano = newValue; os_unfair_lock_unlock(&lock) }
+    }
+    var isAllPaused: Bool {
+        get { os_unfair_lock_lock(&lock); defer { os_unfair_lock_unlock(&lock) }; return _isAllPaused }
+        set { os_unfair_lock_lock(&lock); _isAllPaused = newValue; os_unfair_lock_unlock(&lock) }
+    }
+
+    // Static Pre-Calculated Voicings (Zero Heap Allocations on Audio Render Thread)
+    private static let lofiChords: [(Float, Float, Float, Float)] = [
+        (146.83, 174.61, 220.00, 261.63), // Dm9
+        (196.00, 246.94, 293.66, 329.63), // G13
+        (130.81, 164.81, 196.00, 246.94), // Cmaj9
+        (220.00, 277.18, 329.63, 370.00)  // A7#9
+    ]
+
+    private static let pianoChords: [(Float, Float, Float, Float)] = [
+        (155.56, 196.00, 233.08, 293.66), // Ebmaj9
+        (130.81, 155.56, 196.00, 293.66), // Cm9
+        (174.61, 207.65, 261.63, 311.13), // Fm9
+        (116.54, 146.83, 207.65, 261.63)  // Bb13
+    ]
 
     // Real-Time Synthesis Sample Counter & Phases
     private var sampleIndex: UInt64 = 0
@@ -62,19 +108,38 @@ final class FocusAudioDSPContext: @unchecked Sendable {
     private var libraryLfo: Float = 0.0
 
     func render(frameCount: Int, ablPointer: UnsafeMutableAudioBufferListPointer, sampleRate: Float) {
-        if isAllPaused {
+        // Atomic Snapshot of Parameters to eliminate torn reads across stereo channels
+        var curLofi: Float = 0.0
+        var curNature: Float = 0.0
+        var curRain: Float = 0.0
+        var curFire: Float = 0.0
+        var curLib: Float = 0.0
+        var curPiano: Float = 0.0
+        var curPaused: Bool = false
+
+        os_unfair_lock_lock(&lock)
+        curLofi = _volLofi
+        curNature = _volNature
+        curRain = _volRain
+        curFire = _volFire
+        curLib = _volLibrary
+        curPiano = _volPiano
+        curPaused = _isAllPaused
+        os_unfair_lock_unlock(&lock)
+
+        if curPaused {
             for buffer in ablPointer {
                 memset(buffer.mData, 0, Int(buffer.mDataByteSize))
             }
             return
         }
 
-        let gLofi = logarithmicGain(volLofi)
-        let gNature = logarithmicGain(volNature)
-        let gRain = logarithmicGain(volRain)
-        let gFire = logarithmicGain(volFire)
-        let gLib = logarithmicGain(volLibrary)
-        let gPiano = logarithmicGain(volPiano)
+        let gLofi = logarithmicGain(curLofi)
+        let gNature = logarithmicGain(curNature)
+        let gRain = logarithmicGain(curRain)
+        let gFire = logarithmicGain(curFire)
+        let gLib = logarithmicGain(curLib)
+        let gPiano = logarithmicGain(curPiano)
 
         let isAnyActive = (gLofi + gNature + gRain + gFire + gLib + gPiano) > 0.0001
         if !isAnyActive {
@@ -157,13 +222,7 @@ final class FocusAudioDSPContext: @unchecked Sendable {
     private func synthesizeLoFi(t: Float, sampleRate: Float) -> (Float, Float) {
         // Lush Rhodes jazz chords (6s bar cycle: Dm9 -> G13 -> Cmaj9 -> A7#9)
         let chordCycle = Int(t / 6.0) % 4
-        let chords: [[Float]] = [
-            [146.83, 174.61, 220.00, 261.63], // Dm9
-            [196.00, 246.94, 293.66, 329.63], // G13
-            [130.81, 164.81, 196.00, 246.94], // Cmaj9
-            [220.00, 277.18, 329.63, 370.00]  // A7#9
-        ]
-        let currentNotes = chords[chordCycle]
+        let currentNotes = Self.lofiChords[chordCycle]
 
         // Silky smooth tape wow & flutter (zero digital noise spikes)
         let flutter = 1.0 + 0.0018 * sin(2.0 * .pi * 0.30 * t)
@@ -172,10 +231,10 @@ final class FocusAudioDSPContext: @unchecked Sendable {
         let twoPi = 2.0 * Float.pi
         let dt = 1.0 / sampleRate
 
-        lofiPhase1 += twoPi * currentNotes[0] * flutter * dt
-        lofiPhase2 += twoPi * currentNotes[1] * flutter * dt
-        lofiPhase3 += twoPi * currentNotes[2] * flutter * dt
-        lofiPhase4 += twoPi * currentNotes[3] * flutter * dt
+        lofiPhase1 += twoPi * currentNotes.0 * flutter * dt
+        lofiPhase2 += twoPi * currentNotes.1 * flutter * dt
+        lofiPhase3 += twoPi * currentNotes.2 * flutter * dt
+        lofiPhase4 += twoPi * currentNotes.3 * flutter * dt
 
         if lofiPhase1 > twoPi { lofiPhase1 -= twoPi }
         if lofiPhase2 > twoPi { lofiPhase2 -= twoPi }
@@ -197,21 +256,15 @@ final class FocusAudioDSPContext: @unchecked Sendable {
     private func synthesizePiano(t: Float, sampleRate: Float) -> (Float, Float) {
         // Rich Polyphonic Jazz Chord Progression (6s per chord measure: Ebmaj9 -> Cm9 -> Fm9 -> Bb13)
         let chordCycle = Int(t / 6.0) % 4
-        let jazzChords: [[Float]] = [
-            [155.56, 196.00, 233.08, 293.66], // Ebmaj9
-            [130.81, 155.56, 196.00, 293.66], // Cm9
-            [174.61, 207.65, 261.63, 311.13], // Fm9
-            [116.54, 146.83, 207.65, 261.63]  // Bb13
-        ]
-        let notes = jazzChords[chordCycle]
+        let notes = Self.pianoChords[chordCycle]
 
         let dt = 1.0 / sampleRate
         let twoPi = 2.0 * Float.pi
 
-        pianoPhase1 += twoPi * notes[0] * dt
-        pianoPhase2 += twoPi * notes[1] * dt
-        pianoPhase3 += twoPi * notes[2] * dt
-        pianoPhase4 += twoPi * notes[3] * dt
+        pianoPhase1 += twoPi * notes.0 * dt
+        pianoPhase2 += twoPi * notes.1 * dt
+        pianoPhase3 += twoPi * notes.2 * dt
+        pianoPhase4 += twoPi * notes.3 * dt
 
         if pianoPhase1 > twoPi { pianoPhase1 -= twoPi }
         if pianoPhase2 > twoPi { pianoPhase2 -= twoPi }

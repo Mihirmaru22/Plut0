@@ -234,7 +234,7 @@ private struct List1BentoCardsView: View {
 
                 ClearCompletedGlassButton {
                     for item in doneItems {
-                        item.archivedAt = Date()
+                        item.archiveCascade(in: modelContext)
                     }
                     try? modelContext.save()
                     PlutoSoundEngine.shared.play(.deleteTrash)
@@ -400,7 +400,7 @@ private struct List1CardRow: View {
             // Delete Trash Button on Hover
             if item.isCompleted || isHovered {
                 Button {
-                    item.archivedAt = Date()
+                    item.archiveCascade(in: modelContext)
                     try? modelContext.save()
                     PlutoSoundEngine.shared.play(.deleteTrash)
                     Haptics.impact(.light)

@@ -200,7 +200,7 @@ final class TodoItem {
         let targetParentID = self.id
         if let children = try? context.fetch(FetchDescriptor<TodoItem>(predicate: #Predicate { $0.parentID == targetParentID })) {
             for child in children {
-                child.archivedAt = now
+                child.archiveCascade(in: context)
             }
         }
     }
