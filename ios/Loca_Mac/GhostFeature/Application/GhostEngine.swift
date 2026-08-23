@@ -340,7 +340,7 @@ public actor GhostEngine {
         }
 
         let allDays = try await store.fetchAllDays(seasonID: season.id)
-        let daysMap = Dictionary(uniqueKeysWithValues: allDays.map { ($0.dateString, $0) })
+        let daysMap = Dictionary(allDays.map { ($0.dateString, $0) }, uniquingKeysWith: { first, _ in first })
 
         let calendar = Calendar.current
         let today = Date()
@@ -395,7 +395,7 @@ public actor GhostEngine {
         guard let season = try await store.fetchActiveSeason() else { return [] }
 
         let allDays = try await store.fetchAllDays(seasonID: season.id)
-        let daysMap = Dictionary(uniqueKeysWithValues: allDays.map { ($0.dateString, $0) })
+        let daysMap = Dictionary(allDays.map { ($0.dateString, $0) }, uniquingKeysWith: { first, _ in first })
 
         let calendar = Calendar.current
         let totalDays = season.totalDays
@@ -454,7 +454,7 @@ public actor GhostEngine {
         guard let season = try await store.fetchActiveSeason() else { return [] }
 
         let allDays = try await store.fetchAllDays(seasonID: season.id)
-        let daysMap = Dictionary(uniqueKeysWithValues: allDays.map { ($0.dateString, $0) })
+        let daysMap = Dictionary(allDays.map { ($0.dateString, $0) }, uniquingKeysWith: { first, _ in first })
 
         let calendar = Calendar.current
         let today = Date()
@@ -669,7 +669,7 @@ public actor GhostEngine {
         guard let season = try await store.fetchActiveSeason() else { return [] }
 
         let allDays = try await store.fetchAllDays(seasonID: season.id)
-        let daysMap = Dictionary(uniqueKeysWithValues: allDays.map { ($0.id, $0) })
+        let daysMap = Dictionary(allDays.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         let receipts = try await store.fetchAllReceipts(seasonID: season.id)
         let photoReceipts = receipts.filter { $0.kind == .artifact && $0.photoPath != nil }

@@ -209,10 +209,10 @@ final class GeoJSONBoundaryLoader {
     private static func simplify(coordinates: [CLLocationCoordinate2D], tolerance: Double) -> [CLLocationCoordinate2D] {
         guard coordinates.count > 4 else { return coordinates }
 
+        guard let first = coordinates.first, let last = coordinates.last else { return coordinates }
+
         var maxDistance = 0.0
         var index = 0
-        let first = coordinates.first!
-        let last = coordinates.last!
 
         for i in 1..<(coordinates.count - 1) {
             let distance = perpendicularDistance(point: coordinates[i], lineStart: first, lineEnd: last)
