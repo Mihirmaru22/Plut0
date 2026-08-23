@@ -327,4 +327,84 @@ struct Loca_MacTests {
         #expect(leftSum > 0.0)
         #expect(rightSum > 0.0)
     }
+
+    // MARK: - Invariant 9: Natural Language Time Extraction & Word Boundaries (B-09, B-10)
+
+    @Test func testNaturalLanguageNoFalsePositiveTimeExtraction() throws {
+        // Plain text with words containing 'am' or 'pm' must NEVER trigger time extraction
+        let testCases = [
+            "Buy spam",
+            "Team sync",
+            "Go to camp",
+            "Scam alert",
+            "Review diagram",
+            "Ice cream social"
+        ]
+
+        for tc in testCases {
+            let res = LocaNeuralEngine.parseSmartTask(tc)
+            #expect(res.startTime == nil, "Failed for '\(tc)': erroneously extracted startTime \(String(describing: res.startTime))")
+            #expect(res.dueDate == nil, "Failed for '\(tc)': erroneously extracted dueDate \(String(describing: res.dueDate))")
+            #expect(res.cleanTitle == tc)
+        }
+
+        // Date-only phrases containing 'am'/'pm' words must set dueDate but NOT startTime
+        let dateOnlyCases = [
+            ("Buy spam today", "Buy spam"),
+            ("Team sync tomorrow", "Team sync"),
+            ("Go to camp tomorrow", "Go to camp")
+        ]
+
+        for (input, expectedTitle) in dateOnlyCases {
+            let res = LocaNeuralEngine.parseSmartTask(input)
+            #expect(res.startTime == nil, "Failed for '\(input)': erroneously extracted startTime \(String(describing: res.startTime))")
+            #expect(res.dueDate != nil, "Failed for '\(input)': dueDate should be present")
+            #expect(res.cleanTitle == expectedTitle)
+        }
+    }
+
+    @Test func testNaturalLanguageAccurateTimeExtraction() throws {
+        let cal = Calendar.current
+
+        // 1. "Meeting at 5pm" -> 17:00
+        let r1 = LocaNeuralEngine.parseSmartTask("Meeting at 5pm")
+        #expect(r1.cleanTitle == "Meeting")
+        #expect(r1.startTime != nil)
+        if let st = r1.startTime {
+            #expect(cal.component(.hour, from: st) == 17)
+            #expect(cal.component(.minute, from: st) == 0)
+        }
+
+        // 2. "Standup 9:30am" -> 09:30
+        let r2 = LocaNeuralEngine.parseSmartTask("Standup 9:30am")
+        #expect(r2.cleanTitle == "Standup")
+        #expect(r2.startTime != nil)
+        if let st = r2.startTime {
+            #expect(cal.component(.hour, from: st) == 9)
+            #expect(cal.component(.minute, from: st) == 30)
+        }
+
+        // 3. "Team sync tomorrow at 10am for 1h #work !!" -> Complex task with 'am' word + explicit time
+        let r3 = LocaNeuralEngine.parseSmartTask("Team sync tomorrow at 10am for 1h #work !!")
+        #expect(r3.cleanTitle == "Team sync")
+        #expect(r3.dueDate != nil)
+        #expect(r3.startTime != nil)
+        if let st = r3.startTime {
+            #expect(cal.component(.hour, from: st) == 10)
+            #expect(cal.component(.minute, from: st) == 0)
+        }
+        #expect(r3.durationMinutes == 60)
+        #expect(r3.priority == 2)
+        #expect(r3.detectedTags.contains("work"))
+
+        // 4. "Lunch at noon" -> 12:00
+        let r4 = LocaNeuralEngine.parseSmartTask("Lunch at noon")
+        #expect(r4.cleanTitle == "Lunch")
+        #expect(r4.startTime != nil)
+        if let st = r4.startTime {
+            #expect(cal.component(.hour, from: st) == 12)
+            #expect(cal.component(.minute, from: st) == 0)
+        }
+    }
 }
+

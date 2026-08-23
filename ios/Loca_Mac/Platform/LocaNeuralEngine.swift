@@ -193,8 +193,12 @@ enum LocaNeuralEngine {
                 let cal = Calendar.current
                 detectedDueDate = cal.startOfDay(for: detectedDate)
 
-                // Check if time components were present in match
-                if firstMatch.timeZone != nil || text.lowercased().contains("am") || text.lowercased().contains("pm") || text.contains(":") || text.lowercased().contains("noon") || text.lowercased().contains("tonight") {
+                // Check if time components were present in match with strict word boundaries and digit validation
+                let matchedSubstring = (text as NSString).substring(with: firstMatch.range)
+                let timePattern = #"(?i)(?:\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b|\b\d{1,2}:\d{2}\b|\bat\s+\d{1,2}(?::\d{2})?\b|\b(?:noon|midnight|tonight)\b)"#
+                let hasExplicitTime = firstMatch.timeZone != nil || matchedSubstring.range(of: timePattern, options: .regularExpression) != nil
+
+                if hasExplicitTime {
                     detectedStartTime = detectedDate
                 }
 
