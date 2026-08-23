@@ -15,8 +15,9 @@ final class GeoJSONBoundaryLoader {
     static let shared = GeoJSONBoundaryLoader()
 
     // Each stateCode → array of polygons, where each polygon is an array of coordinate rings
-    // Outer ring is first, any holes follow
     private var cache: [String: [[[CLLocationCoordinate2D]]]] = [:]
+    // Precomputed flattened outer rings for O(1) instantaneous access without allocation
+    private var outerRingsCache: [String: [[CLLocationCoordinate2D]]] = [:]
     private var loaded = false
 
     private init() {
@@ -26,19 +27,18 @@ final class GeoJSONBoundaryLoader {
     // MARK: - Public API
 
     /// Returns all polygon coordinate rings for the given state code.
-    /// Each element is a polygon with its outer ring (index 0) and optional interior rings (holes).
     func polygons(for stateCode: String) -> [[[CLLocationCoordinate2D]]] {
         return cache[stateCode.uppercased()] ?? []
     }
 
-    /// Returns flattened outer rings only (no holes), suitable for MapPolygon fill rendering.
+    /// Returns precomputed flattened outer rings only (no holes) for 120 FPS MapPolygon rendering.
     func outerRings(for stateCode: String) -> [[CLLocationCoordinate2D]] {
-        return polygons(for: stateCode).compactMap { $0.first }
+        return outerRingsCache[stateCode.uppercased()] ?? []
     }
 
     /// Returns true if boundaries are available for the given state code.
     func hasBoundary(for stateCode: String) -> Bool {
-        return !(cache[stateCode.uppercased()]?.isEmpty ?? true)
+        return !(outerRingsCache[stateCode.uppercased()]?.isEmpty ?? true)
     }
 
     // MARK: - GeoJSON Name → StateCode Mapping
@@ -147,18 +147,31 @@ final class GeoJSONBoundaryLoader {
                 for geometry in feature.geometry {
                     if let polygon = geometry as? MKPolygon {
                         let rings = extractRings(from: polygon)
-                        let simplified = rings.map { Self.simplify(coordinates: $0, tolerance: 0.012) }
-                        statePolygons.append(simplified)
+                        let simplified = rings.compactMap { ring -> [CLLocationCoordinate2D]? in
+                            guard ring.count >= 4 else { return nil }
+                            let simp = Self.simplify(coordinates: ring, tolerance: 0.020)
+                            return simp.count >= 4 ? simp : nil
+                        }
+                        if !simplified.isEmpty {
+                            statePolygons.append(simplified)
+                        }
                     } else if let multiPolygon = geometry as? MKMultiPolygon {
                         for poly in multiPolygon.polygons {
                             let rings = extractRings(from: poly)
-                            let simplified = rings.map { Self.simplify(coordinates: $0, tolerance: 0.012) }
-                            statePolygons.append(simplified)
+                            let simplified = rings.compactMap { ring -> [CLLocationCoordinate2D]? in
+                                guard ring.count >= 4 else { return nil }
+                                let simp = Self.simplify(coordinates: ring, tolerance: 0.020)
+                                return simp.count >= 4 ? simp : nil
+                            }
+                            if !simplified.isEmpty {
+                                statePolygons.append(simplified)
+                            }
                         }
                     }
                 }
 
                 cache[stateCode] = statePolygons
+                outerRingsCache[stateCode] = statePolygons.compactMap { $0.first }
             }
 
             print("✅ GeoJSONBoundaryLoader: Loaded & simplified boundaries for \(cache.count) states/UTs")

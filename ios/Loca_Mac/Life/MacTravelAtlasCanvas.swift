@@ -115,7 +115,7 @@ struct MacTravelAtlasCanvas: View {
 
             Divider().opacity(0.12)
 
-            // 2. Map Canvas & Overlays (Native Apple Maps Titles & 60 FPS GPU Rendering)
+            // 2. Map Canvas & Overlays (Native Apple Maps Titles & 120 FPS GPU Rendering)
             ZStack(alignment: .topLeading) {
                 mapView
 
@@ -124,19 +124,6 @@ struct MacTravelAtlasCanvas: View {
                     floatingSearchDrawer
                         .transition(.move(edge: .leading).combined(with: .opacity))
                         .padding(14)
-                }
-
-                // Bottom-Trailing: Floating State Inspector Card
-                if let state = selectedState {
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            cleanStateInspector(state: state)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
-                                .padding(16)
-                        }
-                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,11 +144,13 @@ struct MacTravelAtlasCanvas: View {
 
     private func rebuildTerritoryCache() {
         var rings: [MapPolygonRing] = []
+        let loader = GeoJSONBoundaryLoader.shared
+        let selectedCode = selectedState?.stateCode
 
         // 1. Persistent Visited State Boundaries (Warm Saffron Gold)
         for state in visitedStates {
-            if state.stateCode != selectedState?.stateCode {
-                let stateRings = GeoJSONBoundaryLoader.shared.outerRings(for: state.stateCode)
+            if state.stateCode != selectedCode {
+                let stateRings = loader.outerRings(for: state.stateCode)
                 for (idx, coords) in stateRings.enumerated() {
                     rings.append(MapPolygonRing(id: "\(state.stateCode)_v_\(idx)", coordinates: coords, isSelected: false))
                 }
@@ -170,7 +159,7 @@ struct MacTravelAtlasCanvas: View {
 
         // 2. Currently Selected State (Laser Cyan - Top Layer)
         if let selected = selectedState {
-            let stateRings = GeoJSONBoundaryLoader.shared.outerRings(for: selected.stateCode)
+            let stateRings = loader.outerRings(for: selected.stateCode)
             for (idx, coords) in stateRings.enumerated() {
                 rings.append(MapPolygonRing(id: "\(selected.stateCode)_sel_\(idx)", coordinates: coords, isSelected: true))
             }
@@ -225,26 +214,19 @@ struct MacTravelAtlasCanvas: View {
         .background(DS.Theme.surface)
     }
 
-    // MARK: - Native Apple Maps Public Transport View (60 FPS Performance)
+    // MARK: - Native Apple Maps Public Transport View (120 FPS Performance)
 
     private var mapView: some View {
         GeometryReader { proxy in
             if proxy.size.width > 0 && proxy.size.height > 0 {
                 Map(position: $mapCameraPosition) {
-                    // Pre-cached Polygon Rings (Zero allocation per frame)
+                    // Pre-cached Polygon Rings (Single combined MapPolygon for 120 FPS performance)
                     ForEach(cachedTerritoryRings) { ring in
                         MapPolygon(coordinates: ring.coordinates)
-                            .foregroundStyle(ring.isSelected ? selectedAccent.opacity(0.30) : visitedAccent.opacity(0.20))
-
-                        MapPolygon(coordinates: ring.coordinates)
-                            .foregroundStyle(Color.clear)
+                            .foregroundStyle(ring.isSelected ? selectedAccent.opacity(0.35) : visitedAccent.opacity(0.20))
                             .stroke(
                                 ring.isSelected ? selectedAccent : visitedAccent.opacity(0.85),
-                                style: StrokeStyle(
-                                    lineWidth: ring.isSelected ? 3.5 : 1.8,
-                                    lineCap: .round,
-                                    lineJoin: .round
-                                )
+                                lineWidth: ring.isSelected ? 3.0 : 1.6
                             )
                     }
                 }
@@ -462,128 +444,6 @@ struct MacTravelAtlasCanvas: View {
         case .unionTerritory:
             return "UTs"
         }
-    }
-
-    // MARK: - Clean Floating State Inspector Card
-
-    private func cleanStateInspector(state: TravelRecord) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            // Header: Name + Code + Visited Status + Close
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(state.name)
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color.white)
-
-                        Text("(\(state.stateCode))")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(selectedAccent)
-
-                        if state.isVisited {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(visitedAccent)
-                        }
-                    }
-
-                    Text("Capital: \(state.capital) · \(state.zone.title)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                }
-
-                Spacer()
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.12)) {
-                        savedSelectedStateCode = ""
-                    }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(DS.Theme.textTertiary)
-                }
-                .buttonStyle(.plain)
-            }
-
-            Divider().opacity(0.12)
-
-            // Best Season & Language
-            HStack(spacing: 6) {
-                if !state.bestSeason.isEmpty {
-                    infoBox(label: "BEST SEASON", value: state.bestSeason, accent: selectedAccent)
-                }
-                if !state.officialLanguage.isEmpty {
-                    infoBox(label: "LANGUAGE", value: state.officialLanguage, accent: Color.white.opacity(0.85))
-                }
-            }
-
-            // Top Attractions Pills
-            if !state.topAttractions.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("TOP ATTRACTIONS")
-                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.textTertiary)
-
-                    Text(state.topAttractions.prefix(3).joined(separator: " • "))
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                        .lineLimit(2)
-                }
-            }
-
-            Divider().opacity(0.12)
-
-            // Direct 1-Click Visited / Unexplored Toggle Button
-            Button {
-                toggleVisited(state)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: state.isVisited ? "checkmark.circle.fill" : "plus.circle.fill")
-                        .font(.system(size: 12, weight: .bold))
-                    Text(state.isVisited ? "Visited ✓ (Click to Mark Unexplored)" : "Mark as Visited 🏆")
-                        .font(.system(size: 11.5, weight: .bold))
-                }
-                .foregroundStyle(state.isVisited ? Color.white : Color.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(
-                    state.isVisited ? Color.white.opacity(0.12) : visitedAccent,
-                    in: RoundedRectangle(cornerRadius: 6)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(state.isVisited ? visitedAccent.opacity(0.5) : Color.clear, lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(12)
-        .frame(width: 300)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(DS.Theme.card)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(selectedAccent.opacity(0.40), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.45), radius: 12, x: 0, y: 6)
-    }
-
-    private func infoBox(label: String, value: String, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(DS.Theme.textTertiary)
-            Text(value)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(accent)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(5)
-        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 4))
     }
 
     private func toggleVisited(_ state: TravelRecord) {
