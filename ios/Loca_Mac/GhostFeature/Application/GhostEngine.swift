@@ -489,17 +489,20 @@ public actor GhostEngine {
     public struct DarkHoursSummary: Sendable {
         public let todayMinutes: Int
         public let weekMinutes: Int
+        public let totalSilenceMinutes: Int
         public let longestStretchMinutes: Int
         public let recentIntervals: [GhostOfflineInterval]
 
         public init(
             todayMinutes: Int = 0,
             weekMinutes: Int = 0,
+            totalSilenceMinutes: Int = 0,
             longestStretchMinutes: Int = 0,
             recentIntervals: [GhostOfflineInterval] = []
         ) {
             self.todayMinutes = todayMinutes
             self.weekMinutes = weekMinutes
+            self.totalSilenceMinutes = totalSilenceMinutes
             self.longestStretchMinutes = longestStretchMinutes
             self.recentIntervals = recentIntervals
         }
@@ -507,7 +510,7 @@ public actor GhostEngine {
 
     public func fetchDarkHoursSummary() async throws -> DarkHoursSummary {
         guard let season = try await store.fetchActiveSeason() else {
-            return DarkHoursSummary(todayMinutes: 0, weekMinutes: 0, longestStretchMinutes: 0, recentIntervals: [])
+            return DarkHoursSummary(todayMinutes: 0, weekMinutes: 0, totalSilenceMinutes: 0, longestStretchMinutes: 0, recentIntervals: [])
         }
 
         let allDays = try await store.fetchAllDays(seasonID: season.id)
@@ -519,6 +522,7 @@ public actor GhostEngine {
 
         let past7Days = allDays.suffix(7)
         let weekMin = past7Days.reduce(0) { $0 + $1.silenceMinutesVerified + $1.silenceMinutesAttested }
+        let totalSilence = allDays.reduce(0) { $0 + $1.silenceMinutesVerified + $1.silenceMinutesAttested }
 
         var maxStretch = 0
         for day in allDays {
@@ -531,6 +535,7 @@ public actor GhostEngine {
         return DarkHoursSummary(
             todayMinutes: todayMin,
             weekMinutes: weekMin,
+            totalSilenceMinutes: totalSilence,
             longestStretchMinutes: maxStretch,
             recentIntervals: intervals
         )
