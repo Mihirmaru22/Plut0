@@ -218,5 +218,48 @@ struct CRDTConflictTests {
             #expect(c == b + 1, "C must remain immediately following its origin B")
         }
     }
+
+    // MARK: - Scenario 6: Operation-Based Undo/Redo (B-15)
+    @Test func testUndoPreservesRemoteEdits() throws {
+        let deviceA = "device-a"
+        let deviceB = "device-b"
+        let noteID = NoteID()
+        
+        let docA = CRDTDoc(id: noteID, deviceID: deviceA)
+        let bridgeA = TextKitCRDTBridge(doc: docA, deviceID: deviceA)
+        let blockID = bridgeA.createBlock(text: "")
+        
+        // Peer A types "Hello "
+        bridgeA.insertText("Hello ", atBlockID: blockID, position: 0)
+        
+        // Peer B starts from state with block and types "World" at index 0
+        let docB = CRDTDoc(id: noteID, deviceID: deviceB)
+        let bridgeB = TextKitCRDTBridge(doc: docB, deviceID: deviceB)
+        _ = bridgeB.createBlock(id: blockID, text: "")
+        bridgeB.insertText("World", atBlockID: blockID, position: 0)
+        
+        // Merge B into A
+        bridgeA.merge(from: bridgeB.doc)
+        
+        let mergedText = bridgeA.getBlock(id: blockID)?.text.string ?? ""
+        #expect(mergedText.contains("Hello"))
+        #expect(mergedText.contains("World"))
+        
+        // Peer A undoes local typing
+        let undoResult = bridgeA.undo(currentSelection: NSRange(location: 0, length: 0))
+        #expect(undoResult != nil)
+        
+        // Result: Peer B's "World" is preserved, Peer A's "Hello " is deleted via tombstones
+        let textAfterUndo = bridgeA.getBlock(id: blockID)?.text.string ?? ""
+        #expect(textAfterUndo.contains("World"), "Undo must preserve concurrent remote edits")
+        #expect(!textAfterUndo.contains("Hello"), "Local edits must be undone")
+        
+        // Peer A redoes typing
+        let redoResult = bridgeA.redo(currentSelection: NSRange(location: 0, length: 0))
+        #expect(redoResult != nil)
+        let textAfterRedo = bridgeA.getBlock(id: blockID)?.text.string ?? ""
+        #expect(textAfterRedo.contains("Hello"))
+        #expect(textAfterRedo.contains("World"))
+    }
 }
 #endif
