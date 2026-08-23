@@ -406,5 +406,74 @@ struct Loca_MacTests {
             #expect(cal.component(.minute, from: st) == 0)
         }
     }
+
+    // MARK: - Invariant 10: Quick Switcher Keyboard Navigation & Index Clamping (B-11, B-12)
+
+    @Test func testQuickSwitcherIndexClamping() {
+        let mockNote = NoteSummary(title: "Mock Note")
+        let switcher = QuickSwitcherViewModel()
+        switcher.results = Array(repeating: mockNote, count: 10)
+        switcher.selectedIndex = 9
+        #expect(switcher.selectedIndex == 9)
+
+        // Simulate query change or filter shrink that reduces results to 5
+        switcher.results = Array(repeating: mockNote, count: 5)
+
+        // Index should clamp to 4 (last valid index)
+        #expect(switcher.selectedIndex == 4)
+    }
+
+    @Test func testQuickSwitcherEnterActivation() {
+        let mockNote1 = NoteSummary(title: "Note 1")
+        let mockNote2 = NoteSummary(title: "Note 2")
+        let switcher = QuickSwitcherViewModel()
+        switcher.results = [mockNote1, mockNote2]
+        switcher.selectedIndex = 1
+
+        // Pressing Enter (activateSelected) should immediately activate item at index 1
+        let activated = switcher.activateSelected()
+        #expect(activated?.id == mockNote2.id)
+    }
+
+    @Test func testQuickSwitcherResetOnQueryChange() {
+        let mockNote1 = NoteSummary(title: "Note 1")
+        let mockNote2 = NoteSummary(title: "Note 2")
+        let mockNote3 = NoteSummary(title: "Note 3")
+        let switcher = QuickSwitcherViewModel(notes: [mockNote1, mockNote2, mockNote3])
+        switcher.selectedIndex = 2
+
+        // Changing query should reset selectedIndex to 0
+        switcher.query = "Note"
+        #expect(switcher.selectedIndex == 0)
+    }
+
+    @Test func testQuickSwitcherArrowNavigationBounds() {
+        let mockNote1 = NoteSummary(title: "Alpha")
+        let mockNote2 = NoteSummary(title: "Beta")
+        let mockNote3 = NoteSummary(title: "Gamma")
+        let switcher = QuickSwitcherViewModel(notes: [mockNote1, mockNote2, mockNote3])
+
+        #expect(switcher.selectedIndex == 0)
+
+        // Navigate down
+        switcher.moveSelectionDown()
+        #expect(switcher.selectedIndex == 1)
+        switcher.moveSelectionDown()
+        #expect(switcher.selectedIndex == 2)
+
+        // Navigate down beyond bounds -> clamped at last index
+        switcher.moveSelectionDown()
+        #expect(switcher.selectedIndex == 2)
+
+        // Navigate up
+        switcher.moveSelectionUp()
+        #expect(switcher.selectedIndex == 1)
+        switcher.moveSelectionUp()
+        #expect(switcher.selectedIndex == 0)
+
+        // Navigate up beyond bounds -> clamped at 0
+        switcher.moveSelectionUp()
+        #expect(switcher.selectedIndex == 0)
+    }
 }
 

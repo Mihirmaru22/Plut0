@@ -1,5 +1,87 @@
 import SwiftUI
 
+// MARK: - QuickSwitcherViewModel
+
+/// State model and business logic for Quick Switcher (Cmd+K) search, index clamping, and keyboard navigation.
+public final class QuickSwitcherViewModel: ObservableObject {
+    @Published public var allNotes: [NoteSummary] = []
+    
+    @Published public var query: String = "" {
+        didSet {
+            selectedIndex = 0
+            updateFilteredNotes()
+        }
+    }
+    
+    @Published public var results: [NoteSummary] = [] {
+        didSet {
+            clampIndex()
+        }
+    }
+    
+    @Published public var selectedIndex: Int = 0
+    
+    public init(notes: [NoteSummary] = []) {
+        self.allNotes = notes
+        self.results = notes.isEmpty ? [] : Array(notes.prefix(8))
+        self.selectedIndex = 0
+    }
+    
+    public func setNotes(_ notes: [NoteSummary]) {
+        self.allNotes = notes
+        updateFilteredNotes()
+    }
+    
+    public func updateFilteredNotes() {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            self.results = Array(allNotes.prefix(8))
+        } else {
+            self.results = allNotes.filter {
+                $0.title.localizedCaseInsensitiveContains(trimmed) ||
+                $0.preview.localizedCaseInsensitiveContains(trimmed)
+            }
+        }
+    }
+    
+    public func clampIndex() {
+        if results.isEmpty {
+            selectedIndex = 0
+        } else if selectedIndex >= results.count {
+            selectedIndex = max(0, results.count - 1)
+        } else if selectedIndex < 0 {
+            selectedIndex = 0
+        }
+    }
+    
+    public func moveSelectionUp() {
+        guard !results.isEmpty else {
+            selectedIndex = 0
+            return
+        }
+        selectedIndex = max(0, selectedIndex - 1)
+    }
+    
+    public func moveSelectionDown() {
+        guard !results.isEmpty else {
+            selectedIndex = 0
+            return
+        }
+        selectedIndex = min(results.count - 1, selectedIndex + 1)
+    }
+    
+    @discardableResult
+    public func activateSelected() -> NoteSummary? {
+        clampIndex()
+        guard !results.isEmpty, selectedIndex >= 0, selectedIndex < results.count else {
+            return nil
+        }
+        return results[selectedIndex]
+    }
+}
+
+// MARK: - QuickSwitcherView
+
 /// Floating command palette (Cmd+K) providing ultra-fast note searching, keyboard navigation, and creation.
 public struct QuickSwitcherView: View {
     
@@ -8,8 +90,7 @@ public struct QuickSwitcherView: View {
     public let onSelectNote: (NoteID) -> Void
     public let onCreateNoteWithTitle: (String) -> Void
     
-    @State private var query: String = ""
-    @State private var selectedIndex: Int = 0
+    @StateObject private var viewModel: QuickSwitcherViewModel
     @FocusState private var isFieldFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     
@@ -23,17 +104,7 @@ public struct QuickSwitcherView: View {
         self.notes = notes
         self.onSelectNote = onSelectNote
         self.onCreateNoteWithTitle = onCreateNoteWithTitle
-    }
-    
-    private var filteredNotes: [NoteSummary] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return Array(notes.prefix(8))
-        }
-        return notes.filter {
-            $0.title.localizedCaseInsensitiveContains(trimmed) ||
-            $0.preview.localizedCaseInsensitiveContains(trimmed)
-        }
+        self._viewModel = StateObject(wrappedValue: QuickSwitcherViewModel(notes: notes))
     }
     
     @Namespace private var paletteSelectionNamespace
@@ -55,7 +126,7 @@ public struct QuickSwitcherView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(DS.Theme.amber)
                     
-                    TextField("Search notes or type to create...", text: $query)
+                    TextField("Search notes or type to create...", text: $viewModel.query)
                         .textFieldStyle(.plain)
                         .font(.system(size: 15))
                         .focused($isFieldFocused)
@@ -63,9 +134,9 @@ public struct QuickSwitcherView: View {
                             commitSelection()
                         }
                     
-                    if !query.isEmpty {
+                    if !viewModel.query.isEmpty {
                         Button {
-                            query = ""
+                            viewModel.query = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 13))
@@ -88,15 +159,15 @@ public struct QuickSwitcherView: View {
                     .opacity(0.12)
                 
                 // Search Results
-                let results = filteredNotes
+                let results = viewModel.results
                 if !results.isEmpty {
                     ScrollView {
                         LazyVStack(spacing: 3) {
                             ForEach(Array(results.enumerated()), id: \.element.id) { index, note in
-                                let isSelected = index == selectedIndex
+                                let isSelected = index == viewModel.selectedIndex
                                 Button {
-                                    onSelectNote(note.id)
-                                    isPresented = false
+                                    viewModel.selectedIndex = index
+                                    commitSelection()
                                 } label: {
                                     HStack(spacing: 8) {
                                         if note.isPinned {
@@ -137,7 +208,7 @@ public struct QuickSwitcherView: View {
                                                         colors: [Color(white: 0.98), Color(white: 0.90)],
                                                         startPoint: .top,
                                                         endPoint: .bottom
-                                                    )
+                                                     )
                                                 )
                                                 .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.9), lineWidth: 1))
                                                 .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
@@ -151,17 +222,16 @@ public struct QuickSwitcherView: View {
                         .padding(8)
                     }
                     .frame(maxHeight: 280)
-                } else if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                } else if !viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     // Create New Note Affordance
                     Button {
-                        onCreateNoteWithTitle(query)
-                        isPresented = false
+                        commitSelection()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 14))
                                 .foregroundStyle(DS.Theme.amber)
-                            Text("Create note \"\(query)\"")
+                            Text("Create note \"\(viewModel.query)\"")
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -189,24 +259,38 @@ public struct QuickSwitcherView: View {
         }
         .onAppear {
             isFieldFocused = true
-            selectedIndex = 0
+            viewModel.clampIndex()
         }
         .onExitCommand {
             isPresented = false
         }
-        .onChange(of: query) { _, _ in
-            selectedIndex = 0
+        .onKeyPress(.upArrow) {
+            viewModel.moveSelectionUp()
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            viewModel.moveSelectionDown()
+            return .handled
+        }
+        .onKeyPress(.return) {
+            commitSelection()
+            return .handled
+        }
+        .onChange(of: notes) { _, newNotes in
+            viewModel.setNotes(newNotes)
         }
     }
     
     private func commitSelection() {
-        let results = filteredNotes
-        if selectedIndex >= 0 && selectedIndex < results.count {
-            onSelectNote(results[selectedIndex].id)
+        if let selected = viewModel.activateSelected() {
+            onSelectNote(selected.id)
             isPresented = false
-        } else if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            onCreateNoteWithTitle(query)
-            isPresented = false
+        } else {
+            let trimmed = viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                onCreateNoteWithTitle(trimmed)
+                isPresented = false
+            }
         }
     }
 }
