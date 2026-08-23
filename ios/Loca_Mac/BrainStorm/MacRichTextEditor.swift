@@ -348,8 +348,7 @@ public final class RichTextEditorController: ObservableObject {
 public struct MacRichTextEditor: NSViewRepresentable {
     
     let initialAttributedText: NSAttributedString
-    let initialPlainText: String
-    var preset: TypographyPreset = .standard
+    var contentInset: NSSize = NSSize(width: 32, height: 20)
     var isEditable: Bool = true
     var controller: RichTextEditorController? = nil
     var onTextChangeDebounced: ((NSAttributedString, String) -> Void)? = nil
@@ -359,6 +358,7 @@ public struct MacRichTextEditor: NSViewRepresentable {
         initialAttributedText: NSAttributedString,
         initialPlainText: String,
         preset: TypographyPreset = .standard,
+        contentInset: NSSize = NSSize(width: 32, height: 20),
         isEditable: Bool = true,
         controller: RichTextEditorController? = nil,
         onTextChangeDebounced: ((NSAttributedString, String) -> Void)? = nil,
@@ -367,6 +367,7 @@ public struct MacRichTextEditor: NSViewRepresentable {
         self.initialAttributedText = initialAttributedText
         self.initialPlainText = initialPlainText
         self.preset = preset
+        self.contentInset = contentInset
         self.isEditable = isEditable
         self.controller = controller
         self.onTextChangeDebounced = onTextChangeDebounced
@@ -436,7 +437,7 @@ public struct MacRichTextEditor: NSViewRepresentable {
         textView.registerForDraggedTypes([.fileURL, .png, .tiff, .string])
         
         // Native Apple Notes Insets & Caret
-        textView.textContainerInset = NSSize(width: 32, height: 20)
+        textView.textContainerInset = contentInset
         textView.insertionPointColor = NSColor(red: 0.96, green: 0.65, blue: 0.18, alpha: 1.0)
         textView.currentPreset = preset
         
