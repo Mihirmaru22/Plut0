@@ -27,7 +27,6 @@ enum LifeDesignVariant: String, CaseIterable, Identifiable {
 struct MacLifeView: View {
 
     @AppStorage("mac_life_layout_v4") private var selectedVariant: LifeDesignVariant = .mountainAtlas
-    @Namespace private var lifePillNamespace
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,7 +77,6 @@ struct MacLifeView: View {
                                         )
                                         .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
                                         .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
-                                        .matchedGeometryEffect(id: "activeLifeVariantPill", in: lifePillNamespace)
                                 }
                             }
                             .contentShape(Capsule())

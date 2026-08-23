@@ -31,7 +31,6 @@ struct MacTodoListColumn: View {
 
     @AppStorage("mac_todo_list_layout_v2") private var selectedVariant: ListDesignVariant = .list1
     @State private var showCompleted = false
-    @Namespace private var layoutPillNamespace
     @Namespace private var taskSelectionNamespace
 
     private var activeItems: [TodoItem] {
@@ -170,7 +169,6 @@ struct MacTodoListColumn: View {
                                         )
                                         .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
                                         .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
-                                        .matchedGeometryEffect(id: "activeLayoutPill", in: layoutPillNamespace)
                                 }
                             }
                     }

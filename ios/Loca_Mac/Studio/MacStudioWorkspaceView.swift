@@ -7,7 +7,6 @@ import SwiftData
 struct MacStudioWorkspaceView: View {
 
     @AppStorage("mac_studio_active_tab") private var activeTab: StudioTab = .projects
-    @Namespace private var studioNamespace
 
     enum StudioTab: String, CaseIterable, Identifiable {
         case projects = "Projects"
@@ -93,7 +92,6 @@ struct MacStudioWorkspaceView: View {
                         )
                         .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
                         .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
-                        .matchedGeometryEffect(id: "activeStudioTabPill", in: studioNamespace)
                 }
             }
             .contentShape(Capsule())

@@ -346,14 +346,11 @@ struct MacBlockEditor: View {
         }
     }
 
-    @Namespace private var blockTypeNamespace
-
     private var activeBlockType: TodoBlockType? {
-        if let id = activeBlockID ?? focusedFieldID,
-           let block = blocks.first(where: { $0.id == id }) {
-            return block.type
+        guard let id = activeBlockID, let block = blocks.first(where: { $0.id == id }) else {
+            return .paragraph
         }
-        return nil
+        return block.type
     }
 
     // MARK: - Add Block Quick Bar (Liquid Glass Container)
@@ -404,7 +401,6 @@ struct MacBlockEditor: View {
                         )
                         .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
                         .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
-                        .matchedGeometryEffect(id: "activeBlockTypePill", in: blockTypeNamespace)
                 }
             }
         }
