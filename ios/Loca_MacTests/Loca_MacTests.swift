@@ -648,7 +648,3 @@ struct Loca_MacTests {
         #expect(repo is LocalNotesRepository)
     }
 }
-
-
-
-
