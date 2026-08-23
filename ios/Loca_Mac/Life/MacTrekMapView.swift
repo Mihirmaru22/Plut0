@@ -101,6 +101,8 @@ struct MacTrekMapView: NSViewRepresentable {
 
     let treks: [TrekRecord]
     let selectedTrek: TrekRecord?
+    var targetCamera: MKMapCamera? = nil
+    var cameraToken: String = ""
     var scrubCoordinate: CLLocationCoordinate2D? = nil
     var isFlyingTrail: Bool = false
     var onFinishFlyTrail: () -> Void = {}
@@ -126,9 +128,9 @@ struct MacTrekMapView: NSViewRepresentable {
         mapView.register(TrekAnnotationView.self, forAnnotationViewWithReuseIdentifier: TrekAnnotationView.reuseIdentifier)
         mapView.register(TrekScrubCrosshairAnnotationView.self, forAnnotationViewWithReuseIdentifier: TrekScrubCrosshairAnnotationView.reuseIdentifier)
 
-        // Set initial camera over world
-        let initialCoord = CLLocationCoordinate2D(latitude: 30.0, longitude: 15.0)
-        let camera = MKMapCamera(lookingAtCenter: initialCoord, fromDistance: 16_000_000, pitch: 40, heading: 0)
+        // Set initial camera over India & Himalayas
+        let initialCoord = CLLocationCoordinate2D(latitude: 24.0, longitude: 78.5)
+        let camera = MKMapCamera(lookingAtCenter: initialCoord, fromDistance: 3_800_000, pitch: 38, heading: 0)
         mapView.setCamera(camera, animated: false)
 
         return mapView
@@ -187,8 +189,12 @@ struct MacTrekMapView: NSViewRepresentable {
             return
         }
 
-        // 4. Fly Camera to Selected Trek
-        if let selectedTrek, selectedTrek.id != context.coordinator.lastSelectedID {
+        // 5. Handle Target Camera Navigation (e.g. state selection)
+        if let targetCamera, !cameraToken.isEmpty, cameraToken != context.coordinator.lastCameraToken {
+            context.coordinator.lastCameraToken = cameraToken
+            mapView.setCamera(targetCamera, animated: true)
+        } else if let selectedTrek, selectedTrek.id != context.coordinator.lastSelectedID {
+            // 6. Fly Camera to Selected Trek
             context.coordinator.lastSelectedID = selectedTrek.id
 
             // If selected trek has a GPX trail, frame the whole trail
@@ -201,9 +207,9 @@ struct MacTrekMapView: NSViewRepresentable {
             } else {
                 let camera = MKMapCamera(
                     lookingAtCenter: selectedTrek.coordinate,
-                    fromDistance: 95_000,
-                    pitch: 55,
-                    heading: 10
+                    fromDistance: 85_000,
+                    pitch: 58,
+                    heading: 15
                 )
                 mapView.setCamera(camera, animated: true)
             }
@@ -393,6 +399,7 @@ struct MacTrekMapView: NSViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: MacTrekMapView
         var lastSelectedID: UUID?
+        var lastCameraToken: String = ""
         var lastOverlaysSignature: String = ""
 
         init(parent: MacTrekMapView) {

@@ -30,6 +30,8 @@ struct MacTrekAtlasCanvas: View {
     @Query(sort: \TrekRecord.elevationMeters, order: .reverse) private var allTreks: [TrekRecord]
 
     @State private var selectedTrek: TrekRecord? = nil
+    @State private var targetCamera: MKMapCamera? = nil
+    @State private var cameraToken: String = ""
     @State private var searchText: String = ""
     @State private var selectedFilter: TrekFilter = .all
     @State private var isDirectoryOpen: Bool = false
@@ -147,6 +149,8 @@ struct MacTrekAtlasCanvas: View {
                 MacTrekMapView(
                     treks: filteredTreks,
                     selectedTrek: selectedTrek,
+                    targetCamera: targetCamera,
+                    cameraToken: cameraToken,
                     scrubCoordinate: nil,
                     isFlyingTrail: false,
                     onFinishFlyTrail: {},
@@ -397,6 +401,8 @@ struct MacTrekAtlasCanvas: View {
                         Button {
                             withAnimation(.easeInOut(duration: 0.12)) {
                                 selectedFilter = filter
+                                targetCamera = cameraForFilter(filter)
+                                cameraToken = UUID().uuidString
                             }
                             Haptics.impact(.light)
                         } label: {
@@ -464,6 +470,81 @@ struct MacTrekAtlasCanvas: View {
             return "Unclimbed (\(activeTreks.count - conqueredTreks.count))"
         default:
             return filter.rawValue
+        }
+    }
+
+    private func cameraForFilter(_ filter: TrekFilter) -> MKMapCamera {
+        switch filter {
+        case .gujarat:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 21.5222, longitude: 70.5771),
+                fromDistance: 450_000,
+                pitch: 52,
+                heading: 10
+            )
+        case .maharashtra:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 19.3000, longitude: 73.8000),
+                fromDistance: 480_000,
+                pitch: 54,
+                heading: 15
+            )
+        case .uttarakhand:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 30.5000, longitude: 79.4000),
+                fromDistance: 380_000,
+                pitch: 58,
+                heading: 25
+            )
+        case .himachal:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 32.2500, longitude: 77.3000),
+                fromDistance: 380_000,
+                pitch: 58,
+                heading: 20
+            )
+        case .ladakh:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 34.1526, longitude: 77.5771),
+                fromDistance: 480_000,
+                pitch: 56,
+                heading: 15
+            )
+        case .rajasthan:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 24.6500, longitude: 72.7800),
+                fromDistance: 320_000,
+                pitch: 48,
+                heading: 5
+            )
+        case .sikkim:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 27.5330, longitude: 88.5122),
+                fromDistance: 360_000,
+                pitch: 58,
+                heading: 30
+            )
+        case .southIndia:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 11.5000, longitude: 76.5000),
+                fromDistance: 520_000,
+                pitch: 50,
+                heading: 0
+            )
+        case .sevenSummits:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 27.9881, longitude: 86.9250),
+                fromDistance: 2_800_000,
+                pitch: 48,
+                heading: 15
+            )
+        case .conquered, .unclimbed, .all:
+            return MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(latitude: 23.5, longitude: 79.0),
+                fromDistance: 3_800_000,
+                pitch: 38,
+                heading: 0
+            )
         }
     }
 
