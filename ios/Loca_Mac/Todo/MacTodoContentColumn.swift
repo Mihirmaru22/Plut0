@@ -54,6 +54,9 @@ struct MacTodoContentColumn: View {
 
     @Binding var selection: TodoItem?
     @AppStorage("mac_today_submode") private var modeString: String = "Plan"
+    @AppStorage("mac_today_enable_plan") private var enablePlan: Bool = true
+    @AppStorage("mac_today_enable_list") private var enableList: Bool = true
+    @AppStorage("mac_today_enable_time") private var enableTime: Bool = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: [SortDescriptor(\TodoItem.createdAt)], animation: .default)
     private var allItems: [TodoItem]
@@ -61,6 +64,14 @@ struct MacTodoContentColumn: View {
     @State private var transitionDirection: TransitionDirection = .forward
     @State private var lastModeIndex: Int = 0
     @State private var hoveredMode: TodoMode? = nil
+
+    private var visibleModes: [TodoMode] {
+        var modes: [TodoMode] = []
+        if enablePlan { modes.append(.plan) }
+        if enableList { modes.append(.list) }
+        if enableTime { modes.append(.time) }
+        return modes.isEmpty ? [.plan] : modes
+    }
 
     private var openItems: [TodoItem] {
         allItems.filter { !$0.isArchived && $0.parentID == nil && !$0.isCompleted }
@@ -72,7 +83,13 @@ struct MacTodoContentColumn: View {
 
     private var mode: Binding<TodoMode> {
         Binding(
-            get: { TodoMode(rawValue: modeString) ?? .plan },
+            get: {
+                let current = TodoMode(rawValue: modeString) ?? .plan
+                if visibleModes.contains(current) {
+                    return current
+                }
+                return visibleModes.first ?? .plan
+            },
             set: { newMode in
                 let newIndex = newMode.index
                 transitionDirection = newIndex >= lastModeIndex ? .forward : .backward
@@ -85,12 +102,14 @@ struct MacTodoContentColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             // Linear Machined Segmented Control
-            linearPillarSwitcher
-                .padding(.horizontal, DS.Space.md)
-                .padding(.vertical, 8)
+            if visibleModes.count > 1 {
+                linearPillarSwitcher
+                    .padding(.horizontal, DS.Space.md)
+                    .padding(.vertical, 8)
 
-            Divider()
-                .opacity(0.12)
+                Divider()
+                    .opacity(0.12)
+            }
 
             // Direction-Aware Viewport (Plan ↔ List ↔ Time)
             ZStack {
@@ -114,7 +133,18 @@ struct MacTodoContentColumn: View {
         .navigationTitle("Today")
         .background(DS.Theme.surface)
         .onAppear {
+            ensureValidMode()
             lastModeIndex = (TodoMode(rawValue: modeString) ?? .plan).index
+        }
+        .onChange(of: enablePlan) { _, _ in ensureValidMode() }
+        .onChange(of: enableList) { _, _ in ensureValidMode() }
+        .onChange(of: enableTime) { _, _ in ensureValidMode() }
+    }
+
+    private func ensureValidMode() {
+        let current = TodoMode(rawValue: modeString) ?? .plan
+        if !visibleModes.contains(current), let first = visibleModes.first {
+            modeString = first.rawValue
         }
     }
 
@@ -142,7 +172,7 @@ struct MacTodoContentColumn: View {
 
     private var linearPillarSwitcher: some View {
         HStack(spacing: 3) {
-            ForEach(TodoMode.allCases) { m in
+            ForEach(visibleModes) { m in
                 let isSelected = mode.wrappedValue == m
                 let isHovered = hoveredMode == m
 

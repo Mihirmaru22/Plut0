@@ -36,9 +36,10 @@ struct MacTodoQuickAdd: View {
             // Liquid Glass Input Row
             HStack(spacing: DS.Space.sm) {
                 Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(focused ? Color.accentColor : DS.Color.textTertiary)
+                    .foregroundStyle(focused ? DS.Theme.amber : DS.Theme.textTertiary)
                     .font(.system(size: 15))
-                    .animation(.spring(response: 0.25), value: focused)
+                    .rotationEffect(.degrees(focused ? 90 : 0))
+                    .animation(PlutoSpring.smooth, value: focused)
 
                 TextField("Add a task (e.g. Design review tomorrow at 10am for 1h #work !!)…", text: $text)
                     .textFieldStyle(.plain)
@@ -57,28 +58,22 @@ struct MacTodoQuickAdd: View {
                             Image(systemName: "return")
                                 .font(.system(size: 9, weight: .bold))
                         }
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 8)
+                        .foregroundStyle(Color.black)
+                        .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(Color.accentColor, in: Capsule())
+                        .background(DS.Theme.amber, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .transition(.scale.combined(with: .opacity))
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 9)
+            .plutoGlass(focused ? .interactive : .regular, in: RoundedRectangle(cornerRadius: 10))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        focused
-                            ? LinearGradient(colors: [Color.accentColor.opacity(0.8), Color.accentColor.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [.white.opacity(0.18), .white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                        lineWidth: focused ? 1.2 : 0.8
-                    )
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(focused ? DS.Theme.amber.opacity(0.6) : Color.clear, lineWidth: 1)
             )
-            .shadow(color: focused ? Color.accentColor.opacity(0.15) : Color.black.opacity(0.06), radius: focused ? 8 : 4, x: 0, y: 2)
             .onTapGesture { focused = true }
 
             // Live token preview in frosted glass chips

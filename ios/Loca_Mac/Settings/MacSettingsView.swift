@@ -40,6 +40,11 @@ struct MacSettingsView: View {
     // Telemetry & Privacy
     @AppStorage("mac_telemetry_opt_in") private var telemetryOptIn: Bool = true
 
+    // Today Pillar Sub-modes Storage
+    @AppStorage("mac_today_enable_plan") private var enableTodayPlan: Bool = true
+    @AppStorage("mac_today_enable_list") private var enableTodayList: Bool = true
+    @AppStorage("mac_today_enable_time") private var enableTodayTime: Bool = true
+
     // Local UI State
     @State private var showExportSuccess = false
     @State private var exportMessage = ""
@@ -47,6 +52,8 @@ struct MacSettingsView: View {
     @State private var showingResetConfirmation = false
     @State private var showResetSuccess = false
     @State private var resetSuccessMessage = ""
+    @State private var showingGhostResetConfirmation = false
+    @State private var showGhostResetSuccess = false
 
     // Accent Palette
     private var accentColor: Color {
@@ -106,6 +113,11 @@ struct MacSettingsView: View {
                     }
                 }
 
+                // Today Pillar Sub-modes Bento Tile (Full Width)
+                bentoTile(title: "Today Pillar Sub-modes", icon: "calendar.day.timeline.left", accent: Color(red: 0.95, green: 0.77, blue: 0.25)) {
+                    todaySubmodesControlBlock
+                }
+
                 // 5. Notifications Bento Tile (Full Width)
                 bentoTile(title: "Notifications & Smart Schedule", icon: "bell.badge.fill", accent: Color(red: 0.85, green: 0.40, blue: 0.40)) {
                     notificationsControlBlock
@@ -145,13 +157,32 @@ struct MacSettingsView: View {
             Button("Reset Everything (Clean Slate)", role: .destructive) {
                 PlutoDataResetManager.resetAllAppData(context: modelContext)
                 PlutoSoundEngine.shared.play(.deleteTrash)
-                Haptics.notification(.success)
+                Haptics.notify(.success)
                 resetSuccessMessage = "All App Data Has Been Reset to Clean Slate!"
                 showResetSuccess = true
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will permanently erase all tasks, work goals, journal notes, master bucket list items, and habit logs. This action cannot be undone.")
+        }
+        .confirmationDialog(
+            "Reset Ghost Mode Operating System?",
+            isPresented: $showingGhostResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset Ghost Mode (Clean Slate)", role: .destructive) {
+                Task {
+                    _ = try? await GhostEngine.shared.resetAllGhostData()
+                    await MainActor.run {
+                        PlutoSoundEngine.shared.play(.deleteTrash)
+                        Haptics.notify(.success)
+                        showGhostResetSuccess = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently erase all active and archived Ghost seasons, daily ring check-in records, receipts, and custom protocol rules. Ghost Mode will return to an uninitiated covenant state.")
         }
         .sheet(isPresented: $showKeynoteJourneyModal) {
             PlutoKeynoteJourneyModal()
@@ -345,6 +376,115 @@ struct MacSettingsView: View {
         }
     }
 
+    // Today Sub-modes Control Block
+    private var todaySubmodesControlBlock: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Turn on or off operational sub-views in the Today pillar switcher. When turned off, they will immediately disappear from Today.")
+                .font(.system(size: 11.5))
+                .foregroundStyle(DS.Color.textSecondary)
+                .lineSpacing(2)
+
+            VStack(spacing: 12) {
+                // 1. Plan Toggle
+                Toggle(isOn: Binding(
+                    get: { enableTodayPlan },
+                    set: { newVal in
+                        if !newVal && !enableTodayList && !enableTodayTime {
+                            Haptics.notify(.warning)
+                            return
+                        }
+                        enableTodayPlan = newVal
+                        Haptics.impact(.light)
+                    }
+                )) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "calendar.day.timeline.left")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(DS.Theme.amber)
+                            .frame(width: 22)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Plan (Time-Blocked Day Planner)")
+                                .font(.system(size: 12.5, weight: .bold))
+                                .foregroundStyle(DS.Color.textPrimary)
+                            Text("Vertical day agenda timeline, live time blocking, and task scheduling.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(DS.Color.textSecondary)
+                        }
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(accentColor)
+
+                Divider().opacity(0.12)
+
+                // 2. List Toggle
+                Toggle(isOn: Binding(
+                    get: { enableTodayList },
+                    set: { newVal in
+                        if !newVal && !enableTodayPlan && !enableTodayTime {
+                            Haptics.notify(.warning)
+                            return
+                        }
+                        enableTodayList = newVal
+                        Haptics.impact(.light)
+                    }
+                )) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "checklist.checked")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color(red: 0.35, green: 0.65, blue: 0.95))
+                            .frame(width: 22)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("List (Tasks & Queues)")
+                                .font(.system(size: 12.5, weight: .bold))
+                                .foregroundStyle(DS.Color.textPrimary)
+                            Text("GTD-style inbox, priority queues, bento cards, and backlog trays.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(DS.Color.textSecondary)
+                        }
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(accentColor)
+
+                Divider().opacity(0.12)
+
+                // 3. Time Toggle
+                Toggle(isOn: Binding(
+                    get: { enableTodayTime },
+                    set: { newVal in
+                        if !newVal && !enableTodayPlan && !enableTodayList {
+                            Haptics.notify(.warning)
+                            return
+                        }
+                        enableTodayTime = newVal
+                        Haptics.impact(.light)
+                    }
+                )) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "timer.circle.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color(red: 0.75, green: 0.55, blue: 0.95))
+                            .frame(width: 22)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Time (Focus Studio)")
+                                .font(.system(size: 12.5, weight: .bold))
+                                .foregroundStyle(DS.Color.textPrimary)
+                            Text("Integrated Pomodoro timer, ambient flow mixer, and deep work tracking.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(DS.Color.textSecondary)
+                        }
+                    }
+                }
+                .toggleStyle(.switch)
+                .tint(accentColor)
+            }
+        }
+    }
+
     // 5. Notifications
     private var notificationsControlBlock: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -484,7 +624,8 @@ struct MacSettingsView: View {
 
     // 7. Danger Zone & Factory Data Reset
     private var dangerZoneControlBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            // Whole App Reset
             VStack(alignment: .leading, spacing: 3) {
                 Text("Reset All App Data to Empty State")
                     .font(.system(size: 13, weight: .bold))
@@ -509,8 +650,8 @@ struct MacSettingsView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
                     .background(
-                        Color(red: 0.95, green: 0.35, blue: 0.35).opacity(0.18),
-                        in: RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(red: 0.95, green: 0.35, blue: 0.35).opacity(0.18))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
@@ -526,6 +667,62 @@ struct MacSettingsView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(Color.green)
                         Text(resetSuccessMessage)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.green)
+                    }
+                    .transition(.opacity)
+                }
+            }
+
+            Divider().opacity(0.2)
+
+            // Ghost Mode Specific Reset
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color(red: 0.95, green: 0.65, blue: 0.18))
+                    Text("Reset Ghost Mode Operating System")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(DS.Color.textPrimary)
+                }
+                Text("Erase current and archived Ghost seasons, daily ring check-in records, receipts, and custom protocol rules. Returns Ghost Mode to an uninitiated covenant state.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(DS.Color.textSecondary)
+            }
+
+            HStack(spacing: 12) {
+                Button {
+                    PlutoSoundEngine.shared.play(.tabSwitch)
+                    Haptics.impact(.medium)
+                    showingGhostResetConfirmation = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Reset Ghost Mode")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(red: 0.95, green: 0.65, blue: 0.18).opacity(0.18))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(red: 0.95, green: 0.65, blue: 0.18).opacity(0.5), lineWidth: 1)
+                    )
+                    .foregroundStyle(Color(red: 0.95, green: 0.65, blue: 0.18))
+                }
+                .buttonStyle(.plain)
+
+                if showGhostResetSuccess {
+                    HStack(spacing: 5) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.green)
+                        Text("Ghost Mode Reset Complete")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.green)
                     }

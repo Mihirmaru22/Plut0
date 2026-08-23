@@ -250,74 +250,75 @@ struct MacDayPlannerColumn: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header (Pattern A Date Switcher Pill)
 
     private var header: some View {
         HStack(spacing: DS.Space.sm) {
-            Button { shiftDay(-1) } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(DS.Color.textSecondary)
-                    .frame(width: 26, height: 26)
-                    .background(Color.white.opacity(0.06), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Previous day  ←")
+            // Segmented Date Switcher Pill
+            HStack(spacing: 8) {
+                Button { shiftDay(-1) } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(DS.Theme.textSecondary)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .help("Previous day  ←")
 
-            HStack(spacing: 6) {
-                Text(selectedDate, format: .dateTime.weekday(.wide).day().month(.wide))
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .lineLimit(1)
-
-                if !cal.isDateInToday(selectedDate) {
-                    Button {
+                Button {
+                    if !cal.isDateInToday(selectedDate) {
                         withAnimation(.spring(response: 0.25)) {
                             selectedDate = cal.startOfDay(for: .now)
                         }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Circle()
-                                .fill(Color.accentColor)
-                                .frame(width: 5, height: 5)
-                            Text("Today")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.accentColor.opacity(0.12), in: Capsule())
-                        .overlay(Capsule().stroke(Color.accentColor.opacity(0.3), lineWidth: 0.8))
                     }
-                    .buttonStyle(.plain)
-                    .help("Jump to today  ⌘T")
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .frame(maxWidth: .infinity)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(DS.Theme.amber)
 
-            Button { shiftDay(1) } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(DS.Color.textSecondary)
-                    .frame(width: 26, height: 26)
-                    .background(Color.white.opacity(0.06), in: Circle())
+                        Text(selectedDate, format: .dateTime.weekday(.wide).day().month(.wide))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.Theme.textPrimary)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .buttonStyle(.plain)
+
+                Button { shiftDay(1) } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(DS.Theme.textSecondary)
+                        .frame(width: 20, height: 20)
+                }
+                .buttonStyle(.plain)
+                .help("Next day  →")
             }
-            .buttonStyle(.plain)
-            .help("Next day  →")
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(DS.Theme.card)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(DS.Theme.border, lineWidth: 1)
+            )
+
+            Spacer()
 
             Button(action: addBlock) {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .bold))
                     Text("Block")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 11.5, weight: .bold))
                 }
-                .foregroundStyle(Color.white)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 7))
-                .shadow(color: Color.accentColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                .foregroundStyle(Color.black)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(DS.Theme.amber, in: RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)
             .help("Add a time block  ⌘N")
@@ -326,10 +327,10 @@ struct MacDayPlannerColumn: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Week strip (Liquid Glass Day Tiles)
+    // MARK: - Week strip (Pattern C High-Contrast Day Tiles)
 
     private var weekStrip: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             ForEach(weekDays, id: \.self) { dayCell($0) }
         }
         .padding(.horizontal, DS.Space.md)
@@ -346,50 +347,29 @@ struct MacDayPlannerColumn: View {
                 selectedDate = cal.startOfDay(for: day)
             }
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 Text(day, format: .dateTime.weekday(.abbreviated))
-                    .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? Color.white : (isToday ? Color.accentColor : DS.Color.textTertiary))
+                    .font(.system(size: 9.5, weight: isSelected ? .bold : .medium, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.black : (isToday ? DS.Theme.amber : DS.Theme.textTertiary))
 
                 Text(day, format: .dateTime.day())
-                    .font(.system(size: 13, weight: isSelected ? .black : (isToday ? .bold : .semibold)))
-                    .foregroundStyle(isSelected ? Color.white : (isToday ? Color.accentColor : DS.Color.textPrimary))
+                    .font(.system(size: 13, weight: isSelected ? .black : .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? Color.black : DS.Theme.textPrimary)
 
                 // Task count pip
-                HStack(spacing: 2) {
-                    if count > 0 {
-                        Circle()
-                            .fill(isSelected ? Color.white : Color.accentColor)
-                            .frame(width: 4, height: 4)
-                    } else {
-                        Circle()
-                            .fill(Color.clear)
-                            .frame(width: 4, height: 4)
-                    }
-                }
+                Circle()
+                    .fill(count > 0 ? (isSelected ? Color.black : DS.Theme.amber) : Color.clear)
+                    .frame(width: 3.5, height: 3.5)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
             .background(
-                ZStack {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(Color.accentColor)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 9)
-                                    .stroke(LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom), lineWidth: 0.8)
-                            )
-                            .shadow(color: Color.accentColor.opacity(0.35), radius: 6, x: 0, y: 2)
-                    } else if isToday {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(Color.accentColor.opacity(0.12))
-                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.accentColor.opacity(0.4), lineWidth: 1))
-                    } else {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(Color.white.opacity(0.04))
-                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.white.opacity(0.06), lineWidth: 0.6))
-                    }
-                }
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isSelected ? Color.white : DS.Theme.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(isSelected ? Color.white : (isToday ? DS.Theme.amber.opacity(0.4) : DS.Theme.border), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -1050,38 +1030,38 @@ extension MacDayPlannerColumn {
         let doneCount = scheduled.filter { $0.isCompleted }.count
         let totalCount = scheduled.count
 
-        return VStack(spacing: 8) {
+        return VStack(spacing: 6) {
             HStack {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.accentColor)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(DS.Theme.amber)
 
                     Text("DAY HORIZON")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Color.textTertiary)
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(DS.Theme.textTertiary)
+                        .tracking(1.0)
                 }
 
                 Spacer()
 
                 HStack(spacing: 8) {
                     if totalMins > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "hourglass")
-                                .font(.system(size: 8.5))
-                            Text("\(totalMins / 60)h \(totalMins % 60)m planned")
-                                .font(.system(size: 9.5, weight: .semibold))
-                        }
-                        .foregroundStyle(DS.Color.textSecondary)
+                        Text("\(totalMins / 60)h \(totalMins % 60)m planned")
+                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(DS.Theme.textTertiary)
                     }
 
                     if totalCount > 0 {
                         Text("\(doneCount)/\(totalCount) Done")
-                            .font(.system(size: 9.5, weight: .bold))
-                            .foregroundStyle(doneCount == totalCount && totalCount > 0 ? Color.green : Color.accentColor)
+                            .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(doneCount == totalCount ? DS.Theme.emerald : DS.Theme.amber)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.12), in: Capsule())
+                            .background(
+                                (doneCount == totalCount ? DS.Theme.emerald : DS.Theme.amber).opacity(0.12),
+                                in: Capsule()
+                            )
                     }
                 }
             }
@@ -1090,79 +1070,62 @@ extension MacDayPlannerColumn {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 5)
+                        .fill(DS.Theme.surface)
+                        .frame(height: 3)
 
                     if totalCount > 0 {
                         let ratio = CGFloat(doneCount) / CGFloat(max(1, totalCount))
                         Capsule()
-                            .fill(LinearGradient(colors: [Color.accentColor, Color.teal], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(8, geo.size.width * ratio), height: 5)
-                            .shadow(color: Color.accentColor.opacity(0.4), radius: 3, x: 0, y: 1)
+                            .fill(DS.Theme.amber)
+                            .frame(width: max(6, geo.size.width * ratio), height: 3)
                     }
                 }
             }
-            .frame(height: 5)
+            .frame(height: 3)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    LinearGradient(colors: [.white.opacity(0.22), .white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.8
-                )
-        )
+        .padding(.vertical, 4)
     }
 
     private func agendaPeriodSection(title: String, timeRange: String, icon: String, color: Color, tasks: [TodoItem]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(color)
 
                 Text(title)
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .tracking(0.5)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(DS.Theme.textSecondary)
+                    .tracking(0.8)
 
                 Spacer()
 
                 Text(timeRange)
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(DS.Color.textTertiary)
+                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(DS.Theme.textTertiary)
             }
-            .padding(.horizontal, 2)
+            .padding(.top, 4)
 
             if tasks.isEmpty {
                 HStack {
                     Image(systemName: "circle.dashed")
-                        .font(.system(size: 10))
-                        .foregroundStyle(DS.Color.textTertiary.opacity(0.6))
+                        .font(.system(size: 9))
+                        .foregroundStyle(DS.Theme.textTertiary.opacity(0.5))
                     Text("No blocks scheduled")
                         .font(.system(size: 10.5))
-                        .foregroundStyle(DS.Color.textTertiary.opacity(0.8))
+                        .foregroundStyle(DS.Theme.textTertiary.opacity(0.7))
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
             } else {
-                VStack(spacing: 5) {
+                VStack(spacing: 4) {
                     ForEach(tasks) { task in
                         bentoTaskRow(task: task)
                     }
                 }
             }
+
+            Divider().opacity(0.08)
         }
-        .padding(10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    LinearGradient(colors: [.white.opacity(0.18), .white.opacity(0.04)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.8
-                )
-        )
     }
 
     private func createBlock(at hourDate: Date) {
@@ -1409,38 +1372,15 @@ private struct BentoPlannerTaskRow: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
             .background(
-                ZStack {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(Color.accentColor.opacity(0.14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 9)
-                                    .stroke(Color.accentColor.opacity(0.4), lineWidth: 1)
-                            )
-                    } else {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(isHovered ? Color.white.opacity(0.08) : Color.white.opacity(0.04))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 9)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [
-                                                isHovered ? catColor.opacity(0.35) : Color.white.opacity(0.06),
-                                                Color.white.opacity(0.02)
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        ),
-                                        lineWidth: 0.8
-                                    )
-                            )
-                    }
-                }
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isSelected ? DS.Theme.cardSelected : (isHovered ? DS.Theme.surface : Color.clear))
             )
-            .offset(y: isHovered ? -1.5 : 0)
-            .shadow(color: isHovered ? Color.black.opacity(0.16) : Color.clear, radius: 5, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(isSelected ? DS.Theme.amber.opacity(0.4) : (isHovered ? DS.Theme.border : Color.clear), lineWidth: 1)
+            )
             .animation(.spring(response: 0.22, dampingFraction: 0.8), value: isHovered)
             .contentShape(Rectangle())
         }

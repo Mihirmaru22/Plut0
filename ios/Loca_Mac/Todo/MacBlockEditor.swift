@@ -346,10 +346,20 @@ struct MacBlockEditor: View {
         }
     }
 
-    // MARK: - Add Block Quick Bar
+    @Namespace private var blockTypeNamespace
+
+    private var activeBlockType: TodoBlockType? {
+        if let id = activeBlockID ?? focusedFieldID,
+           let block = blocks.first(where: { $0.id == id }) {
+            return block.type
+        }
+        return nil
+    }
+
+    // MARK: - Add Block Quick Bar (Liquid Glass Container)
 
     private var addBlockBar: some View {
-        HStack(spacing: DS.Space.xs) {
+        GlassEffectContainer(spacing: 3) {
             quickAddButton(title: "Text", icon: "text.alignleft", type: .paragraph)
             quickAddButton(title: "Checklist", icon: "checkmark.square", type: .check)
             quickAddButton(title: "Bullet", icon: "list.bullet", type: .bullet)
@@ -357,27 +367,38 @@ struct MacBlockEditor: View {
             quickAddButton(title: "Quote", icon: "quote.opening", type: .quote)
             quickAddButton(title: "Divider", icon: "divide", type: .divider)
         }
-        .padding(.top, 4)
+        .padding(.top, 6)
     }
 
     private func quickAddButton(title: String, icon: String, type: TodoBlockType) -> some View {
-        Button {
-            let newBlock = TodoContentBlock(type: type, text: "")
-            blocks.append(newBlock)
-            activeBlockID = newBlock.id
-            focusedFieldID = newBlock.id
-            persistChanges()
+        let isActive = activeBlockType == type
+        return Button {
+            withAnimation(PlutoSpring.snappy) {
+                let newBlock = TodoContentBlock(type: type, text: "")
+                blocks.append(newBlock)
+                activeBlockID = newBlock.id
+                focusedFieldID = newBlock.id
+                persistChanges()
+            }
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 10, weight: isActive ? .bold : .medium))
+                    .symbolEffect(.bounce, value: isActive)
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 10, weight: isActive ? .bold : .medium))
             }
-            .foregroundStyle(DS.Color.textTertiary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 4))
+            .foregroundStyle(isActive ? Color.white : DS.Theme.textSecondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3.5)
+            .background {
+                if isActive {
+                    Capsule()
+                        .fill(DS.Theme.cardSelected)
+                        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                        .matchedGeometryEffect(id: "activeBlockTypePill", in: blockTypeNamespace)
+                }
+            }
         }
         .buttonStyle(.plain)
     }
