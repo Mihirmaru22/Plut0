@@ -176,43 +176,65 @@ public struct RichTextTypography {
     
     public static func applyParagraphStyle(_ style: NoteParagraphStyle, to textStorage: NSMutableAttributedString, range: NSRange, preset: TypographyPreset = .standard, textColor: NSColor = .textColor) {
         textStorage.beginEditing()
+        defer { textStorage.endEditing() }
+
         let string = textStorage.string as NSString
-        let paragraphRange = string.paragraphRange(for: range)
-        
-        // If it's a list style (bullet/dash/numbered), prefix it
-        if let prefix = style.listPrefix {
-            let paragraphText = string.substring(with: paragraphRange)
-            let cleanText = cleanPrefixes(from: paragraphText)
-            let newParagraphText = prefix + cleanText
-            textStorage.replaceCharacters(in: paragraphRange, with: newParagraphText)
+        guard string.length > 0 else {
+            return
         }
-        
+
+        let safeLoc = max(0, min(range.location, string.length - 1))
+        let paragraphRange = string.paragraphRange(for: NSRange(location: safeLoc, length: 0))
+        let paragraphText = string.substring(with: paragraphRange)
+        let cleanText = cleanPrefixes(from: paragraphText)
+
+        var newParagraphText = cleanText
+        if let prefix = style.listPrefix {
+            newParagraphText = prefix + cleanText
+        } else if style == .quote {
+            newParagraphText = "“ " + cleanText
+        }
+
+        textStorage.replaceCharacters(in: paragraphRange, with: newParagraphText)
+
         let newString = textStorage.string as NSString
-        let updatedParagraphRange = newString.paragraphRange(for: range)
+        guard newString.length > 0 else { return }
+        let newSafeLoc = max(0, min(paragraphRange.location, newString.length - 1))
+        let updatedParagraphRange = newString.paragraphRange(for: NSRange(location: newSafeLoc, length: 0))
+
         let paragraphStyle = makeParagraphStyle(for: style, preset: preset)
         let font = preset.font(for: style)
-        
-        textStorage.addAttribute(.paragraphStyle, value: paragraphStyle, range: updatedParagraphRange)
-        textStorage.addAttribute(.font, value: font, range: updatedParagraphRange)
-        
-        if style == .checklist {
-            textStorage.addAttribute(.noteChecklistState, value: ChecklistState.unchecked.rawValue, range: updatedParagraphRange)
-        } else {
-            textStorage.removeAttribute(.noteChecklistState, range: updatedParagraphRange)
-            textStorage.removeAttribute(.strikethroughStyle, range: updatedParagraphRange)
+
+        if updatedParagraphRange.length > 0 {
+            textStorage.addAttribute(.paragraphStyle, value: paragraphStyle, range: updatedParagraphRange)
+            textStorage.addAttribute(.font, value: font, range: updatedParagraphRange)
+
+            if style == .quote {
+                textStorage.addAttribute(.foregroundColor, value: textColor.withAlphaComponent(0.85), range: updatedParagraphRange)
+            } else {
+                textStorage.addAttribute(.foregroundColor, value: textColor, range: updatedParagraphRange)
+            }
+
+            if style == .checklist {
+                textStorage.addAttribute(.noteChecklistState, value: ChecklistState.unchecked.rawValue, range: updatedParagraphRange)
+            } else {
+                textStorage.removeAttribute(.noteChecklistState, range: updatedParagraphRange)
+                textStorage.removeAttribute(.strikethroughStyle, range: updatedParagraphRange)
+            }
         }
-        
-        textStorage.endEditing()
     }
-    
+
     public static func cleanPrefixes(from text: String) -> String {
         var result = text
-        let prefixes = ["• ", "– ", "1. ", "2. ", "3. ", "4. ", "5. "]
-        for p in prefixes {
+        let staticPrefixes = ["•  ", "• ", "–  ", "– ", "- ", "“ ", "> ", "“"]
+        for p in staticPrefixes {
             if result.hasPrefix(p) {
                 result = String(result.dropFirst(p.count))
-                break
+                return result
             }
+        }
+        if let match = result.range(of: #"^\d+\.\s*"#, options: .regularExpression) {
+            result.removeSubrange(match)
         }
         return result
     }

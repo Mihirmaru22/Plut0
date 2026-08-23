@@ -130,15 +130,6 @@ struct MacBlockEditor: View {
                 formatButton(title: "Quote", icon: "quote.opening", isActive: controller.activeParagraphStyle == .quote) {
                     controller.applyParagraphStyle(.quote, preset: .standard)
                 }
-
-                // Inline Traits
-                formatButton(title: "B", icon: "bold", isActive: controller.isBold) {
-                    controller.toggleBold(preset: .standard)
-                }
-
-                formatButton(title: "I", icon: "italic", isActive: controller.isItalic) {
-                    controller.toggleItalic(preset: .standard)
-                }
             }
             .padding(.horizontal, 2)
             .padding(.vertical, 2)

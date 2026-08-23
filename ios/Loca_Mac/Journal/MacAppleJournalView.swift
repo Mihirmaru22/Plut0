@@ -363,10 +363,11 @@ final class AppleJournalRichTextController: NSObject, ObservableObject {
         var underline: Int = 0
         var strikethrough: Int = 0
 
-        if range.length > 0, let ts = tv.textStorage {
-            font = ts.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont
-            underline = ts.attribute(.underlineStyle, at: range.location, effectiveRange: nil) as? Int ?? 0
-            strikethrough = ts.attribute(.strikethroughStyle, at: range.location, effectiveRange: nil) as? Int ?? 0
+        if range.length > 0, let ts = tv.textStorage, ts.length > 0 {
+            let safeLoc = max(0, min(range.location, ts.length - 1))
+            font = ts.attribute(.font, at: safeLoc, effectiveRange: nil) as? NSFont
+            underline = ts.attribute(.underlineStyle, at: safeLoc, effectiveRange: nil) as? Int ?? 0
+            strikethrough = ts.attribute(.strikethroughStyle, at: safeLoc, effectiveRange: nil) as? Int ?? 0
         } else {
             let attrs = tv.typingAttributes
             font = attrs[.font] as? NSFont
@@ -382,8 +383,9 @@ final class AppleJournalRichTextController: NSObject, ObservableObject {
         var hasNumbered = false
         var hasQuote = false
 
-        if let str = tv.string as NSString? {
-            let lineRange = str.lineRange(for: NSRange(location: range.location, length: 0))
+        if let str = tv.string as NSString?, str.length > 0 {
+            let safeLoc = max(0, min(range.location, str.length - 1))
+            let lineRange = str.lineRange(for: NSRange(location: safeLoc, length: 0))
             let currentLine = str.substring(with: lineRange)
             hasBullet = currentLine.hasPrefix("• ")
             hasChecklist = currentLine.hasPrefix("○ ") || currentLine.hasPrefix("● ") || currentLine.hasPrefix("☑ ") || currentLine.hasPrefix("☐ ")

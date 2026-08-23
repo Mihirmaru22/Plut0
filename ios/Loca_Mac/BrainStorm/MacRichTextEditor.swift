@@ -45,13 +45,17 @@ public final class RichTextEditorController: ObservableObject {
                 let paragraphRange = string.paragraphRange(for: NSRange(location: targetLocation, length: 0))
                 let paragraphText = string.substring(with: paragraphRange)
                 
-                // Check list prefixes
-                if paragraphText.hasPrefix("• ") {
+                // Check list and quote prefixes
+                if paragraphText.hasPrefix("• ") || paragraphText.hasPrefix("•  ") {
                     newStyle = .bulletedList
-                } else if paragraphText.hasPrefix("– ") {
+                } else if paragraphText.hasPrefix("– ") || paragraphText.hasPrefix("–  ") || paragraphText.hasPrefix("- ") {
                     newStyle = .dashedList
                 } else if paragraphText.range(of: #"^\d+\.\s"#, options: .regularExpression) != nil {
                     newStyle = .numberedList
+                } else if paragraphText.hasPrefix("“ ") || paragraphText.hasPrefix("> ") {
+                    newStyle = .quote
+                } else if let pStyle = textStorage.attribute(.paragraphStyle, at: targetLocation, effectiveRange: nil) as? NSParagraphStyle, pStyle.headIndent == 18 {
+                    newStyle = .quote
                 } else if let font = textStorage.attribute(.font, at: targetLocation, effectiveRange: nil) as? NSFont {
                     if font.pointSize >= 24 {
                         newStyle = .title
@@ -835,9 +839,9 @@ public final class LocaAppKitTextView: NSTextView {
         }
         
         // 2. Bulleted List continuation
-        if paragraphText.hasPrefix("• ") {
-            let contentInLine = paragraphText.replacingOccurrences(of: "• ", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if contentInLine.isEmpty {
+        if paragraphText.hasPrefix("• ") || paragraphText.hasPrefix("•  ") {
+            let clean = paragraphText.replacingOccurrences(of: "•  ", with: "").replacingOccurrences(of: "• ", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if clean.isEmpty {
                 textStorage.replaceCharacters(in: paragraphRange, with: "\n")
                 self.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
                 self.didChangeText()
@@ -858,21 +862,106 @@ public final class LocaAppKitTextView: NSTextView {
                 return
             }
         }
-        
-        // 3. Blockquote continuation
-        if let existingStyle = textStorage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle {
-            if existingStyle.headIndent == 18 {
-                let contentInLine = paragraphText.trimmingCharacters(in: .whitespacesAndNewlines)
-                if contentInLine.isEmpty {
-                    let bodyStyle = RichTextTypography.makeParagraphStyle(for: .body, preset: currentPreset)
-                    textStorage.addAttribute(.paragraphStyle, value: bodyStyle, range: paragraphRange)
-                    self.typingAttributes = RichTextTypography.defaultAttributes(for: .body, preset: currentPreset)
-                    self.didChangeText()
-                    return
-                }
+
+        // 3. Dashed List continuation
+        if paragraphText.hasPrefix("– ") || paragraphText.hasPrefix("–  ") || paragraphText.hasPrefix("- ") {
+            let clean = paragraphText.replacingOccurrences(of: "–  ", with: "").replacingOccurrences(of: "– ", with: "").replacingOccurrences(of: "- ", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if clean.isEmpty {
+                textStorage.replaceCharacters(in: paragraphRange, with: "\n")
+                self.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
+                self.didChangeText()
+                return
+            } else {
+                super.insertNewline(sender)
+                let font = (self.typingAttributes[.font] as? NSFont) ?? currentPreset.font(for: .dashedList)
+                let pStyle = RichTextTypography.makeParagraphStyle(for: .dashedList, preset: currentPreset)
+                let dashAttr = NSAttributedString(string: "– ", attributes: [
+                    .font: font,
+                    .paragraphStyle: pStyle,
+                    .foregroundColor: NSColor.textColor
+                ])
+                let newLocation = self.selectedRange().location
+                textStorage.insert(dashAttr, at: newLocation)
+                self.setSelectedRange(NSRange(location: newLocation + 2, length: 0))
+                self.didChangeText()
+                return
             }
         }
-        
+
+        // 4. Numbered List continuation
+        if let match = paragraphText.range(of: #"^(\d+)\.\s*"#, options: .regularExpression) {
+            let prefixStr = String(paragraphText[match])
+            let numStr = prefixStr.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
+            let currentNum = Int(numStr) ?? 1
+            let contentInLine = String(paragraphText.dropFirst(prefixStr.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if contentInLine.isEmpty {
+                // Empty numbered line -> convert to plain body
+                textStorage.replaceCharacters(in: paragraphRange, with: "\n")
+                self.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
+                let bodyStyle = RichTextTypography.makeParagraphStyle(for: .body, preset: currentPreset)
+                let newParaRange = (textStorage.string as NSString).paragraphRange(for: NSRange(location: paragraphRange.location, length: 0))
+                textStorage.addAttribute(.paragraphStyle, value: bodyStyle, range: newParaRange)
+                self.typingAttributes = RichTextTypography.defaultAttributes(for: .body, preset: currentPreset)
+                self.didChangeText()
+                return
+            } else {
+                super.insertNewline(sender)
+                let nextNum = currentNum + 1
+                let nextPrefix = "\(nextNum). "
+                let font = (self.typingAttributes[.font] as? NSFont) ?? currentPreset.font(for: .numberedList)
+                let pStyle = RichTextTypography.makeParagraphStyle(for: .numberedList, preset: currentPreset)
+                let numAttr = NSAttributedString(string: nextPrefix, attributes: [
+                    .font: font,
+                    .paragraphStyle: pStyle,
+                    .foregroundColor: NSColor.textColor
+                ])
+                let newLocation = self.selectedRange().location
+                textStorage.insert(numAttr, at: newLocation)
+                self.setSelectedRange(NSRange(location: newLocation + nextPrefix.count, length: 0))
+                self.didChangeText()
+                return
+            }
+        }
+
+        // 5. Blockquote / Quote continuation
+        let hasQuotePrefix = paragraphText.hasPrefix("“ ") || paragraphText.hasPrefix("> ")
+        var isQuoteStyle = false
+        if textStorage.length > 0 && paragraphRange.location < textStorage.length,
+           let existingStyle = textStorage.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSParagraphStyle {
+            isQuoteStyle = (existingStyle.headIndent == 18)
+        }
+
+        if hasQuotePrefix || isQuoteStyle {
+            let clean = paragraphText.replacingOccurrences(of: "“ ", with: "").replacingOccurrences(of: "> ", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if clean.isEmpty {
+                textStorage.replaceCharacters(in: paragraphRange, with: "\n")
+                self.setSelectedRange(NSRange(location: paragraphRange.location, length: 0))
+                let bodyStyle = RichTextTypography.makeParagraphStyle(for: .body, preset: currentPreset)
+                let newParaRange = (textStorage.string as NSString).paragraphRange(for: NSRange(location: paragraphRange.location, length: 0))
+                textStorage.addAttribute(.paragraphStyle, value: bodyStyle, range: newParaRange)
+                self.typingAttributes = RichTextTypography.defaultAttributes(for: .body, preset: currentPreset)
+                self.didChangeText()
+                return
+            } else {
+                super.insertNewline(sender)
+                if hasQuotePrefix {
+                    let font = (self.typingAttributes[.font] as? NSFont) ?? currentPreset.font(for: .quote)
+                    let pStyle = RichTextTypography.makeParagraphStyle(for: .quote, preset: currentPreset)
+                    let quoteAttr = NSAttributedString(string: "“ ", attributes: [
+                        .font: font,
+                        .paragraphStyle: pStyle,
+                        .foregroundColor: NSColor.textColor.withAlphaComponent(0.85)
+                    ])
+                    let newLocation = self.selectedRange().location
+                    textStorage.insert(quoteAttr, at: newLocation)
+                    self.setSelectedRange(NSRange(location: newLocation + 2, length: 0))
+                }
+                self.didChangeText()
+                return
+            }
+        }
+
         super.insertNewline(sender)
     }
     
