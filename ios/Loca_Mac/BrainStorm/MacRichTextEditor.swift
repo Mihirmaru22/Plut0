@@ -348,6 +348,8 @@ public final class RichTextEditorController: ObservableObject {
 public struct MacRichTextEditor: NSViewRepresentable {
     
     let initialAttributedText: NSAttributedString
+    let initialPlainText: String
+    var preset: TypographyPreset = .standard
     var contentInset: NSSize = NSSize(width: 32, height: 20)
     var isEditable: Bool = true
     var controller: RichTextEditorController? = nil
