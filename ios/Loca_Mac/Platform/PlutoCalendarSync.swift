@@ -30,7 +30,7 @@ struct PlutoCalendarEvent: Identifiable, Sendable {
     }
 
     var calendarColor: Color {
-        Color(hex: calendarColorHex) ?? DS.Color.active
+        Color(hex: calendarColorHex)
     }
 }
 

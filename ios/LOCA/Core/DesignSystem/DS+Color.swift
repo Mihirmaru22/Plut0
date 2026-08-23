@@ -129,3 +129,41 @@ extension DS {
         static let priorityHigh = ColorPalette[2]     // Terracotta
     }
 }
+
+// MARK: - Universal Color Hex Initializer
+
+extension SwiftUI.Color {
+    public init(hex: String) {
+        let cleanHex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        var int: UInt64 = 0
+        Scanner(string: cleanHex).scanHexInt64(&int)
+        let r, g, b, a: Double
+        switch cleanHex.count {
+        case 3: // RGB (12-bit)
+            (r, g, b, a) = (
+                Double((int >> 8) * 17) / 255,
+                Double((int >> 4 & 0xF) * 17) / 255,
+                Double((int & 0xF) * 17) / 255,
+                1.0
+            )
+        case 6: // RGB (24-bit)
+            (r, g, b, a) = (
+                Double((int >> 16) & 0xFF) / 255,
+                Double((int >> 8) & 0xFF) / 255,
+                Double(int & 0xFF) / 255,
+                1.0
+            )
+        case 8: // ARGB (32-bit)
+            (r, g, b, a) = (
+                Double((int >> 16) & 0xFF) / 255,
+                Double((int >> 8) & 0xFF) / 255,
+                Double(int & 0xFF) / 255,
+                Double((int >> 24) & 0xFF) / 255
+            )
+        default:
+            (r, g, b, a) = (1, 1, 1, 1)
+        }
+        self.init(.sRGB, red: r, green: g, blue: b, opacity: a)
+    }
+}
+

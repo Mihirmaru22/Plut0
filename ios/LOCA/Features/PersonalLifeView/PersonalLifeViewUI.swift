@@ -479,19 +479,6 @@ private struct UncertaintyLegendView: View {
     }
 }
 
-// MARK: - Color Extension
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        let rgb = Int(hex, radix: 16) ?? 0
-        let red = Double((rgb >> 16) & 0xFF) / 255
-        let green = Double((rgb >> 8) & 0xFF) / 255
-        let blue = Double(rgb & 0xFF) / 255
-        self.init(red: red, green: green, blue: blue)
-    }
-}
-
 // MARK: - Preview
 
 #Preview {

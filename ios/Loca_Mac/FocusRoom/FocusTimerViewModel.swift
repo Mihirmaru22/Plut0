@@ -174,6 +174,17 @@ final class FocusTimerViewModel: ObservableObject {
             PlutoSoundEngine.shared.play(.completePop)
         }
         Haptics.notify(.success)
+
+        // Ghost Mode OS Bridge: automatically credit verified focus minutes to Silence Ring
+        if mode == .focus {
+            let focusMins = totalDurationSeconds / 60
+            if focusMins > 0 {
+                Task {
+                    _ = try? await GhostEngine.shared.recordVerifiedSilenceMinutes(focusMins)
+                }
+            }
+        }
+
         advanceToNextPhase()
         resetToCurrentMode()
     }
