@@ -7,23 +7,20 @@ import SwiftData
 public struct GhostPillarView: View {
 
     public enum Tab: String, CaseIterable {
-        case today  = "today"
-        case season = "season"
-        case intel  = "intel"
+        case today    = "today"
+        case progress = "progress"
 
         var label: String {
             switch self {
-            case .today:  return "Today"
-            case .season: return "Season"
-            case .intel:  return "Intel"
+            case .today:    return "Today"
+            case .progress: return "Visual Progress & Charts"
             }
         }
 
         var icon: String {
             switch self {
-            case .today:  return "scope"
-            case .season: return "chart.line.uptrend.xyaxis"
-            case .intel:  return "brain.head.profile"
+            case .today:    return "scope"
+            case .progress: return "chart.xyaxis.line"
             }
         }
     }
@@ -73,7 +70,7 @@ public struct GhostPillarView: View {
                 activeSeason = newSeason
                 loadData()
             }
-            .frame(minWidth: 840, idealWidth: 900, minHeight: 720, idealHeight: 800)
+            .frame(minWidth: 840, idealWidth: 960, maxWidth: .infinity, minHeight: 640, idealHeight: 740, maxHeight: .infinity)
         }
         .sheet(isPresented: $showPhotoWall) {
             GhostPhotoWallView(photos: photoArtifacts)
@@ -117,7 +114,7 @@ public struct GhostPillarView: View {
                     onReload:      loadData
                 )
 
-            case .season:
+            case .progress:
                 GhostSeasonView(
                     season:           season,
                     streakStatus:     $streakStatus,
@@ -131,11 +128,9 @@ public struct GhostPillarView: View {
                     onToggleDark:     toggleDark,
                     onExportPassport: { handlePassportExport(season: season) },
                     onShowPhotoWall:  { showPhotoWall = true },
+                    onReconfigureCovenant: { showOnboarding = true },
                     onReload:         loadData
                 )
-
-            case .intel:
-                GhostIntelView()
             }
         }
     }
@@ -194,31 +189,52 @@ public struct GhostPillarView: View {
 
             Spacer()
 
-            // Streak badge
-            HStack(spacing: 6) {
-                Image(systemName: streakStatus.rank.glyph)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(DS.Theme.amber)
-                    .opacity(streakStatus.rank.opacity)
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 3) {
-                        Text("\(streakStatus.currentStreak)")
-                            .font(.system(size: 15, weight: .black, design: .monospaced))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("DAY")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(DS.Theme.textMuted)
+            // Right Actions: Reconfigure Covenant + Streak Badge
+            HStack(spacing: 8) {
+                Button {
+                    showOnboarding = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("Covenant")
+                            .font(.system(size: 11.5, weight: .semibold))
                     }
-                    Text(streakStatus.rank.rawValue.uppercased())
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.amber)
+                    .foregroundStyle(DS.Theme.amber)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(DS.Theme.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.amber.opacity(0.3), lineWidth: 1))
                 }
+                .buttonStyle(.plain)
+                .help("Reconfigure Sovereign Covenant Protocol & Rules")
+
+                // Streak badge
+                HStack(spacing: 6) {
+                    Image(systemName: streakStatus.rank.glyph)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(DS.Theme.amber)
+                        .opacity(streakStatus.rank.opacity)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 3) {
+                            Text("\(streakStatus.currentStreak)")
+                                .font(.system(size: 15, weight: .black, design: .monospaced))
+                                .foregroundStyle(DS.Theme.textPrimary)
+                            Text("DAY")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.textMuted)
+                        }
+                        Text(streakStatus.rank.rawValue.uppercased())
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(DS.Theme.amber)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
-            .frame(minWidth: 100, alignment: .trailing)
+            .frame(minWidth: 160, alignment: .trailing)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)

@@ -59,7 +59,7 @@ public struct GhostDashboardView: View {
                 self.activeSeason = newSeason
                 loadData()
             }
-            .frame(minWidth: 840, idealWidth: 900, minHeight: 720, idealHeight: 800)
+            .frame(minWidth: 840, idealWidth: 960, maxWidth: .infinity, minHeight: 640, idealHeight: 740, maxHeight: .infinity)
         }
         .sheet(isPresented: $showCheckInSheet) {
             GhostCheckInSheet {

@@ -464,7 +464,7 @@ public struct ContractOnboardingView: View {
                 .background(DS.Theme.surface.opacity(0.6))
             }
         }
-        .frame(minWidth: 840, idealWidth: 900, maxWidth: 960, minHeight: 620, idealHeight: 680, maxHeight: 750)
+        .frame(minWidth: 840, idealWidth: 960, maxWidth: .infinity, minHeight: 640, idealHeight: 740, maxHeight: .infinity)
         .background(DS.Theme.canvas)
     }
 
