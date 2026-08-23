@@ -45,6 +45,18 @@ public enum NotesMigrations {
             try runMigrationV5(on: db)
             try recordMigration(version: 5, on: db)
         }
+
+        // 7. Migration v6: Ghost Season Lifecycle + Custom Rules
+        if !applied.contains(6) {
+            try runMigrationV6(on: db)
+            try recordMigration(version: 6, on: db)
+        }
+
+        // 8. Migration v7: Private Notes Barrier (Ghost Mode Privacy)
+        if !applied.contains(7) {
+            try runMigrationV7(on: db)
+            try recordMigration(version: 7, on: db)
+        }
     }
     
     // MARK: - Migration Version Gating & Inspection
@@ -232,6 +244,57 @@ public enum NotesMigrations {
         CREATE INDEX IF NOT EXISTS idx_ghost_receipts_rule ON ghost_receipts(rule_id);
         """
         try execute(sql: sql, on: db)
+    }
+
+    private static func runMigrationV6(on db: OpaquePointer?) throws {
+        // Add lifecycle columns to ghost_seasons (ALTER TABLE is additive-safe)
+        let alterSeasons = """
+        ALTER TABLE ghost_seasons ADD COLUMN completed_at REAL;
+        """
+        // Ignore error if column already exists (SQLite returns error on duplicate ADD COLUMN)
+        _ = try? execute(sql: alterSeasons, on: db)
+
+        let alterSeasonStats = """
+        ALTER TABLE ghost_seasons ADD COLUMN final_stats_json TEXT;
+        """
+        _ = try? execute(sql: alterSeasonStats, on: db)
+
+        let alterSeasonPDF = """
+        ALTER TABLE ghost_seasons ADD COLUMN passport_pdf_path TEXT;
+        """
+        _ = try? execute(sql: alterSeasonPDF, on: db)
+
+        // Create ghost_custom_rules table for user-defined protocol rules
+        let createCustomRules = """
+        CREATE TABLE IF NOT EXISTS ghost_custom_rules (
+            id TEXT PRIMARY KEY,
+            season_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL DEFAULT '',
+            ring TEXT NOT NULL,
+            phase TEXT NOT NULL,
+            proof_kind TEXT NOT NULL,
+            target_value REAL NOT NULL DEFAULT 1.0,
+            unit_label TEXT NOT NULL DEFAULT '',
+            icon TEXT NOT NULL DEFAULT 'star.fill',
+            is_outdoor_required INTEGER NOT NULL DEFAULT 0,
+            is_enabled INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL,
+            FOREIGN KEY(season_id) REFERENCES ghost_seasons(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ghost_custom_rules_season ON ghost_custom_rules(season_id);
+        """
+        try execute(sql: createCustomRules, on: db)
+    }
+    
+    private static func runMigrationV7(on db: OpaquePointer?) throws {
+        // Add is_private column to notes table (ALTER TABLE is additive-safe)
+        let alterNotes = """
+        ALTER TABLE notes ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0;
+        """
+        _ = try? execute(sql: alterNotes, on: db)
     }
     
     public static func execute(sql: String, on db: OpaquePointer?) throws {

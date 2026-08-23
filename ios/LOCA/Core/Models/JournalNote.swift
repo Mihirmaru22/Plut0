@@ -37,6 +37,9 @@ final class JournalNote {
     /// Raw values are permanent — do not renumber.
     var noteKindRaw: Int = NoteKind.dailyNote.rawValue
 
+    /// When true, this reflection or note is marked private and excluded from Spotlight or external indexing.
+    var isPrivate: Bool = false
+
     var isArchived: Bool { archivedAt != nil }
 
     /// Type-safe accessor. Falls back to `.dailyNote` for records written by
@@ -46,11 +49,12 @@ final class JournalNote {
         set { noteKindRaw = newValue.rawValue }
     }
 
-    init(date: Date = Date(), title: String = "", text: String = "", kind: NoteKind = .dailyNote) {
+    init(date: Date = Date(), title: String = "", text: String = "", kind: NoteKind = .dailyNote, isPrivate: Bool = false) {
         self.date        = Calendar.current.startOfDay(for: date)
         self.title       = title
         self.text        = text
         self.noteKindRaw = kind.rawValue
+        self.isPrivate   = isPrivate
     }
 }
 

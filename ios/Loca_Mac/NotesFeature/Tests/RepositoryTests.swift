@@ -307,5 +307,27 @@ struct RepositoryTests {
         #expect(updatedVersions.contains(1))
         #expect(updatedVersions.contains(2))
     }
+    
+    // MARK: - Invariant 13: Private Note Barrier & Migration v7
+    @Test func testPrivateNoteMigrationAndRepositoryReadWrite() async throws {
+        let db = try NotesDatabase.inMemory()
+        let applied = try db.read { try NotesMigrations.appliedVersions(on: $0) }
+        #expect(applied.contains(7))
+        
+        let store = LocalNotesStore(database: db)
+        let repo = LocalNotesRepository(store: store)
+        
+        let noteID = NoteID()
+        try await repo.apply(.createNote(noteID: noteID, folderID: nil))
+        try await repo.apply(.setTitle(noteID: noteID, title: "Classified"))
+        try await repo.apply(.setPrivate(noteID: noteID, isPrivate: true))
+        
+        let fetched = try await repo.fetchNote(id: noteID)
+        #expect(fetched != nil)
+        #expect(fetched?.isPrivate == true)
+        
+        let summaries = try await repo.fetchNotes(matching: NoteQuery())
+        #expect(summaries.first?.isPrivate == true)
+    }
 }
 #endif

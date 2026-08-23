@@ -27,6 +27,7 @@ public enum NotesMappers {
             isPinned: row.isPinned != 0,
             isLocked: row.isLocked != 0,
             isDeleted: row.isDeleted != 0,
+            isPrivate: row.isPrivate != 0,
             createdAt: Date(timeIntervalSince1970: row.createdAt),
             updatedAt: Date(timeIntervalSince1970: row.updatedAt),
             deletedAt: row.deletedAt.map { Date(timeIntervalSince1970: $0) },
@@ -56,6 +57,7 @@ public enum NotesMappers {
             isPinned: note.isPinned ? 1 : 0,
             isLocked: note.isLocked ? 1 : 0,
             isDeleted: note.isDeleted ? 1 : 0,
+            isPrivate: note.isPrivate ? 1 : 0,
             createdAt: note.createdAt.timeIntervalSince1970,
             updatedAt: note.updatedAt.timeIntervalSince1970,
             deletedAt: note.deletedAt?.timeIntervalSince1970,
@@ -75,6 +77,7 @@ public enum NotesMappers {
             isPinned: row.isPinned != 0,
             isLocked: row.isLocked != 0,
             isDeleted: row.isDeleted != 0,
+            isPrivate: row.isPrivate != 0,
             updatedAt: Date(timeIntervalSince1970: row.updatedAt)
         )
     }
@@ -92,6 +95,7 @@ public enum NotesMappers {
             isPinned: note.isPinned,
             isLocked: note.isLocked,
             isDeleted: note.isDeleted,
+            isPrivate: note.isPrivate,
             updatedAt: note.updatedAt
         )
     }

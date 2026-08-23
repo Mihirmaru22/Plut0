@@ -109,6 +109,9 @@ public enum CRDTTranslator {
         metadata["isDeleted"] = note.isDeleted ? "true" : "false"
         metadataTimestamps["isDeleted"] = now
         
+        metadata["isPrivate"] = note.isPrivate ? "true" : "false"
+        metadataTimestamps["isPrivate"] = now
+        
         if let folderID = note.folderID {
             metadata["folderID"] = folderID.raw.uuidString
             metadataTimestamps["folderID"] = now
@@ -144,6 +147,9 @@ public enum CRDTTranslator {
             
         case .setLocked(_, let isLocked):
             doc.setMetadata(key: "isLocked", value: isLocked ? "true" : "false", timestamp: now)
+            
+        case .setPrivate(_, let isPrivate):
+            doc.setMetadata(key: "isPrivate", value: isPrivate ? "true" : "false", timestamp: now)
             
         case .markDeleted:
             doc.setMetadata(key: "isDeleted", value: "true", timestamp: now)

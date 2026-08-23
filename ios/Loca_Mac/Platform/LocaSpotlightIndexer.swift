@@ -57,10 +57,18 @@ final class LocaSpotlightIndexer {
                 }
             }
 
-            // 3. Index Journal Notes
+            // 3. Index Journal Notes & Purge Private Notes
             if let notes = try? context.fetch(FetchDescriptor<JournalNote>()) {
-                for note in notes where !note.isArchived && !note.text.isEmpty {
-                    itemsToIndex.append(makeJournalItem(note))
+                var identifiersToPurge: [String] = []
+                for note in notes {
+                    if note.isPrivate || note.isArchived || note.text.isEmpty {
+                        identifiersToPurge.append(ItemType.journal.makeIdentifier(id: note.id.uuidString))
+                    } else {
+                        itemsToIndex.append(makeJournalItem(note))
+                    }
+                }
+                if !identifiersToPurge.isEmpty {
+                    try? await CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: identifiersToPurge)
                 }
             }
 
@@ -115,7 +123,7 @@ final class LocaSpotlightIndexer {
     }
 
     func indexJournalNoteItem(_ note: JournalNote) {
-        guard !note.isArchived, !note.text.isEmpty else {
+        guard !note.isPrivate, !note.isArchived, !note.text.isEmpty else {
             removeJournalNote(id: note.id.uuidString)
             return
         }

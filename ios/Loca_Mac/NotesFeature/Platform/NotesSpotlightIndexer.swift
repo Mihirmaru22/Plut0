@@ -16,7 +16,12 @@ public final class NotesSpotlightIndexer: @unchecked Sendable {
     private init() {}
     
     /// Indexes an individual note into macOS Core Spotlight.
-    public func indexNote(id: NoteID, title: String, preview: String, content: NoteContent? = nil) {
+    public func indexNote(id: NoteID, title: String, preview: String, content: NoteContent? = nil, isPrivate: Bool = false) {
+        guard !isPrivate else {
+            deindexNote(id: id)
+            return
+        }
+        
         let attributeSet = CSSearchableItemAttributeSet(contentType: .text)
         attributeSet.title = title.isEmpty ? "New Note" : title
         attributeSet.contentDescription = preview
@@ -42,14 +47,21 @@ public final class NotesSpotlightIndexer: @unchecked Sendable {
         }
     }
     
-    /// Removes a deleted note from macOS Core Spotlight.
+    /// Removes a deleted or private note from macOS Core Spotlight.
     public func deindexNote(id: NoteID) {
         CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [id.raw.uuidString]) { _ in }
     }
     
-    /// Batch indexes an array of note summaries.
+    /// Batch indexes an array of note summaries, purging private notes.
     public func batchIndex(summaries: [NoteSummary]) {
-        let items: [CSSearchableItem] = summaries.map { summary in
+        let nonPrivate = summaries.filter { !$0.isPrivate && !$0.isDeleted }
+        let toPurge = summaries.filter { $0.isPrivate || $0.isDeleted }.map { $0.id.raw.uuidString }
+        
+        if !toPurge.isEmpty {
+            CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: toPurge) { _ in }
+        }
+        
+        let items: [CSSearchableItem] = nonPrivate.map { summary in
             let attributeSet = CSSearchableItemAttributeSet(contentType: .text)
             attributeSet.title = summary.title.isEmpty ? "New Note" : summary.title
             attributeSet.contentDescription = summary.preview
@@ -62,7 +74,9 @@ public final class NotesSpotlightIndexer: @unchecked Sendable {
             )
         }
         
-        CSSearchableIndex.default().indexSearchableItems(items) { _ in }
+        if !items.isEmpty {
+            CSSearchableIndex.default().indexSearchableItems(items) { _ in }
+        }
     }
     
     /// Starts real-time observation of the Notes engine to sync all changes to Spotlight.

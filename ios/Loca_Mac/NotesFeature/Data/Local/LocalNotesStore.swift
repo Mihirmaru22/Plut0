@@ -87,7 +87,7 @@ public actor LocalNotesStore {
                 limitClause = "LIMIT \(limit)"
             }
             
-            let sql = "SELECT id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id FROM notes \(whereClause) \(orderClause) \(limitClause);"
+            let sql = "SELECT id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, is_private, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id FROM notes \(whereClause) \(orderClause) \(limitClause);"
             
             let statement = try SQLiteHelper.prepare(sql: sql, on: db)
             defer { sqlite3_finalize(statement) }
@@ -164,7 +164,7 @@ public actor LocalNotesStore {
                 limitClause = "LIMIT \(limit)"
             }
             
-            let sql = "SELECT id, folder_id, title, preview, is_pinned, is_locked, is_deleted, updated_at FROM notes \(whereClause) \(orderClause) \(limitClause);"
+            let sql = "SELECT id, folder_id, title, preview, is_pinned, is_locked, is_deleted, is_private, updated_at FROM notes \(whereClause) \(orderClause) \(limitClause);"
             
             let statement = try SQLiteHelper.prepare(sql: sql, on: db)
             defer { sqlite3_finalize(statement) }
@@ -186,7 +186,8 @@ public actor LocalNotesStore {
                 let isPinned = SQLiteHelper.int(at: 4, statement: statement) != 0
                 let isLocked = SQLiteHelper.int(at: 5, statement: statement) != 0
                 let isDeleted = SQLiteHelper.int(at: 6, statement: statement) != 0
-                let updatedAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 7, statement: statement))
+                let isPrivate = SQLiteHelper.int(at: 7, statement: statement) != 0
+                let updatedAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 8, statement: statement))
                 
                 summaries.append(
                     NoteSummary(
@@ -197,6 +198,7 @@ public actor LocalNotesStore {
                         isPinned: isPinned,
                         isLocked: isLocked,
                         isDeleted: isDeleted,
+                        isPrivate: isPrivate,
                         updatedAt: updatedAt
                     )
                 )
@@ -341,6 +343,17 @@ public actor LocalNotesStore {
             try updateNoteRow(row, on: db)
             return .noteUpdated(noteID)
             
+        case .setPrivate(let noteID, let isPrivate):
+            guard var row = try fetchNoteRow(id: noteID.raw.uuidString, on: db) else {
+                throw NotesError.noteNotFound(noteID)
+            }
+            let now = Date().timeIntervalSince1970
+            row.isPrivate = isPrivate ? 1 : 0
+            row.updatedAt = now
+            row.clientUpdatedAt = now
+            try updateNoteRow(row, on: db)
+            return .noteUpdated(noteID)
+            
         case .markDeleted(let noteID):
             guard var row = try fetchNoteRow(id: noteID.raw.uuidString, on: db) else {
                 throw NotesError.noteNotFound(noteID)
@@ -460,7 +473,7 @@ public actor LocalNotesStore {
     // MARK: - Direct Row Operations on DB Pointer
     
     private func fetchNoteRow(id: String, on db: OpaquePointer) throws -> NoteRow? {
-        let sql = "SELECT id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id FROM notes WHERE id = ? LIMIT 1;"
+        let sql = "SELECT id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, is_private, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id FROM notes WHERE id = ? LIMIT 1;"
         let statement = try SQLiteHelper.prepare(sql: sql, on: db)
         defer { sqlite3_finalize(statement) }
         
@@ -473,8 +486,8 @@ public actor LocalNotesStore {
     
     private func insertNoteRow(_ row: NoteRow, on db: OpaquePointer) throws {
         let sql = """
-        INSERT INTO notes (id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO notes (id, folder_id, title, content_json, plain_text_cache, preview, is_pinned, is_locked, is_deleted, is_private, created_at, updated_at, deleted_at, sort_key, schema_version, client_updated_at, device_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
         let statement = try SQLiteHelper.prepare(sql: sql, on: db)
         defer { sqlite3_finalize(statement) }
@@ -488,7 +501,7 @@ public actor LocalNotesStore {
     
     private func updateNoteRow(_ row: NoteRow, on db: OpaquePointer) throws {
         let sql = """
-        UPDATE notes SET folder_id = ?, title = ?, content_json = ?, plain_text_cache = ?, preview = ?, is_pinned = ?, is_locked = ?, is_deleted = ?, updated_at = ?, deleted_at = ?, sort_key = ?, schema_version = ?, client_updated_at = ?, device_id = ?
+        UPDATE notes SET folder_id = ?, title = ?, content_json = ?, plain_text_cache = ?, preview = ?, is_pinned = ?, is_locked = ?, is_deleted = ?, is_private = ?, updated_at = ?, deleted_at = ?, sort_key = ?, schema_version = ?, client_updated_at = ?, device_id = ?
         WHERE id = ?;
         """
         let statement = try SQLiteHelper.prepare(sql: sql, on: db)
@@ -502,13 +515,14 @@ public actor LocalNotesStore {
         SQLiteHelper.bind(int: row.isPinned, at: 6, statement: statement)
         SQLiteHelper.bind(int: row.isLocked, at: 7, statement: statement)
         SQLiteHelper.bind(int: row.isDeleted, at: 8, statement: statement)
-        SQLiteHelper.bind(double: row.updatedAt, at: 9, statement: statement)
-        SQLiteHelper.bind(double: row.deletedAt, at: 10, statement: statement)
-        SQLiteHelper.bind(text: row.sortKey, at: 11, statement: statement)
-        SQLiteHelper.bind(int: row.schemaVersion, at: 12, statement: statement)
-        SQLiteHelper.bind(double: row.clientUpdatedAt, at: 13, statement: statement)
-        SQLiteHelper.bind(text: row.deviceID, at: 14, statement: statement)
-        SQLiteHelper.bind(text: row.id, at: 15, statement: statement)
+        SQLiteHelper.bind(int: row.isPrivate, at: 9, statement: statement)
+        SQLiteHelper.bind(double: row.updatedAt, at: 10, statement: statement)
+        SQLiteHelper.bind(double: row.deletedAt, at: 11, statement: statement)
+        SQLiteHelper.bind(text: row.sortKey, at: 12, statement: statement)
+        SQLiteHelper.bind(int: row.schemaVersion, at: 13, statement: statement)
+        SQLiteHelper.bind(double: row.clientUpdatedAt, at: 14, statement: statement)
+        SQLiteHelper.bind(text: row.deviceID, at: 15, statement: statement)
+        SQLiteHelper.bind(text: row.id, at: 16, statement: statement)
         
         if sqlite3_step(statement) != SQLITE_DONE {
             let msg = String(cString: sqlite3_errmsg(db))
@@ -703,13 +717,14 @@ public actor LocalNotesStore {
             isPinned: SQLiteHelper.int(at: 6, statement: statement),
             isLocked: SQLiteHelper.int(at: 7, statement: statement),
             isDeleted: SQLiteHelper.int(at: 8, statement: statement),
-            createdAt: SQLiteHelper.nonNullDouble(at: 9, statement: statement),
-            updatedAt: SQLiteHelper.nonNullDouble(at: 10, statement: statement),
-            deletedAt: SQLiteHelper.double(at: 11, statement: statement),
-            sortKey: SQLiteHelper.nonNullText(at: 12, statement: statement),
-            schemaVersion: SQLiteHelper.int(at: 13, statement: statement),
-            clientUpdatedAt: SQLiteHelper.nonNullDouble(at: 14, statement: statement),
-            deviceID: SQLiteHelper.nonNullText(at: 15, statement: statement)
+            isPrivate: SQLiteHelper.int(at: 9, statement: statement),
+            createdAt: SQLiteHelper.nonNullDouble(at: 10, statement: statement),
+            updatedAt: SQLiteHelper.nonNullDouble(at: 11, statement: statement),
+            deletedAt: SQLiteHelper.double(at: 12, statement: statement),
+            sortKey: SQLiteHelper.nonNullText(at: 13, statement: statement),
+            schemaVersion: SQLiteHelper.int(at: 14, statement: statement),
+            clientUpdatedAt: SQLiteHelper.nonNullDouble(at: 15, statement: statement),
+            deviceID: SQLiteHelper.nonNullText(at: 16, statement: statement)
         )
     }
     
@@ -723,12 +738,13 @@ public actor LocalNotesStore {
         SQLiteHelper.bind(int: row.isPinned, at: 7, statement: statement)
         SQLiteHelper.bind(int: row.isLocked, at: 8, statement: statement)
         SQLiteHelper.bind(int: row.isDeleted, at: 9, statement: statement)
-        SQLiteHelper.bind(double: row.createdAt, at: 10, statement: statement)
-        SQLiteHelper.bind(double: row.updatedAt, at: 11, statement: statement)
-        SQLiteHelper.bind(double: row.deletedAt, at: 12, statement: statement)
-        SQLiteHelper.bind(text: row.sortKey, at: 13, statement: statement)
-        SQLiteHelper.bind(int: row.schemaVersion, at: 14, statement: statement)
-        SQLiteHelper.bind(double: row.clientUpdatedAt, at: 15, statement: statement)
-        SQLiteHelper.bind(text: row.deviceID, at: 16, statement: statement)
+        SQLiteHelper.bind(int: row.isPrivate, at: 10, statement: statement)
+        SQLiteHelper.bind(double: row.createdAt, at: 11, statement: statement)
+        SQLiteHelper.bind(double: row.updatedAt, at: 12, statement: statement)
+        SQLiteHelper.bind(double: row.deletedAt, at: 13, statement: statement)
+        SQLiteHelper.bind(text: row.sortKey, at: 14, statement: statement)
+        SQLiteHelper.bind(int: row.schemaVersion, at: 15, statement: statement)
+        SQLiteHelper.bind(double: row.clientUpdatedAt, at: 16, statement: statement)
+        SQLiteHelper.bind(text: row.deviceID, at: 17, statement: statement)
     }
 }

@@ -9,6 +9,7 @@ public struct NoteSummary: Identifiable, Hashable, Sendable {
     public var isPinned: Bool
     public var isLocked: Bool
     public var isDeleted: Bool
+    public var isPrivate: Bool
     public var updatedAt: Date
     
     public init(
@@ -19,6 +20,7 @@ public struct NoteSummary: Identifiable, Hashable, Sendable {
         isPinned: Bool = false,
         isLocked: Bool = false,
         isDeleted: Bool = false,
+        isPrivate: Bool = false,
         updatedAt: Date = Date()
     ) {
         self.id = id
@@ -28,6 +30,7 @@ public struct NoteSummary: Identifiable, Hashable, Sendable {
         self.isPinned = isPinned
         self.isLocked = isLocked
         self.isDeleted = isDeleted
+        self.isPrivate = isPrivate
         self.updatedAt = updatedAt
     }
 }

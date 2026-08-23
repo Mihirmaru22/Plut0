@@ -11,6 +11,7 @@ public struct Note: Identifiable, Hashable, Sendable {
     public var isPinned: Bool
     public var isLocked: Bool
     public var isDeleted: Bool
+    public var isPrivate: Bool
     public var createdAt: Date
     public var updatedAt: Date
     public var deletedAt: Date?
@@ -29,6 +30,7 @@ public struct Note: Identifiable, Hashable, Sendable {
         isPinned: Bool = false,
         isLocked: Bool = false,
         isDeleted: Bool = false,
+        isPrivate: Bool = false,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         deletedAt: Date? = nil,
@@ -46,6 +48,7 @@ public struct Note: Identifiable, Hashable, Sendable {
         self.isPinned = isPinned
         self.isLocked = isLocked
         self.isDeleted = isDeleted
+        self.isPrivate = isPrivate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt

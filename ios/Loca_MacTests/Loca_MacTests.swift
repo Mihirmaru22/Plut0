@@ -105,4 +105,69 @@ struct Loca_MacTests {
         #expect(remainingTasks.count == 1)
         #expect(remainingTasks.first?.sectionID == nil)
     }
+
+    // MARK: - Invariant 5: Ghost Mode Privacy Barrier (Spotlight Exclusion)
+    
+    @Test func testGhostReflectionNotIndexed() throws {
+        let privateNote = JournalNote(title: "Evening Reflection", text: "Ghost protocol reflection details", isPrivate: true)
+        #expect(privateNote.isPrivate == true)
+        
+        let schema = Schema([JournalNote.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+        
+        context.insert(privateNote)
+        try context.save()
+        
+        let allNotes = try context.fetch(FetchDescriptor<JournalNote>())
+        let indexableNotes = allNotes.filter { !$0.isPrivate && !$0.isArchived && !$0.text.isEmpty }
+        #expect(indexableNotes.isEmpty)
+    }
+
+    @Test func testPrivateNotePurgedOnReindex() throws {
+        let schema = Schema([JournalNote.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+        
+        let publicNote = JournalNote(title: "Public Note", text: "Public reflection", isPrivate: false)
+        let privateNote = JournalNote(title: "Ghost Covenant", text: "Secret reflection", isPrivate: true)
+        context.insert(publicNote)
+        context.insert(privateNote)
+        try context.save()
+        
+        let allNotes = try context.fetch(FetchDescriptor<JournalNote>())
+        var identifiersToPurge: [String] = []
+        var itemsToIndex: [JournalNote] = []
+        
+        for note in allNotes {
+            if note.isPrivate || note.isArchived || note.text.isEmpty {
+                identifiersToPurge.append(note.id.uuidString)
+            } else {
+                itemsToIndex.append(note)
+            }
+        }
+        
+        #expect(itemsToIndex.count == 1)
+        #expect(itemsToIndex.first?.title == "Public Note")
+        #expect(identifiersToPurge.contains(privateNote.id.uuidString))
+    }
+
+    @Test func testJournalStillShowsPrivateNotes() throws {
+        let schema = Schema([JournalNote.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
+        let context = ModelContext(container)
+        
+        let reflectionNote = JournalNote(date: Date(), title: "Ghost Reflection", text: "Evening review content", kind: .dailyNote, isPrivate: true)
+        context.insert(reflectionNote)
+        try context.save()
+        
+        // In-app query for Journal list fetches all unarchived notes including private reflections
+        let inAppJournalNotes = try context.fetch(FetchDescriptor<JournalNote>(predicate: #Predicate { $0.archivedAt == nil }))
+        #expect(inAppJournalNotes.count == 1)
+        #expect(inAppJournalNotes.first?.title == "Ghost Reflection")
+        #expect(inAppJournalNotes.first?.isPrivate == true)
+    }
 }

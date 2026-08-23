@@ -11,6 +11,7 @@ public struct NoteRow: Sendable, Codable, Equatable {
     public var isPinned: Int
     public var isLocked: Int
     public var isDeleted: Int
+    public var isPrivate: Int
     public var createdAt: Double
     public var updatedAt: Double
     public var deletedAt: Double?
@@ -29,6 +30,7 @@ public struct NoteRow: Sendable, Codable, Equatable {
         isPinned: Int = 0,
         isLocked: Int = 0,
         isDeleted: Int = 0,
+        isPrivate: Int = 0,
         createdAt: Double = Date().timeIntervalSince1970,
         updatedAt: Double = Date().timeIntervalSince1970,
         deletedAt: Double? = nil,
@@ -46,6 +48,7 @@ public struct NoteRow: Sendable, Codable, Equatable {
         self.isPinned = isPinned
         self.isLocked = isLocked
         self.isDeleted = isDeleted
+        self.isPrivate = isPrivate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.deletedAt = deletedAt

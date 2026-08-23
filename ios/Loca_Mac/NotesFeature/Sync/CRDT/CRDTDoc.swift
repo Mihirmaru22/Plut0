@@ -54,6 +54,11 @@ public struct CRDTDoc: Identifiable, Hashable, Codable, Sendable {
         set { setMetadata(key: "isDeleted", value: newValue ? "true" : "false") }
     }
     
+    public var isPrivate: Bool {
+        get { metadata["isPrivate"] == "true" }
+        set { setMetadata(key: "isPrivate", value: newValue ? "true" : "false") }
+    }
+    
     public var folderID: FolderID? {
         get { metadata["folderID"].flatMap { UUID(uuidString: $0) }.map { FolderID(raw: $0) } }
         set { setMetadata(key: "folderID", value: newValue?.raw.uuidString ?? "") }

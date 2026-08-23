@@ -49,6 +49,13 @@ public final class InMemoryJournalDocumentRepository: DocumentCoreRepository, @u
             entries.removeValue(forKey: id)
             eventBus.publish(.noteDeleted(id))
             
+        case .setPrivate(let id, let isPrivate):
+            if var note = entries[id] {
+                note.isPrivate = isPrivate
+                entries[id] = note
+            }
+            eventBus.publish(.noteUpdated(id))
+            
         default:
             eventBus.publish(.noteUpdated(mutation.noteID))
         }
