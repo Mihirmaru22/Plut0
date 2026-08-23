@@ -175,5 +175,48 @@ struct CRDTConflictTests {
         #expect(diff3.inserts.count == 1)
         #expect(diff3.inserts.first?.character == "r")
     }
+
+    // MARK: - Scenario 5: RGA Child-Subtree Skip (B-01)
+    @Test func testRGAChildSubtreeSkip() throws {
+        let deviceA = "device-a"
+        let deviceB = "device-b"
+        let noteID = NoteID()
+        let blockID = UUID()
+        
+        // Peer A starts with empty block
+        var docA = CRDTDoc(id: noteID, deviceID: deviceA)
+        let initialBlock = CRDTBlock(id: blockID, type: "paragraph", text: CRDTText())
+        docA.addBlock(initialBlock)
+        
+        // Peer A types "B" at index 0, then "C" after "B" (C's origin is B)
+        docA.insertText("B", at: 0, in: blockID)
+        docA.insertText("C", at: 1, in: blockID)
+        
+        // Peer B starts from initial state and types "A" at index 0
+        var docB = CRDTDoc(id: noteID, deviceID: deviceB)
+        docB.addBlock(initialBlock)
+        docB.insertText("A", at: 0, in: blockID)
+        
+        // Merge both ways
+        docA.merge(with: docB)
+        docB.merge(with: docA)
+        
+        let resultA = docA.blocks.first?.text.string ?? ""
+        let resultB = docB.blocks.first?.text.string ?? ""
+        
+        #expect(resultA == resultB)
+        #expect(resultA.contains("A"))
+        #expect(resultA.contains("B"))
+        #expect(resultA.contains("C"))
+        
+        // Verify deterministic atom ordering: "B" and "C" remain grouped together without splitting
+        let atomsA = docA.blocks.first?.text.atoms.filter { !$0.isDeleted }.map { $0.value } ?? []
+        let bIdx = atomsA.firstIndex(of: "B")
+        let cIdx = atomsA.firstIndex(of: "C")
+        #expect(bIdx != nil && cIdx != nil)
+        if let b = bIdx, let c = cIdx {
+            #expect(c == b + 1, "C must remain immediately following its origin B")
+        }
+    }
 }
 #endif

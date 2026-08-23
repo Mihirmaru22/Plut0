@@ -135,7 +135,7 @@ public struct CRDTText: Hashable, Codable, Sendable {
                     atoms[localIdx].isDeleted = true
                 }
             } else {
-                // Insert new atom at deterministic position based on originID & tie-breaking
+                // Insert new atom at deterministic position based on originID, descendant skipping & tie-breaking
                 insertRemoteAtom(remoteAtom)
                 existingMap.removeAll()
                 for (idx, atom) in atoms.enumerated() {
@@ -145,31 +145,53 @@ public struct CRDTText: Hashable, Codable, Sendable {
         }
     }
     
-    private mutating func insertRemoteAtom(_ atom: CRDTAtom) {
-        var insertPos = 0
-        if let origin = atom.originID {
-            if let originIdx = atoms.firstIndex(where: { $0.id == origin }) {
-                insertPos = originIdx + 1
+    private mutating func insertRemoteAtom(_ remoteAtom: CRDTAtom) {
+        // 1. Locate the position of the origin atom
+        let originIndex: Int
+        if let originID = remoteAtom.originID {
+            if let idx = atoms.firstIndex(where: { $0.id == originID }) {
+                originIndex = idx
             } else {
-                insertPos = atoms.count
+                // Origin not yet in local state; append to preserve atom
+                atoms.append(remoteAtom)
+                return
             }
+        } else {
+            originIndex = -1
         }
         
-        // Advance past any other atoms sharing the same origin if they have greater precedence
-        while insertPos < atoms.count {
-            let next = atoms[insertPos]
-            if next.originID == atom.originID {
-                if atom.id < next.id {
-                    insertPos += 1
+        // 2. Scan forward from originIndex + 1, skipping all descendant subtrees of higher-priority siblings
+        var scanIdx = originIndex + 1
+        var skippedSubtrees: Set<CRDTAtomID> = []
+        
+        while scanIdx < atoms.count {
+            let existing = atoms[scanIdx]
+            
+            // If existing is a child of any skipped subtree atom, skip it and add it to skipped subtrees
+            if let existingOrigin = existing.originID, skippedSubtrees.contains(existingOrigin) {
+                skippedSubtrees.insert(existing.id)
+                scanIdx += 1
+                continue
+            }
+            
+            // If existing shares the exact same origin as remoteAtom
+            if existing.originID == remoteAtom.originID {
+                if remoteAtom.id < existing.id {
+                    // existing atom has higher priority: skip it and all its future descendants
+                    skippedSubtrees.insert(existing.id)
+                    scanIdx += 1
+                    continue
                 } else {
+                    // remoteAtom has higher priority than existing: insert here before existing
                     break
                 }
-            } else {
-                break
             }
+            
+            // If existing is not a child of origin and not a descendant in skipped subtrees, we have finished scanning origin's subtree
+            break
         }
         
-        atoms.insert(atom, at: min(insertPos, atoms.count))
+        atoms.insert(remoteAtom, at: min(scanIdx, atoms.count))
     }
     
     private func visibleAtoms() -> [CRDTAtom] {
