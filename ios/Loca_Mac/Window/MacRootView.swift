@@ -138,53 +138,63 @@ struct MacRootView: View {
         }
     }
 
-    // MARK: - Split View Shell
+    // MARK: - Root View Shell (Sidebar Material Flush + Opaque Content Plane)
 
     @ViewBuilder
     private var splitView: some View {
-        if selectedSection == .today && todaySubmode == "Time" {
-            FocusRoomView()
-                .transition(.opacity)
-        } else if selectedSection == .today {
-            NavigationSplitView(columnVisibility: $columnVisibility) {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } content: {
-                MacTodoContentColumn(selection: $selectedTodo)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.contentMinWidth,
-                        ideal: DS.Mac.contentIdealWidth,
-                        max:   DS.Mac.contentMaxWidth
-                    )
-            } detail: {
-                MacTodoDetailColumn(item: $selectedTodo)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.detailMinWidth,
-                        ideal: DS.Mac.detailIdealWidth
-                    )
+        HStack(spacing: 0) {
+            // 1. Sidebar (Translucent UltraThinMaterial, Flush to Window Edges)
+            MacSidebarView(selection: $selectedSection)
+                .frame(width: DS.Mac.sidebarIdealWidth)
+
+            // 2. Trailing 1px Boundary Divider
+            Rectangle()
+                .fill(DS.Theme.border)
+                .frame(width: 1)
+                .ignoresSafeArea()
+
+            // 3. Opaque Content Plane (Solid #161618 Obsidian, covering under titlebar)
+            contentPane
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DS.Theme.canvas.ignoresSafeArea())
+        }
+    }
+
+    @ViewBuilder
+    private var contentPane: some View {
+        switch selectedSection {
+        case .today:
+            if todaySubmode == "Time" {
+                FocusRoomView()
+                    .transition(.opacity)
+            } else {
+                HStack(spacing: 0) {
+                    MacTodoContentColumn(selection: $selectedTodo)
+                        .frame(minWidth: DS.Mac.contentMinWidth, idealWidth: DS.Mac.contentIdealWidth, maxWidth: DS.Mac.contentMaxWidth)
+
+                    Rectangle()
+                        .fill(DS.Theme.border)
+                        .frame(width: 1)
+                        .ignoresSafeArea()
+
+                    MacTodoDetailColumn(item: $selectedTodo)
+                        .frame(minWidth: DS.Mac.detailMinWidth, maxWidth: .infinity)
+                }
             }
-        } else if selectedSection == .notes {
-            NavigationSplitView(columnVisibility: $columnVisibility) {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } content: {
+
+        case .notes:
+            HStack(spacing: 0) {
                 AppleJournalEntriesList(selectedNote: $selectedJournalNote)
-                    .navigationSplitViewColumnWidth(
-                        min:   280,
-                        ideal: 320,
-                        max:   360
-                    )
-            } detail: {
+                    .frame(minWidth: 280, idealWidth: 320, maxWidth: 360)
+
+                Rectangle()
+                    .fill(DS.Theme.border)
+                    .frame(width: 1)
+                    .ignoresSafeArea()
+
                 if let note = selectedJournalNote {
                     AppleJournalEditorCanvas(note: note)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ContentUnavailableView {
                         Label("No Note Selected", systemImage: "note.text")
@@ -192,53 +202,25 @@ struct MacRootView: View {
                         Text("Choose a note from the list or click New Entry (⌘N) to start writing.")
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.08, green: 0.07, blue: 0.12))
+                    .background(DS.Theme.canvas)
                 }
             }
-        } else if selectedSection == .studio {
-            NavigationSplitView {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } detail: {
-                MacStudioWorkspaceView()
-            }
-        } else if selectedSection == .life {
-            NavigationSplitView {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } detail: {
-                MacLifeView()
-            }
-        } else if selectedSection == .ghost {
-            NavigationSplitView {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } detail: {
-                GhostDashboardView()
-            }
-        } else {
-            NavigationSplitView {
-                MacSidebarView(selection: $selectedSection)
-                    .navigationSplitViewColumnWidth(
-                        min:   DS.Mac.sidebarMinWidth,
-                        ideal: DS.Mac.sidebarIdealWidth,
-                        max:   DS.Mac.sidebarMaxWidth
-                    )
-            } detail: {
-                MacSettingsView()
-            }
+
+        case .studio:
+            MacStudioWorkspaceView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .life:
+            MacLifeView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .ghost:
+            GhostPillarView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        case .settings, .none:
+            MacSettingsView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

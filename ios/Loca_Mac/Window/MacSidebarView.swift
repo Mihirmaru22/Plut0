@@ -13,7 +13,7 @@ struct MacSidebarView: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Liquid Glass Sidebar Backing
+            // Material Sidebar Backing (Tahoe Flush)
             VStack(spacing: 0) {
 
                 // Top Workspace Brand Header
@@ -51,12 +51,13 @@ struct MacSidebarView: View {
                         .padding(.bottom, 12)
                 }
             }
-            .plutoGlass(.regular, in: Rectangle())
+            .background(.ultraThinMaterial.ignoresSafeArea())
 
             // Right-hand 1px Boundary Divider
             Rectangle()
                 .fill(DS.Theme.border)
                 .frame(width: 1)
+                .ignoresSafeArea()
         }
         .navigationTitle("PLUTO")
     }

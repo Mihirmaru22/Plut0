@@ -226,33 +226,39 @@ struct MacTravelAtlasCanvas: View {
     // MARK: - Native Apple Maps Public Transport View (60 FPS Performance)
 
     private var mapView: some View {
-        Map(position: $mapCameraPosition) {
-            // Pre-cached Polygon Rings (Zero allocation per frame)
-            ForEach(cachedTerritoryRings) { ring in
-                MapPolygon(coordinates: ring.coordinates)
-                    .foregroundStyle(ring.isSelected ? selectedAccent.opacity(0.30) : visitedAccent.opacity(0.20))
+        GeometryReader { proxy in
+            if proxy.size.width > 0 && proxy.size.height > 0 {
+                Map(position: $mapCameraPosition) {
+                    // Pre-cached Polygon Rings (Zero allocation per frame)
+                    ForEach(cachedTerritoryRings) { ring in
+                        MapPolygon(coordinates: ring.coordinates)
+                            .foregroundStyle(ring.isSelected ? selectedAccent.opacity(0.30) : visitedAccent.opacity(0.20))
 
-                MapPolygon(coordinates: ring.coordinates)
-                    .foregroundStyle(Color.clear)
-                    .stroke(
-                        ring.isSelected ? selectedAccent : visitedAccent.opacity(0.85),
-                        style: StrokeStyle(
-                            lineWidth: ring.isSelected ? 3.5 : 1.8,
-                            lineCap: .round,
-                            lineJoin: .round
-                        )
+                        MapPolygon(coordinates: ring.coordinates)
+                            .foregroundStyle(Color.clear)
+                            .stroke(
+                                ring.isSelected ? selectedAccent : visitedAccent.opacity(0.85),
+                                style: StrokeStyle(
+                                    lineWidth: ring.isSelected ? 3.5 : 1.8,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
+                            )
+                    }
+                }
+                .mapStyle(
+                    .standard(
+                        elevation: .flat,
+                        emphasis: .muted,
+                        pointsOfInterest: .including([.publicTransport, .airport, .marina]),
+                        showsTraffic: false
                     )
+                )
+                .edgesIgnoringSafeArea(.all)
+            } else {
+                Color.clear
             }
         }
-        .mapStyle(
-            .standard(
-                elevation: .flat,
-                emphasis: .muted,
-                pointsOfInterest: .including([.publicTransport, .airport, .marina]),
-                showsTraffic: false
-            )
-        )
-        .edgesIgnoringSafeArea(.all)
     }
 
     // MARK: - Floating Search & Filter Drawer
