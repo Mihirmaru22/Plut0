@@ -143,8 +143,8 @@ struct MacTodoListColumn: View {
 
             Spacer()
 
-            // Liquid Glass Layout Switcher Capsule
-            GlassEffectContainer(spacing: 2) {
+            // Liquid Glass Layout Switcher Cluster
+            PlutoGlassCluster(spacing: 2) {
                 ForEach(ListDesignVariant.allCases) { variant in
                     let isSelected = selectedVariant == variant
                     Button {

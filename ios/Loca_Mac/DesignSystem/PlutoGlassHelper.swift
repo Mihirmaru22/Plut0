@@ -24,7 +24,7 @@ public enum PlutoSpring {
     public static let reduceMotion: Animation = .linear(duration: 0.15)
 }
 
-// MARK: - Liquid Glass View Modifier (Machined Glass Anatomy)
+// MARK: - Liquid Glass View Modifier (Real Glass on macOS 26+, Anatomy Fallback Below)
 
 public struct PlutoGlassModifier<S: Shape>: ViewModifier {
     let style: PlutoGlassStyle
@@ -41,7 +41,44 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
             content
                 .background(DS.Theme.card, in: shape)
                 .overlay(shape.stroke(DS.Theme.border, lineWidth: 1))
+        } else if #available(macOS 26.0, *) {
+            // MARK: - Real Native Liquid Glass (macOS 26+)
+            switch style {
+            case .regular:
+                content.glassEffect(.regular, in: shape)
+
+            case .interactive:
+                content.glassEffect(.regular.interactive(), in: shape)
+
+            case .prominent:
+                content.glassEffect(.regular, in: shape)
+
+            case .tinted(let color):
+                content.glassEffect(.regular.tint(color), in: shape)
+
+            case .brightActive:
+                content
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(white: 0.98),
+                                Color(white: 0.90)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        in: shape
+                    )
+                    .overlay(
+                        shape.stroke(
+                            Color.white.opacity(0.85),
+                            lineWidth: 1.0
+                        )
+                    )
+                    .shadow(color: Color.black.opacity(0.30), radius: 6, x: 0, y: 2)
+            }
         } else {
+            // MARK: - Legacy Simulated Glass Anatomy Fallback (< macOS 26)
             switch style {
             case .regular:
                 content
@@ -197,9 +234,9 @@ extension View {
     }
 }
 
-// MARK: - GlassEffectContainer
+// MARK: - PlutoGlassCluster (Unshadowed Container Helper)
 
-public struct GlassEffectContainer<Content: View>: View {
+public struct PlutoGlassCluster<Content: View>: View {
     public let spacing: CGFloat
     @ViewBuilder public let content: () -> Content
 
@@ -209,11 +246,17 @@ public struct GlassEffectContainer<Content: View>: View {
     }
 
     public var body: some View {
-        HStack(spacing: spacing) {
-            content()
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) {
+                content()
+            }
+        } else {
+            HStack(spacing: spacing) {
+                content()
+            }
+            .padding(3)
+            .plutoGlass(.regular, in: Capsule())
         }
-        .padding(3)
-        .plutoGlass(.regular, in: Capsule())
     }
 }
 

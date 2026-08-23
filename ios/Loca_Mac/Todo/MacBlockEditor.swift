@@ -359,8 +359,8 @@ struct MacBlockEditor: View {
     // MARK: - Add Block Quick Bar (Liquid Glass Container)
 
     private var addBlockBar: some View {
-        GlassEffectContainer(spacing: 3) {
-            quickAddButton(title: "Text", icon: "text.alignleft", type: .paragraph)
+        PlutoGlassCluster(spacing: 3) {
+            quickAddButton(title: "H1", icon: "text.quote", type: .heading1)
             quickAddButton(title: "Checklist", icon: "checkmark.square", type: .check)
             quickAddButton(title: "Bullet", icon: "list.bullet", type: .bullet)
             quickAddButton(title: "Heading", icon: "textformat.size", type: .h2)

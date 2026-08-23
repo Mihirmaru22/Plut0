@@ -47,7 +47,7 @@ struct MacLifeView: View {
                 Spacer()
 
                 // Liquid Glass Segmented Switcher
-                GlassEffectContainer(spacing: 2) {
+                PlutoGlassCluster(spacing: 2) {
                     ForEach(LifeDesignVariant.allCases) { variant in
                         let isSelected = selectedVariant == variant
                         Button {

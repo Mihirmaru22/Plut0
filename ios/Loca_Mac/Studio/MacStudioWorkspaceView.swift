@@ -35,7 +35,7 @@ struct MacStudioWorkspaceView: View {
                 Spacer()
 
                 // Liquid Glass Segmented Switcher
-                GlassEffectContainer(spacing: 2) {
+                PlutoGlassCluster(spacing: 2) {
                     ForEach(StudioTab.allCases) { tab in
                         tabButton(for: tab)
                     }
