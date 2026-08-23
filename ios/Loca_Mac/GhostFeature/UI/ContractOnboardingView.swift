@@ -1,19 +1,20 @@
 import SwiftUI
 
-/// Formal Sovereign Ghost Covenant & Authorization Studio for initiating a new Season.
-/// Provides exhaustive configuration of daily rules (reading pages, workout duration, hydration, deep work),
-/// real-time date windows, doctrine accountability models, and a cryptographic digital signature seal.
+/// Executive Sovereign Ghost Covenant Studio.
+/// 2-Column High-Clarity Architecture:
+/// - Left: Precision configuration of Protocol, Doctrine, and the 3 Core Ghost Rings (Mind, Body, Silence).
+/// - Right: Live Daily Protocol Blueprint, Calendar Window, Callsign Signature, and Seal Action.
 public struct ContractOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     public var onContractSigned: ((GhostSeason) -> Void)?
 
-    // MARK: - Core Architecture & Doctrine State
+    // MARK: - Core Protocol & Doctrine
     @State private var selectedProtocol: GhostProtocolKind = .the120
     @State private var customDurationDays: Int = 90
     @State private var selectedDoctrine: GhostDoctrine = .hard
     @State private var seasonName: String = "The Winter Arc 2026"
 
-    // MARK: - Granular Rule Customizations (Mind, Body, Silence)
+    // MARK: - Core 3 Rings State (Ultra-Clean Defaults)
     // 1. Mind Ring
     @State private var readingPages: Int = 10
     @State private var includeEveningSynthesis: Bool = true
@@ -22,15 +23,18 @@ public struct ContractOnboardingView: View {
     @State private var workoutMinutes: Int = 45
     @State private var isOutdoorWorkoutRequired: Bool = false
     @State private var includeSecondWorkout: Bool = false
-    @State private var include10kSteps: Bool = false
     @State private var includeWaterTarget: Bool = false
-    @State private var waterTargetGlasses: Int = 8 // 8 glasses = 3.0 Litres
-    @State private var includeStrictDiet: Bool = false
-    @State private var includeDailyPhoto: Bool = false
+    @State private var waterTargetGlasses: Int = 8
 
     // 3. Silence Ring
     @State private var deepFocusMinutes: Int = 45
     @State private var includeSocialMediaFast: Bool = true
+
+    // 4. Optional Add-On Disciplines (Collapsed by default)
+    @State private var showOptionalAddOns: Bool = false
+    @State private var include10kSteps: Bool = false
+    @State private var includeStrictDiet: Bool = false
+    @State private var includeDailyPhoto: Bool = false
     @State private var includeOfflineSleepMode: Bool = false
 
     // MARK: - Legal / Covenant Authorization State
@@ -60,7 +64,7 @@ public struct ContractOnboardingView: View {
 
     private var durationMonthsText: String {
         let months = max(1, activeDurationDays / 30)
-        return "\(activeDurationDays) Days (\(months) Calendar Months)"
+        return "\(activeDurationDays) Days (\(months) Months)"
     }
 
     public var body: some View {
@@ -70,110 +74,397 @@ public struct ContractOnboardingView: View {
 
             Divider().opacity(0.12)
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Time Period & Calendar Window Banner
-                    executionWindowBanner
+            // 2-Column Split Studio
+            HStack(alignment: .top, spacing: 0) {
 
-                    // 1. Protocol Architecture
-                    VStack(alignment: .leading, spacing: 10) {
-                        sectionHeader("1. SELECT PROTOCOL ARCHITECTURE")
+                // LEFT COLUMN: Controls & Ring Dials
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
 
-                        VStack(spacing: 8) {
-                            ForEach(GhostProtocolKind.allCases) { proto in
-                                protocolCard(proto)
-                            }
-                        }
+                        // 1. Protocol Selection (Clean 3-Segment Picker)
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionLabel("1. PROTOCOL ARCHITECTURE")
 
-                        // Custom Duration Slider if Custom Arc
-                        if selectedProtocol == .custom {
-                            customDurationPicker
-                                .padding(.top, 4)
-                        }
-                    }
-
-                    // 2. Governing Doctrine Selection
-                    VStack(alignment: .leading, spacing: 10) {
-                        sectionHeader("2. SELECT GOVERNING DOCTRINE")
-
-                        HStack(spacing: 12) {
-                            ForEach(GhostDoctrine.allCases) { doc in
-                                doctrineCard(doc)
-                            }
-                        }
-                    }
-
-                    // 3. Granular Daily Rules & Target Customization
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            sectionHeader("3. CUSTOMIZE NON-NEGOTIABLE DAILY RINGS")
-                            Spacer()
-                            Text("Tailor your exact metrics before sealing")
-                                .font(.system(size: 9.5, design: .monospaced))
-                                .foregroundStyle(DS.Theme.amber.opacity(0.8))
-                        }
-
-                        // Mind Ring Customizer
-                        mindRingCustomizerCard
-
-                        // Body Ring Customizer
-                        bodyRingCustomizerCard
-
-                        // Silence Ring Customizer
-                        silenceRingCustomizerCard
-                    }
-
-                    // 4. Live Covenant Blueprint Summary
-                    covenantSummaryCard
-
-                    // 5. Formal Digital Covenant & Authorization
-                    VStack(alignment: .leading, spacing: 10) {
-                        sectionHeader("5. FORMAL COVENANT & AUTHORIZATION")
-
-                        VStack(spacing: 14) {
-                            // Signature Field
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("SOVEREIGN CALLSIGN / LEGAL NAME")
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(DS.Theme.textTertiary)
-
-                                TextField("Enter your full legal name or sovereign callsign…", text: $signatureName)
-                                    .font(.system(size: 13, design: .serif))
-                                    .textFieldStyle(.plain)
-                                    .foregroundStyle(DS.Theme.textPrimary)
-                                    .padding(12)
-                                    .background(DS.Theme.surface, in: RoundedRectangle(cornerRadius: 8))
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
-                            }
-
-                            // Explicit Permission & Commitment Toggle
-                            Toggle(isOn: $hasAgreedToTerms) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("I grant explicit permission to initiate this \(activeDurationDays)-day Ghost Protocol.")
-                                        .font(.system(size: 11.5, weight: .semibold))
-                                        .foregroundStyle(DS.Theme.textPrimary)
-                                    Text("I solemnly covenant to execute these \(generatedCustomRules().count) daily rules from \(formatDate(startDate)) to \(formatDate(endDate)) without excuse, compromise, or dilution.")
-                                        .font(.system(size: 10.5))
-                                        .foregroundStyle(DS.Theme.textTertiary)
+                            HStack(spacing: 8) {
+                                ForEach(GhostProtocolKind.allCases) { proto in
+                                    let isSelected = selectedProtocol == proto
+                                    Button {
+                                        selectedProtocol = proto
+                                        applyProtocolPresetDefaults(proto)
+                                        Haptics.selection()
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            HStack {
+                                                Text(proto.title)
+                                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                                                    .foregroundStyle(isSelected ? Color.white : DS.Theme.textPrimary)
+                                                Spacer()
+                                                Text("\(proto.durationDays)d")
+                                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                                    .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textTertiary)
+                                            }
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            isSelected ? DS.Theme.amber.opacity(0.15) : Color.white.opacity(0.04),
+                                            in: RoundedRectangle(cornerRadius: 6)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(isSelected ? DS.Theme.amber.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
-                            .toggleStyle(.checkbox)
-                            .padding(.top, 2)
+
+                            if selectedProtocol == .custom {
+                                customDurationRow
+                            }
                         }
-                        .padding(16)
-                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(DS.Theme.border, lineWidth: 1))
+
+                        // 2. Governing Doctrine
+                        VStack(alignment: .leading, spacing: 8) {
+                            sectionLabel("2. GOVERNING DOCTRINE")
+
+                            HStack(spacing: 8) {
+                                ForEach(GhostDoctrine.allCases) { doc in
+                                    let isSelected = selectedDoctrine == doc
+                                    Button {
+                                        selectedDoctrine = doc
+                                        Haptics.selection()
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textMuted)
+
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                Text(doc.title)
+                                                    .font(.system(size: 11, weight: .bold))
+                                                    .foregroundStyle(Color.white)
+                                                Text(doc == .hard ? "Missed day resets streak to 0" : "Missed day creates elevation dent")
+                                                    .font(.system(size: 9.5))
+                                                    .foregroundStyle(DS.Theme.textTertiary)
+                                            }
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 7)
+                                        .background(
+                                            isSelected ? DS.Theme.amber.opacity(0.10) : Color.white.opacity(0.03),
+                                            in: RoundedRectangle(cornerRadius: 6)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .stroke(isSelected ? DS.Theme.amber.opacity(0.4) : Color.white.opacity(0.08), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+
+                        Divider().opacity(0.08)
+
+                        // 3. The 3 Core Ghost Rings (Compact & Direct)
+                        VStack(alignment: .leading, spacing: 12) {
+                            sectionLabel("3. THE THREE CORE GHOST RINGS")
+
+                            // Mind Ring Row
+                            ringCard(
+                                ring: .mind,
+                                color: Color(hex: "#3E63DD"),
+                                title: "Mind Ring — Mental Synthesis"
+                            ) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Text("Daily Reading:")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(DS.Theme.textSecondary)
+
+                                        ForEach([5, 10, 15, 20, 30], id: \.self) { pages in
+                                            choiceChip(label: "\(pages)p", isSelected: readingPages == pages) {
+                                                readingPages = pages
+                                            }
+                                        }
+                                    }
+
+                                    Toggle(isOn: $includeEveningSynthesis) {
+                                        Text("Evening Synthesis Note (Seal 1 insight nightly)")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+                                }
+                            }
+
+                            // Body Ring Row
+                            ringCard(
+                                ring: .body,
+                                color: Color(hex: "#E54D2E"),
+                                title: "Body Ring — Physical Forge"
+                            ) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Text("Workout Duration:")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(DS.Theme.textSecondary)
+
+                                        ForEach([30, 45, 60, 90], id: \.self) { mins in
+                                            choiceChip(label: "\(mins)m", isSelected: workoutMinutes == mins) {
+                                                workoutMinutes = mins
+                                            }
+                                        }
+                                    }
+
+                                    HStack(spacing: 16) {
+                                        Toggle(isOn: $includeWaterTarget) {
+                                            Text("1 Gallon (3L) Water")
+                                                .font(.system(size: 10.5))
+                                                .foregroundStyle(DS.Theme.textPrimary)
+                                        }
+                                        .toggleStyle(.checkbox)
+
+                                        Toggle(isOn: $isOutdoorWorkoutRequired) {
+                                            Text("Strict Outdoor Requirement")
+                                                .font(.system(size: 10.5))
+                                                .foregroundStyle(DS.Theme.textPrimary)
+                                        }
+                                        .toggleStyle(.checkbox)
+                                    }
+                                }
+                            }
+
+                            // Silence Ring Row
+                            ringCard(
+                                ring: .silence,
+                                color: Color(hex: "#0091FF"),
+                                title: "Silence Ring — Deep Focus & Fasting"
+                            ) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 8) {
+                                        Text("Deep Focus Silence:")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(DS.Theme.textSecondary)
+
+                                        ForEach([30, 45, 60, 90], id: \.self) { mins in
+                                            choiceChip(label: "\(mins)m", isSelected: deepFocusMinutes == mins) {
+                                                deepFocusMinutes = mins
+                                            }
+                                        }
+                                    }
+
+                                    Toggle(isOn: $includeSocialMediaFast) {
+                                        Text("Social Media Feed Fast (Zero infinite scroll)")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+                                }
+                            }
+                        }
+
+                        // 4. Optional Add-On Disciplines (Collapsible)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Button {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                    showOptionalAddOns.toggle()
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: showOptionalAddOns ? "chevron.down" : "chevron.right")
+                                        .font(.system(size: 9.5, weight: .bold))
+                                        .foregroundStyle(DS.Theme.amber)
+                                    Text("OPTIONAL EXTRA DISCIPLINES")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(DS.Theme.amber)
+                                    Spacer()
+                                    Text(showOptionalAddOns ? "Hide" : "Expand (4 optional)")
+                                        .font(.system(size: 9.5))
+                                        .foregroundStyle(DS.Theme.textTertiary)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+
+                            if showOptionalAddOns {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Toggle(isOn: $include10kSteps) {
+                                        Text("10,000 Daily Steps Baseline / Cold Plunge")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+
+                                    Toggle(isOn: $includeStrictDiet) {
+                                        Text("Strict Nutrition & Zero Alcohol")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+
+                                    Toggle(isOn: $includeDailyPhoto) {
+                                        Text("Daily Progress Photo Artifact")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+
+                                    Toggle(isOn: $includeOfflineSleepMode) {
+                                        Text("Offline Dark Mode 1h Pre-Sleep")
+                                            .font(.system(size: 10.5))
+                                            .foregroundStyle(DS.Theme.textPrimary)
+                                    }
+                                    .toggleStyle(.checkbox)
+                                }
+                                .padding(10)
+                                .background(Color.white.opacity(0.02), in: RoundedRectangle(cornerRadius: 6))
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                            }
+                        }
                     }
+                    .padding(20)
                 }
-                .padding(24)
+                .frame(maxWidth: .infinity)
+
+                Divider().opacity(0.12)
+
+                // RIGHT COLUMN: Live Blueprint Summary, Digital Signature & Seal
+                VStack(alignment: .leading, spacing: 16) {
+
+                    // Time Period Box
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(DS.Theme.amber)
+                            Text("CONFIRMED WINDOW")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.amber)
+                                .tracking(1)
+                            Spacer()
+                            Text(durationMonthsText.uppercased())
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.textTertiary)
+                        }
+
+                        HStack(spacing: 6) {
+                            Text(formatDate(startDate))
+                                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(DS.Theme.amber)
+                            Text(formatDate(endDate))
+                                .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.white)
+                        }
+                    }
+                    .padding(12)
+                    .background(DS.Theme.amber.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.amber.opacity(0.25), lineWidth: 1))
+
+                    // Live Blueprint Checklist
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("DAILY PROTOCOL BLUEPRINT")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.textTertiary)
+                                .tracking(1)
+                            Spacer()
+                            Text("\(generatedCustomRules().count) Daily Rules")
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.amber)
+                        }
+
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 5) {
+                                ForEach(generatedCustomRules()) { rule in
+                                    HStack(spacing: 7) {
+                                        Image(systemName: rule.icon)
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(ruleColor(rule.ring))
+                                            .frame(width: 14)
+
+                                        Text(rule.title)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(Color.white)
+                                            .lineLimit(1)
+
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 4))
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 180)
+                    }
+                    .padding(12)
+                    .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
+
+                    Spacer()
+
+                    // Callsign & Signature
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("SOVEREIGN CALLSIGN / SIGNATURE")
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .foregroundStyle(DS.Theme.textTertiary)
+
+                            TextField("Enter your name or callsign…", text: $signatureName)
+                                .font(.system(size: 12, design: .serif))
+                                .textFieldStyle(.plain)
+                                .foregroundStyle(DS.Theme.textPrimary)
+                                .padding(10)
+                                .background(DS.Theme.surface, in: RoundedRectangle(cornerRadius: 6))
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Theme.border, lineWidth: 1))
+                        }
+
+                        Toggle(isOn: $hasAgreedToTerms) {
+                            Text("I solemnly covenant to execute these daily rules without excuse or compromise.")
+                                .font(.system(size: 10))
+                                .foregroundStyle(DS.Theme.textSecondary)
+                        }
+                        .toggleStyle(.checkbox)
+
+                        // Seal Covenant Button
+                        Button {
+                            executeSignContract()
+                        } label: {
+                            HStack(spacing: 6) {
+                                if isSigning {
+                                    ProgressView().controlSize(.small)
+                                } else {
+                                    Image(systemName: "seal.fill")
+                                        .font(.system(size: 11, weight: .bold))
+                                    Text("Seal Formal Covenant (\(activeDurationDays) Days)")
+                                        .font(.system(size: 12, weight: .bold))
+                                }
+                            }
+                            .foregroundStyle(canSign ? Color.black : DS.Theme.textMuted)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(canSign ? DS.Theme.amber : DS.Theme.card, in: RoundedRectangle(cornerRadius: 7))
+                            .shadow(color: canSign ? DS.Theme.amber.opacity(0.3) : Color.clear, radius: 6, y: 2)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canSign || isSigning)
+                    }
+                    .padding(12)
+                    .background(Color.white.opacity(0.02), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                }
+                .frame(width: 320)
+                .padding(20)
+                .background(DS.Theme.surface.opacity(0.6))
             }
-
-            Divider().opacity(0.12)
-
-            // Bottom Action Bar
-            bottomActionBar
         }
-        .frame(minWidth: 840, idealWidth: 900, maxWidth: .infinity, minHeight: 720, idealHeight: 800, maxHeight: .infinity)
+        .frame(minWidth: 840, idealWidth: 900, maxWidth: 960, minHeight: 620, idealHeight: 680, maxHeight: 750)
         .background(DS.Theme.canvas)
     }
 
@@ -181,19 +472,14 @@ public struct ContractOnboardingView: View {
 
     private var headerBar: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(DS.Theme.amber)
-                    Text("SOVEREIGN GHOST COVENANT")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.amber)
-                        .tracking(1.5)
-                }
-                Text("Enter the \(activeDurationDays)-Day Arc")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(DS.Theme.textPrimary)
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(DS.Theme.amber)
+                Text("SOVEREIGN GHOST COVENANT")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(DS.Theme.amber)
+                    .tracking(1.5)
             }
 
             Spacer()
@@ -202,685 +488,94 @@ public struct ContractOnboardingView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 16))
                     .foregroundStyle(DS.Theme.textTertiary)
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-        .padding(.bottom, 14)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
     }
 
-    // MARK: - Time Window Banner
+    // MARK: - Components
 
-    private var executionWindowBanner: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(DS.Theme.amber)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text("CONFIRMED TIME PERIOD")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.amber)
-                        .tracking(1.2)
-                    Text("· \(durationMonthsText.uppercased())")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.textTertiary)
-                }
-
-                HStack(spacing: 8) {
-                    Text(formatDate(startDate))
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.textPrimary)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(DS.Theme.amber)
-                    Text(formatDate(endDate))
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(DS.Theme.textPrimary)
-                }
-            }
-
-            Spacer()
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(DS.Theme.amber.opacity(0.08))
-        )
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(DS.Theme.amber.opacity(0.25), lineWidth: 1))
-    }
-
-    // MARK: - Protocol Card
-
-    private func protocolCard(_ proto: GhostProtocolKind) -> some View {
-        let isSelected = (selectedProtocol == proto)
-        return Button {
-            selectedProtocol = proto
-            applyProtocolPresetDefaults(proto)
-            Haptics.selection()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textMuted)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(proto.title)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("(\(proto.durationDays) Days)")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(DS.Theme.amber)
-                    }
-                    Text(proto.subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                }
-
-                Spacer()
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? DS.Theme.amber.opacity(0.08) : DS.Theme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? DS.Theme.amber.opacity(0.5) : DS.Theme.border, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var customDurationPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("CUSTOM DURATION:")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(DS.Theme.textTertiary)
-                Text("\(customDurationDays) Days (\(max(1, customDurationDays / 30)) Months)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(DS.Theme.amber)
-            }
-
-            HStack(spacing: 6) {
-                ForEach([30, 45, 60, 90, 100, 120, 180], id: \.self) { days in
-                    Button {
-                        customDurationDays = days
-                        Haptics.selection()
-                    } label: {
-                        Text("\(days)d")
-                            .font(.system(size: 10.5, weight: customDurationDays == days ? .bold : .medium))
-                            .foregroundStyle(customDurationDays == days ? Color.black : DS.Theme.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(
-                                customDurationDays == days ? DS.Theme.amber : Color.white.opacity(0.06),
-                                in: RoundedRectangle(cornerRadius: 5)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(12)
-        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
-    }
-
-    // MARK: - Doctrine Card
-
-    private func doctrineCard(_ doc: GhostDoctrine) -> some View {
-        let isSelected = (selectedDoctrine == doc)
-        return Button {
-            selectedDoctrine = doc
-            Haptics.selection()
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(doc.title)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(DS.Theme.textPrimary)
-                    Spacer()
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textMuted)
-                }
-
-                Text(doc.ruleDescription)
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(DS.Theme.textSecondary)
-                    .lineLimit(3)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? DS.Theme.amber.opacity(0.08) : DS.Theme.card)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? DS.Theme.amber.opacity(0.5) : DS.Theme.border, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - 1. Mind Ring Customizer
-
-    private var mindRingCustomizerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(hex: "#3E63DD"))
-
-                Text("MIND RING — MENTAL SYNTHESIS & READING")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(DS.Theme.textPrimary)
-
-                Spacer()
-            }
-
-            // Reading Target Selection
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Daily Reading Commitment:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                    Spacer()
-                    Text("\(readingPages) Pages / Day")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#3E63DD"))
-                }
-
-                HStack(spacing: 6) {
-                    ForEach([5, 10, 15, 20, 30, 50], id: \.self) { pages in
-                        Button {
-                            readingPages = pages
-                            Haptics.selection()
-                        } label: {
-                            Text("\(pages)p")
-                                .font(.system(size: 10.5, weight: readingPages == pages ? .bold : .medium))
-                                .foregroundStyle(readingPages == pages ? Color.white : DS.Theme.textSecondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    readingPages == pages ? Color(hex: "#3E63DD") : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 5)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer()
-
-                    // Stepper (+ / -)
-                    HStack(spacing: 4) {
-                        Button {
-                            if readingPages > 5 { readingPages -= 5 }
-                        } label: {
-                            Image(systemName: "minus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            readingPages += 5
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            Divider().opacity(0.10)
-
-            // Evening Reflection Toggle
-            Toggle(isOn: $includeEveningSynthesis) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Evening Synthesis Note")
-                        .font(.system(size: 11.5, weight: .medium))
-                        .foregroundStyle(DS.Theme.textPrimary)
-                    Text("Seal one high-leverage realization, decision, or synthesis entry each evening.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(DS.Theme.textTertiary)
-                }
-            }
-            .toggleStyle(.checkbox)
-        }
-        .padding(14)
-        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "#3E63DD").opacity(0.3), lineWidth: 1))
-    }
-
-    // MARK: - 2. Body Ring Customizer
-
-    private var bodyRingCustomizerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "figure.run")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(hex: "#E54D2E"))
-
-                Text("BODY RING — PHYSICAL FORGE & HYDRATION")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(DS.Theme.textPrimary)
-
-                Spacer()
-            }
-
-            // Workout Duration Selection
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Primary Workout Target:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                    Spacer()
-                    Text("\(workoutMinutes) Minutes")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#E54D2E"))
-                }
-
-                HStack(spacing: 6) {
-                    ForEach([30, 45, 60, 90], id: \.self) { mins in
-                        Button {
-                            workoutMinutes = mins
-                            Haptics.selection()
-                        } label: {
-                            Text("\(mins)m")
-                                .font(.system(size: 10.5, weight: workoutMinutes == mins ? .bold : .medium))
-                                .foregroundStyle(workoutMinutes == mins ? Color.white : DS.Theme.textSecondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    workoutMinutes == mins ? Color(hex: "#E54D2E") : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 5)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer()
-
-                    HStack(spacing: 4) {
-                        Button {
-                            if workoutMinutes > 15 { workoutMinutes -= 15 }
-                        } label: {
-                            Image(systemName: "minus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            workoutMinutes += 15
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            // Hydration Target Selection
-            VStack(alignment: .leading, spacing: 6) {
-                Toggle(isOn: $includeWaterTarget) {
-                    HStack {
-                        Text("Daily Hydration Target")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Spacer()
-                        if includeWaterTarget {
-                            Text(waterLabel(waterTargetGlasses))
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color(hex: "#0091FF"))
-                        }
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                if includeWaterTarget {
-                    HStack(spacing: 6) {
-                        ForEach([6, 8, 10, 12], id: \.self) { glasses in
-                            Button {
-                                waterTargetGlasses = glasses
-                                Haptics.selection()
-                            } label: {
-                                Text(waterShortLabel(glasses))
-                                    .font(.system(size: 10.5, weight: waterTargetGlasses == glasses ? .bold : .medium))
-                                    .foregroundStyle(waterTargetGlasses == glasses ? Color.white : DS.Theme.textSecondary)
-                                    .padding(.horizontal, 9)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        waterTargetGlasses == glasses ? Color(hex: "#0091FF") : Color.white.opacity(0.06),
-                                        in: RoundedRectangle(cornerRadius: 5)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.leading, 20)
-                }
-            }
-
-            Divider().opacity(0.10)
-
-            // Body Ring Add-on Toggles
-            VStack(spacing: 8) {
-                Toggle(isOn: $isOutdoorWorkoutRequired) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Strict Outdoor Workout Requirement")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("At least one workout strictly outdoors regardless of weather conditions.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                Toggle(isOn: $includeSecondWorkout) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Second Workout (45m Daily)")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Two separate physical sessions every single day (Standard 75 Hard requirement).")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                Toggle(isOn: $include10kSteps) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("10,000 Daily Steps Baseline / Cold Plunge")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Minimum daily activity threshold for basal metabolic activation.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                Toggle(isOn: $includeStrictDiet) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Strict Nutrition & Zero Alcohol")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Zero cheat meals, zero alcohol, clean macronutrient adherence.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                Toggle(isOn: $includeDailyPhoto) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Daily Progress Photo Artifact")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Capture visual proof artifact sealed to your encrypted local vault.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-            }
-        }
-        .padding(14)
-        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "#E54D2E").opacity(0.3), lineWidth: 1))
-    }
-
-    // MARK: - 3. Silence Ring Customizer
-
-    private var silenceRingCustomizerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "speaker.slash.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Color(hex: "#0091FF"))
-
-                Text("SILENCE RING — DEEP FOCUS & DIGITAL FASTING")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(DS.Theme.textPrimary)
-
-                Spacer()
-            }
-
-            // Deep Focus Target Selection
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Deep Focus Silence Duration:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                    Spacer()
-                    Text("\(deepFocusMinutes) Minutes")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(hex: "#0091FF"))
-                }
-
-                HStack(spacing: 6) {
-                    ForEach([30, 45, 60, 90, 120], id: \.self) { mins in
-                        Button {
-                            deepFocusMinutes = mins
-                            Haptics.selection()
-                        } label: {
-                            Text("\(mins)m")
-                                .font(.system(size: 10.5, weight: deepFocusMinutes == mins ? .bold : .medium))
-                                .foregroundStyle(deepFocusMinutes == mins ? Color.white : DS.Theme.textSecondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    deepFocusMinutes == mins ? Color(hex: "#0091FF") : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 5)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer()
-
-                    HStack(spacing: 4) {
-                        Button {
-                            if deepFocusMinutes > 15 { deepFocusMinutes -= 15 }
-                        } label: {
-                            Image(systemName: "minus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            deepFocusMinutes += 15
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 22, height: 22)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            Divider().opacity(0.10)
-
-            // Silence Add-on Toggles
-            VStack(spacing: 8) {
-                Toggle(isOn: $includeSocialMediaFast) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Social Media Feed Fast")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Zero algorithmic infinite-scroll consumption across all mobile & desktop platforms.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-
-                Toggle(isOn: $includeOfflineSleepMode) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Offline Dark Mode 1h Before Sleep")
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(DS.Theme.textPrimary)
-                        Text("Screens and notifications disabled 60 minutes prior to resting.")
-                            .font(.system(size: 10))
-                            .foregroundStyle(DS.Theme.textTertiary)
-                    }
-                }
-                .toggleStyle(.checkbox)
-            }
-        }
-        .padding(14)
-        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "#0091FF").opacity(0.3), lineWidth: 1))
-    }
-
-    // MARK: - Covenant Summary Card
-
-    private var covenantSummaryCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "list.bullet.clipboard.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(DS.Theme.amber)
-                Text("COVENANT ARCHITECTURE SUMMARY")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(DS.Theme.amber)
-                    .tracking(1.2)
-                Spacer()
-                Text("\(generatedCustomRules().count) Non-Negotiables Daily")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(DS.Theme.amber.opacity(0.2), in: Capsule())
-            }
-
-            VStack(spacing: 6) {
-                summaryRow(icon: "brain.head.profile", color: Color(hex: "#3E63DD"), title: "Mind Ring", detail: "Read \(readingPages) pages" + (includeEveningSynthesis ? " · Evening Synthesis Note" : ""))
-                summaryRow(icon: "figure.run", color: Color(hex: "#E54D2E"), title: "Body Ring", detail: "\(workoutMinutes)m Workout" + (isOutdoorWorkoutRequired ? " (Outdoor)" : "") + (includeSecondWorkout ? " + 2nd 45m Session" : "") + (includeWaterTarget ? " · \(waterShortLabel(waterTargetGlasses)) Water" : "") + (includeStrictDiet ? " · Strict Diet" : ""))
-                summaryRow(icon: "speaker.slash.fill", color: Color(hex: "#0091FF"), title: "Silence Ring", detail: "\(deepFocusMinutes)m Deep Focus Silence" + (includeSocialMediaFast ? " · Social Media Fast" : "") + (includeOfflineSleepMode ? " · Screen-Free Sleep" : ""))
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.04))
-        )
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.10), lineWidth: 1))
-    }
-
-    private func summaryRow(icon: String, color: Color, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(color)
-                .frame(width: 16, height: 16)
-                .background(color.opacity(0.15), in: Circle())
-
-            Text(title + ":")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Color.white)
-
-            Text(detail)
-                .font(.system(size: 11))
-                .foregroundStyle(DS.Theme.textSecondary)
-                .lineLimit(2)
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Bottom Action Bar
-
-    private var bottomActionBar: some View {
-        HStack {
-            Button("Cancel") {
-                dismiss()
-            }
-            .buttonStyle(.plain)
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
             .foregroundStyle(DS.Theme.textTertiary)
+            .tracking(1)
+    }
 
-            Spacer()
-
-            Button {
-                executeSignContract()
-            } label: {
-                HStack(spacing: 6) {
-                    if isSigning {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "seal.fill")
-                            .font(.system(size: 12, weight: .bold))
-                        Text("Seal Formal Covenant (\(activeDurationDays) Days)")
-                            .font(.system(size: 12, weight: .bold))
-                    }
-                }
-                .foregroundStyle(canSign ? Color.black : DS.Theme.textMuted)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 9)
+    private func choiceChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            Haptics.selection()
+        } label: {
+            Text(label)
+                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? Color.white : DS.Theme.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
                 .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(canSign ? DS.Theme.amber : DS.Theme.card)
+                    isSelected ? DS.Theme.amber.opacity(0.8) : Color.white.opacity(0.06),
+                    in: RoundedRectangle(cornerRadius: 4)
                 )
-            }
-            .buttonStyle(.plain)
-            .disabled(!canSign || isSigning)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 16)
-        .background(DS.Theme.surface)
+        .buttonStyle(.plain)
+    }
+
+    private func ringCard<Content: View>(ring: GhostRing, color: Color, title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: ring.icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.white)
+            }
+
+            content()
+                .padding(.top, 2)
+        }
+        .padding(10)
+        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 7))
+        .overlay(RoundedRectangle(cornerRadius: 7).stroke(color.opacity(0.25), lineWidth: 1))
+    }
+
+    private func ruleColor(_ ring: GhostRing) -> Color {
+        switch ring {
+        case .body:    return Color(hex: "#E54D2E")
+        case .mind:    return Color(hex: "#3E63DD")
+        case .silence: return Color(hex: "#0091FF")
+        }
+    }
+
+    private var customDurationRow: some View {
+        HStack(spacing: 6) {
+            Text("Duration:")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(DS.Theme.textTertiary)
+
+            ForEach([30, 60, 90, 100, 120, 180], id: \.self) { days in
+                choiceChip(label: "\(days)d", isSelected: customDurationDays == days) {
+                    customDurationDays = days
+                }
+            }
+        }
+        .padding(.top, 2)
     }
 
     private var canSign: Bool {
         !signatureName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && hasAgreedToTerms
     }
 
-    private func sectionHeader(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundStyle(DS.Theme.textTertiary)
-            .tracking(1.2)
-    }
-
-    private func waterLabel(_ glasses: Int) -> String {
-        switch glasses {
-        case 6:  return "6 Glasses (2.2 Litres)"
-        case 8:  return "8 Glasses (3.0 Litres)"
-        case 10: return "1 Gallon (3.8 Litres)"
-        case 12: return "12 Glasses (4.5 Litres)"
-        default: return "\(glasses) Glasses"
-        }
-    }
-
-    private func waterShortLabel(_ glasses: Int) -> String {
-        switch glasses {
-        case 6:  return "2.2L (6g)"
-        case 8:  return "3.0L (8g)"
-        case 10: return "1 Gallon"
-        case 12: return "4.5L (12g)"
-        default: return "\(glasses)g"
-        }
+    private func formatDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .none
+        return df.string(from: date)
     }
 
     private func applyProtocolPresetDefaults(_ proto: GhostProtocolKind) {
@@ -999,7 +694,7 @@ public struct ContractOnboardingView: View {
         if includeWaterTarget {
             rules.append(GhostProtocolRule(
                 id: "body_water_custom",
-                title: waterTargetGlasses >= 10 ? "1 Gallon Water" : "\(waterLabel(waterTargetGlasses))",
+                title: waterTargetGlasses >= 10 ? "1 Gallon Water" : "\(waterTargetGlasses) Glasses Water",
                 subtitle: "Hydration target: \(waterTargetGlasses) full glasses.",
                 ring: .body,
                 phase: .day,
@@ -1120,13 +815,6 @@ public struct ContractOnboardingView: View {
         }
 
         return rules
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let df = DateFormatter()
-        df.dateStyle = .medium
-        df.timeStyle = .none
-        return df.string(from: date)
     }
 
     private func executeSignContract() {
