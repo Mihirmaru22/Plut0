@@ -59,8 +59,10 @@ public actor GhostStore {
     public func fetchActiveSeason() throws -> GhostSeason? {
         try database.read { db in
             let sql = """
-            SELECT id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id
+            SELECT id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id,
+                   completed_at, final_stats_json, passport_pdf_path
             FROM ghost_seasons
+            WHERE completed_at IS NULL
             ORDER BY signed_at DESC
             LIMIT 1;
             """
@@ -72,6 +74,60 @@ public actor GhostStore {
                 return extractSeason(from: statement)
             }
             return nil
+        }
+    }
+
+    /// Fetch all seasons (active + completed) ordered by sign date descending.
+    public func fetchAllSeasons() throws -> [GhostSeason] {
+        try database.read { db in
+            let sql = """
+            SELECT id, name, protocol_kind, start_date, end_date, doctrine, signed_at, device_id,
+                   completed_at, final_stats_json, passport_pdf_path
+            FROM ghost_seasons
+            ORDER BY signed_at DESC;
+            """
+
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            var seasons: [GhostSeason] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let s = extractSeason(from: statement) { seasons.append(s) }
+            }
+            return seasons
+        }
+    }
+
+    /// Mark a season as completed and freeze final stats snapshot.
+    public func completeSeason(_ season: GhostSeason) throws {
+        try database.write { db in
+            let statsJSON: String?
+            if let stats = season.finalStats,
+               let data = try? JSONEncoder().encode(stats),
+               let str  = String(data: data, encoding: .utf8) {
+                statsJSON = str
+            } else {
+                statsJSON = nil
+            }
+
+            let sql = """
+            UPDATE ghost_seasons
+            SET completed_at = ?, final_stats_json = ?, passport_pdf_path = ?
+            WHERE id = ?;
+            """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            let completedTime = season.completedAt?.timeIntervalSince1970 ?? Date().timeIntervalSince1970
+            SQLiteHelper.bind(double: completedTime,          at: 1, statement: statement)
+            SQLiteHelper.bind(text:   statsJSON,              at: 2, statement: statement)
+            SQLiteHelper.bind(text:   season.passportPDFPath, at: 3, statement: statement)
+            SQLiteHelper.bind(text:   season.id,              at: 4, statement: statement)
+
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw NotesError.persistenceFailure("Failed to complete ghost season: \(msg)")
+            }
         }
     }
 
@@ -251,20 +307,99 @@ public actor GhostStore {
         }
     }
 
+    // MARK: - Custom Rules CRUD (Migration v6)
+
+    public func saveCustomRule(_ rule: GhostProtocolRule, seasonID: String) throws {
+        try database.write { db in
+            let sql = """
+            INSERT OR REPLACE INTO ghost_custom_rules (
+                id, season_id, title, subtitle, ring, phase, proof_kind,
+                target_value, unit_label, icon, is_outdoor_required,
+                is_enabled, sort_order, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text:   rule.id,                          at: 1,  statement: statement)
+            SQLiteHelper.bind(text:   seasonID,                         at: 2,  statement: statement)
+            SQLiteHelper.bind(text:   rule.title,                       at: 3,  statement: statement)
+            SQLiteHelper.bind(text:   rule.subtitle,                    at: 4,  statement: statement)
+            SQLiteHelper.bind(text:   rule.ring.rawValue,               at: 5,  statement: statement)
+            SQLiteHelper.bind(text:   rule.phase.rawValue,              at: 6,  statement: statement)
+            SQLiteHelper.bind(text:   rule.proofKind.rawValue,          at: 7,  statement: statement)
+            SQLiteHelper.bind(double: rule.targetValue,                 at: 8,  statement: statement)
+            SQLiteHelper.bind(text:   rule.unitLabel,                   at: 9,  statement: statement)
+            SQLiteHelper.bind(text:   rule.icon,                        at: 10, statement: statement)
+            SQLiteHelper.bind(int:    rule.isOutdoorRequired ? 1 : 0,   at: 11, statement: statement)
+            SQLiteHelper.bind(int:    rule.isEnabled ? 1 : 0,           at: 12, statement: statement)
+            SQLiteHelper.bind(int:    rule.sortOrder,                   at: 13, statement: statement)
+            SQLiteHelper.bind(double: Date().timeIntervalSince1970,     at: 14, statement: statement)
+
+            if sqlite3_step(statement) != SQLITE_DONE {
+                let msg = String(cString: sqlite3_errmsg(db))
+                throw NotesError.persistenceFailure("Failed to save custom rule: \(msg)")
+            }
+        }
+    }
+
+    public func fetchCustomRules(seasonID: String) throws -> [GhostProtocolRule] {
+        try database.read { db in
+            let sql = """
+            SELECT id, title, subtitle, ring, phase, proof_kind,
+                   target_value, unit_label, icon, is_outdoor_required,
+                   is_enabled, sort_order
+            FROM ghost_custom_rules
+            WHERE season_id = ?
+            ORDER BY sort_order ASC, rowid ASC;
+            """
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: seasonID, at: 1, statement: statement)
+
+            var rules: [GhostProtocolRule] = []
+            while sqlite3_step(statement) == SQLITE_ROW {
+                if let r = extractCustomRule(from: statement) { rules.append(r) }
+            }
+            return rules
+        }
+    }
+
+    public func deleteCustomRule(id: String) throws {
+        try database.write { db in
+            let sql = "DELETE FROM ghost_custom_rules WHERE id = ?;"
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+            SQLiteHelper.bind(text: id, at: 1, statement: statement)
+            _ = sqlite3_step(statement)
+        }
+    }
+
     // MARK: - Mappers
 
     private func extractSeason(from statement: OpaquePointer) -> GhostSeason? {
-        let id = SQLiteHelper.nonNullText(at: 0, statement: statement)
-        let name = SQLiteHelper.nonNullText(at: 1, statement: statement)
-        let kindRaw = SQLiteHelper.nonNullText(at: 2, statement: statement)
-        let doctrineRaw = SQLiteHelper.nonNullText(at: 5, statement: statement)
+        let id        = SQLiteHelper.nonNullText(at: 0, statement: statement)
+        let name      = SQLiteHelper.nonNullText(at: 1, statement: statement)
+        let kindRaw   = SQLiteHelper.nonNullText(at: 2, statement: statement)
+        let docRaw    = SQLiteHelper.nonNullText(at: 5, statement: statement)
         let startDate = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 3, statement: statement))
-        let endDate = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 4, statement: statement))
-        let signedAt = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 6, statement: statement))
-        let deviceID = SQLiteHelper.text(at: 7, statement: statement) ?? "Mac"
+        let endDate   = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 4, statement: statement))
+        let signedAt  = Date(timeIntervalSince1970: SQLiteHelper.nonNullDouble(at: 6, statement: statement))
+        let deviceID  = SQLiteHelper.text(at: 7, statement: statement) ?? "Mac"
 
-        let kind = GhostProtocolKind(rawValue: kindRaw) ?? .the120
-        let doctrine = GhostDoctrine(rawValue: doctrineRaw) ?? .hard
+        // v6 lifecycle columns (indices 8, 9, 10)
+        let completedAtRaw   = SQLiteHelper.double(at: 8, statement: statement)
+        let finalStatsJSON   = SQLiteHelper.text(at: 9, statement: statement)
+        let passportPDFPath  = SQLiteHelper.text(at: 10, statement: statement)
+
+        let completedAt = completedAtRaw.map { Date(timeIntervalSince1970: $0) }
+        let finalStats: SeasonFinalStats? = finalStatsJSON.flatMap {
+            try? JSONDecoder().decode(SeasonFinalStats.self, from: Data($0.utf8))
+        }
+
+        let kind    = GhostProtocolKind(rawValue: kindRaw) ?? .the120
+        let doctrine = GhostDoctrine(rawValue: docRaw) ?? .hard
 
         return GhostSeason(
             id: id,
@@ -274,7 +409,37 @@ public actor GhostStore {
             endDate: endDate,
             doctrine: doctrine,
             signedAt: signedAt,
-            deviceID: deviceID
+            deviceID: deviceID,
+            completedAt: completedAt,
+            finalStats: finalStats,
+            passportPDFPath: passportPDFPath
+        )
+    }
+
+    private func extractCustomRule(from statement: OpaquePointer) -> GhostProtocolRule? {
+        let id          = SQLiteHelper.nonNullText(at: 0, statement: statement)
+        let title       = SQLiteHelper.nonNullText(at: 1, statement: statement)
+        let subtitle    = SQLiteHelper.text(at: 2, statement: statement) ?? ""
+        let ringRaw     = SQLiteHelper.nonNullText(at: 3, statement: statement)
+        let phaseRaw    = SQLiteHelper.nonNullText(at: 4, statement: statement)
+        let proofRaw    = SQLiteHelper.nonNullText(at: 5, statement: statement)
+        let targetVal   = SQLiteHelper.nonNullDouble(at: 6, statement: statement)
+        let unitLabel   = SQLiteHelper.text(at: 7, statement: statement) ?? ""
+        let icon        = SQLiteHelper.text(at: 8, statement: statement) ?? "star.fill"
+        let isOutdoor   = SQLiteHelper.int(at: 9,  statement: statement) == 1
+        let isEnabled   = SQLiteHelper.int(at: 10, statement: statement) == 1
+        let sortOrder   = SQLiteHelper.int(at: 11, statement: statement)
+
+        let ring    = GhostRing(rawValue: ringRaw)             ?? .body
+        let phase   = GhostProtocolPhase(rawValue: phaseRaw)  ?? .day
+        let proof   = GhostProofKind(rawValue: proofRaw)      ?? .binary
+
+        return GhostProtocolRule(
+            id: id, title: title, subtitle: subtitle,
+            ring: ring, phase: phase, proofKind: proof,
+            targetValue: targetVal, unitLabel: unitLabel, icon: icon,
+            isOutdoorRequired: isOutdoor,
+            isCustom: true, isEnabled: isEnabled, sortOrder: sortOrder
         )
     }
 
@@ -334,4 +499,24 @@ public actor GhostStore {
             loggedAt: loggedAt
         )
     }
+
+    // MARK: - Factory Reset Ghost Mode Data
+
+    public func resetGhostData() throws {
+        try database.write { db in
+            let statements = [
+                "DELETE FROM ghost_receipts;",
+                "DELETE FROM ghost_days;",
+                "DELETE FROM ghost_custom_rules;",
+                "DELETE FROM ghost_seasons;"
+            ]
+            for sql in statements {
+                if sqlite3_exec(db, sql, nil, nil, nil) != SQLITE_OK {
+                    let msg = String(cString: sqlite3_errmsg(db))
+                    throw NotesError.persistenceFailure("Failed to reset ghost data: \(msg)")
+                }
+            }
+        }
+    }
 }
+

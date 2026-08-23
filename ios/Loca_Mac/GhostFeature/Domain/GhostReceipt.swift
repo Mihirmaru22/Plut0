@@ -48,6 +48,12 @@ public struct GhostProtocolRule: Identifiable, Codable, Equatable, Sendable {
     public let unitLabel: String
     public let icon: String
     public let isOutdoorRequired: Bool
+    /// Whether this rule was created by the user (false = preset template)
+    public var isCustom: Bool
+    /// User can disable a rule without deleting it
+    public var isEnabled: Bool
+    /// Display order within the protocol checklist
+    public var sortOrder: Int
 
     public init(
         id: String,
@@ -59,7 +65,10 @@ public struct GhostProtocolRule: Identifiable, Codable, Equatable, Sendable {
         targetValue: Double = 1.0,
         unitLabel: String = "",
         icon: String,
-        isOutdoorRequired: Bool = false
+        isOutdoorRequired: Bool = false,
+        isCustom: Bool = false,
+        isEnabled: Bool = true,
+        sortOrder: Int = 0
     ) {
         self.id = id
         self.title = title
@@ -71,6 +80,9 @@ public struct GhostProtocolRule: Identifiable, Codable, Equatable, Sendable {
         self.unitLabel = unitLabel
         self.icon = icon
         self.isOutdoorRequired = isOutdoorRequired
+        self.isCustom = isCustom
+        self.isEnabled = isEnabled
+        self.sortOrder = sortOrder
     }
 
     // MARK: - Standard Protocol Defaults

@@ -137,7 +137,7 @@ public enum WinterArcPassportPDFGenerator {
             let pdfData = generatePDFData(data: data)
             do {
                 try pdfData.write(to: targetURL)
-                Haptics.notification(.success)
+                Haptics.notify(.success)
                 completion?(true)
             } catch {
                 completion?(false)

@@ -162,5 +162,122 @@ struct GhostEngineTests {
         #expect(habit.ghostRingRaw == nil)
         #expect(habit.ghostProofKindRaw == nil)
     }
+
+    // MARK: - 8. Custom Protocol Rules & Ordering
+
+    @Test func testCustomRuleCreationAndDefaults() {
+        let custom = GhostProtocolRule(
+            id: "custom_cold_shower",
+            title: "Cold Shower",
+            subtitle: "3 mins icy water",
+            ring: .body,
+            phase: .morning,
+            proofKind: .duration,
+            targetValue: 3.0,
+            unitLabel: "mins",
+            icon: "drop.fill",
+            isCustom: true,
+            isEnabled: true,
+            sortOrder: 10
+        )
+
+        #expect(custom.isCustom)
+        #expect(custom.isEnabled)
+        #expect(custom.ring == .body)
+        #expect(custom.targetValue == 3.0)
+    }
+
+    // MARK: - 9. Season Final Stats & Lifecycle Snapshot
+
+    @Test func testSeasonFinalStatsSerialization() throws {
+        let stats = SeasonFinalStats(
+            totalGhostDays: 85,
+            totalElapsedDays: 120,
+            bestStreak: 45,
+            finalStreak: 12,
+            completionRate: 70.83,
+            bodyRate: 90.0,
+            mindRate: 85.0,
+            silenceRate: 75.0,
+            averageScore: 82.5,
+            finalRank: "wraith"
+        )
+
+        let encoded = try JSONEncoder().encode(stats)
+        let decoded = try JSONDecoder().decode(SeasonFinalStats.self, from: encoded)
+
+        #expect(decoded.totalGhostDays == 85)
+        #expect(decoded.finalRank == "wraith")
+        #expect(decoded.completionRate == 70.83)
+    }
+
+    // MARK: - 10. Time-of-Day Pattern & Burnout Risk Math
+
+    @Test func testTimeOfDayPatternDistribution() {
+        var hourly: [Int: Int] = [:]
+        hourly[7] = 10  // 7 AM morning
+        hourly[8] = 5   // 8 AM morning
+        hourly[14] = 3  // 2 PM afternoon
+        hourly[21] = 2  // 9 PM evening
+
+        let pattern = TimeOfDayPattern(hourlyCounts: hourly)
+        #expect(pattern.peakHour == 7)
+        #expect(pattern.morningShare > 0.7)
+    }
+
+    @Test func testBurnoutRiskScoreLevels() {
+        let lowRisk = BurnoutRisk(score: 15, recentGhostRate: 0.9, missedDayCluster: 0)
+        #expect(lowRisk.riskLevel == .low)
+
+        let moderateRisk = BurnoutRisk(score: 45, recentGhostRate: 0.6, missedDayCluster: 1)
+        #expect(moderateRisk.riskLevel == .moderate)
+
+        let elevatedRisk = BurnoutRisk(score: 70, recentGhostRate: 0.4, missedDayCluster: 2)
+        #expect(elevatedRisk.riskLevel == .elevated)
+
+        let highRisk = BurnoutRisk(score: 90, recentGhostRate: 0.1, missedDayCluster: 4)
+        #expect(highRisk.riskLevel == .high)
+    }
+
+    // MARK: - 11. Season Comparison Deltas
+
+    @Test func testSeasonComparisonDeltaCalculations() {
+        let sideA = SeasonComparison.Side(
+            id: "season_1",
+            name: "Winter Arc 1",
+            protocolKind: "The 120",
+            totalDays: 120,
+            ghostDays: 60,
+            completionRate: 50.0,
+            bestStreak: 14,
+            bodyRate: 60.0,
+            mindRate: 70.0,
+            silenceRate: 50.0,
+            averageScore: 65.0,
+            rank: "shadow"
+        )
+
+        let sideB = SeasonComparison.Side(
+            id: "season_2",
+            name: "Winter Arc 2",
+            protocolKind: "The 120",
+            totalDays: 120,
+            ghostDays: 90,
+            completionRate: 75.0,
+            bestStreak: 30,
+            bodyRate: 85.0,
+            mindRate: 80.0,
+            silenceRate: 75.0,
+            averageScore: 82.0,
+            rank: "phantom"
+        )
+
+        let comp = SeasonComparison(seasonA: sideA, seasonB: sideB)
+        #expect(comp.completionDelta == 25.0)
+        #expect(comp.bestStreakDelta == 16)
+        #expect(comp.ghostDaysDelta == 30)
+        #expect(comp.scoreDelta == 17.0)
+    }
 }
 #endif
+

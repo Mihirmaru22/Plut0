@@ -34,7 +34,8 @@ public actor GhostEngine {
         protocolKind: GhostProtocolKind = .the120,
         startDate: Date = Date(),
         endDate: Date? = nil,
-        doctrine: GhostDoctrine = .hard
+        doctrine: GhostDoctrine = .hard,
+        customRules: [GhostProtocolRule]? = nil
     ) async throws -> GhostSeason {
         let calculatedEnd = endDate ?? Calendar.current.date(byAdding: .day, value: protocolKind.durationDays, to: startDate) ?? startDate
         let season = GhostSeason(
@@ -46,6 +47,12 @@ public actor GhostEngine {
             signedAt: Date()
         )
         try await store.saveSeason(season)
+
+        if let rules = customRules {
+            for rule in rules {
+                try await store.saveCustomRule(rule, seasonID: season.id)
+            }
+        }
         return season
     }
 
@@ -66,9 +73,32 @@ public actor GhostEngine {
         return newDay
     }
 
-    public func fetchRules(for season: GhostSeason?) -> [GhostProtocolRule] {
+    public func fetchRules(for season: GhostSeason?) async -> [GhostProtocolRule] {
         let kind = season?.protocolKind ?? .the120
-        return GhostProtocolRule.defaultRules(for: kind)
+        var presets = GhostProtocolRule.defaultRules(for: kind)
+        for i in presets.indices { presets[i].sortOrder = i }
+        guard let season = season else { return presets }
+        let customRules = (try? await store.fetchCustomRules(seasonID: season.id)) ?? []
+        if customRules.isEmpty {
+            return presets.filter { $0.isEnabled }
+        }
+
+        let customIDs = Set(customRules.map(\.id))
+        let filteredPresets = presets.filter { !customIDs.contains($0.id) }
+        let allRules = filteredPresets + customRules
+        return allRules
+            .filter { $0.isEnabled }
+            .sorted { ($0.sortOrder, $0.ring.rawValue) < ($1.sortOrder, $1.ring.rawValue) }
+    }
+
+    public func allRulesIncludingDisabled(for season: GhostSeason) async -> [GhostProtocolRule] {
+        let kind = season.protocolKind
+        var presets = GhostProtocolRule.defaultRules(for: kind)
+        for i in presets.indices { presets[i].sortOrder = i }
+        let customRules = (try? await store.fetchCustomRules(seasonID: season.id)) ?? []
+        let customIDs = Set(customRules.map(\.id))
+        let filteredPresets = presets.filter { !customIDs.contains($0.id) }
+        return filteredPresets + customRules
     }
 
     // MARK: - Receipts & Live Ring Re-Evaluation (Migration v5)
@@ -94,7 +124,7 @@ public actor GhostEngine {
         try await store.saveReceipt(receipt)
 
         let allReceipts = try await store.fetchReceipts(dayID: day.id)
-        let rules = fetchRules(for: season)
+        let rules = await fetchRules(for: season)
 
         // Evaluate Ring Closures from Receipts
         let bodyRules = rules.filter { $0.ring == .body }
@@ -557,7 +587,7 @@ public actor GhostEngine {
         let mindCount = past7.filter(\.mindClosed).count
         let silenceCount = past7.filter(\.silenceClosed).count
 
-        let rules = fetchRules(for: season)
+        let rules = await fetchRules(for: season)
         var ruleStats: [RuleAdherence] = []
 
         let allReceipts = try await store.fetchAllReceipts(seasonID: season.id)
@@ -642,4 +672,364 @@ public actor GhostEngine {
 
         return artifacts.sorted(by: { $0.loggedAt < $1.loggedAt })
     }
+
+    // MARK: - Custom Rules Management
+
+    public func saveCustomRule(_ rule: GhostProtocolRule) async throws {
+        guard let season = try await store.fetchActiveSeason() else { return }
+        try await store.saveCustomRule(rule, seasonID: season.id)
+    }
+
+    public func deleteCustomRule(id: String) async throws {
+        try await store.deleteCustomRule(id: id)
+    }
+
+    // MARK: - Season Lifecycle
+
+    /// Fetch all seasons including completed ones (for campaign history).
+    public func fetchAllSeasons() async throws -> [GhostSeason] {
+        try await store.fetchAllSeasons()
+    }
+
+    /// Freeze the current active season with final stats.
+    public func completeSeason(passportPDFPath: String? = nil) async throws {
+        guard var season = try await store.fetchActiveSeason() else { return }
+        let allDays  = try await store.fetchAllDays(seasonID: season.id)
+        let streak   = try await computeStreakStatus()
+        let elapsed  = max(1, allDays.count)
+        let ghostDays = allDays.filter(\.ghostDay).count
+        let bodyRate  = Double(allDays.filter(\.bodyClosed).count)    / Double(elapsed)
+        let mindRate  = Double(allDays.filter(\.mindClosed).count)    / Double(elapsed)
+        let silRate   = Double(allDays.filter(\.silenceClosed).count) / Double(elapsed)
+        let avgScore  = Double(allDays.map(\.score).reduce(0, +))     / Double(elapsed)
+
+        let stats = SeasonFinalStats(
+            totalGhostDays:   ghostDays,
+            totalElapsedDays: elapsed,
+            bestStreak:       streak.bestStreak,
+            finalStreak:      streak.currentStreak,
+            completionRate:   Double(ghostDays) / Double(elapsed) * 100.0,
+            bodyRate:         bodyRate * 100.0,
+            mindRate:         mindRate * 100.0,
+            silenceRate:      silRate  * 100.0,
+            averageScore:     avgScore,
+            finalRank:        streak.rank.rawValue
+        )
+        season.completedAt     = Date()
+        season.finalStats      = stats
+        season.passportPDFPath = passportPDFPath
+        try await store.completeSeason(season)
+    }
+
+    /// Complete the current season then immediately begin a new one.
+    public func startNewSeason(
+        name: String,
+        protocolKind: GhostProtocolKind = .the120,
+        startDate: Date = Date(),
+        endDate: Date? = nil,
+        doctrine: GhostDoctrine = .hard
+    ) async throws -> GhostSeason {
+        try await completeSeason()
+        return try await signContract(
+            name: name,
+            protocolKind: protocolKind,
+            startDate: startDate,
+            endDate: endDate,
+            doctrine: doctrine
+        )
+    }
+
+    // MARK: - Analytics Engine
+
+    /// Full on-device analytics report. windowDays controls trend window size.
+    public func fetchAnalyticsReport(windowDays: Int = 30) async throws -> GhostAnalyticsReport {
+        guard let season = try await store.fetchActiveSeason() else {
+            return GhostAnalyticsReport()
+        }
+
+        let allDays     = try await store.fetchAllDays(seasonID: season.id)
+        let allReceipts = try await store.fetchAllReceipts(seasonID: season.id)
+        let rules       = await fetchRules(for: season)
+        let streak      = try await computeStreakStatus()
+        let calendar    = Calendar.current
+        let window      = min(windowDays, max(1, allDays.count))
+        let recentDays  = Array(allDays.suffix(window))
+
+        // --- Ring Trend Windows (7-day buckets) ---
+        var trendWindows: [GhostRing: [RingTrendWindow]] = [:]
+        for ring in GhostRing.allCases {
+            var windows: [RingTrendWindow] = []
+            let chunkSize = 7
+            var offset = 0
+            var weekIndex = 1
+            while offset < recentDays.count {
+                let chunk = Array(recentDays[offset..<min(offset + chunkSize, recentDays.count)])
+                let completed: Int
+                switch ring {
+                case .body:    completed = chunk.filter(\.bodyClosed).count
+                case .mind:    completed = chunk.filter(\.mindClosed).count
+                case .silence: completed = chunk.filter(\.silenceClosed).count
+                }
+                let rate = Double(completed) / Double(chunk.count)
+                windows.append(RingTrendWindow(ring: ring, label: "Wk \(weekIndex)", completionRate: rate, dayCount: chunk.count))
+                offset += chunkSize
+                weekIndex += 1
+            }
+            trendWindows[ring] = windows
+        }
+
+        // --- Rule Correlations (point-biserial coefficient: rule completion vs ghost day) ---
+        let receiptsByDay = Dictionary(grouping: allReceipts, by: \.dayID)
+        var ruleCorrelations: [RuleCorrelation] = []
+        let fmt = ISO8601DateFormatter()
+
+        for rule in rules {
+            var ruleCompleted = [Bool]()
+            var ghostFlags    = [Bool]()
+            var wdCompletedCount = [Int: Int]()
+            var wdTotalCount     = [Int: Int]()
+
+            for day in recentDays {
+                let dayReceipts  = receiptsByDay[day.id] ?? []
+                let ruleReceipts = dayReceipts.filter { $0.ruleID == rule.id }
+                let totalVal     = ruleReceipts.reduce(0.0) { $0 + $1.valueReal }
+                let done         = totalVal >= rule.targetValue
+                ruleCompleted.append(done)
+                ghostFlags.append(day.ghostDay)
+
+                let date = fmt.date(from: day.dateString + "T00:00:00Z") ?? Date()
+                let wd   = calendar.component(.weekday, from: date)
+                wdTotalCount[wd, default: 0] += 1
+                if done { wdCompletedCount[wd, default: 0] += 1 }
+            }
+
+            let n        = Double(ruleCompleted.count)
+            let x        = ruleCompleted.map { $0 ? 1.0 : 0.0 }
+            let y        = ghostFlags.map    { $0 ? 1.0 : 0.0 }
+            let meanX    = n > 0 ? x.reduce(0, +) / n : 0
+            let meanY    = n > 0 ? y.reduce(0, +) / n : 0
+            let num      = zip(x, y).reduce(0.0) { $0 + ($1.0 - meanX) * ($1.1 - meanY) }
+            let denX     = x.reduce(0.0) { $0 + pow($1 - meanX, 2) }
+            let denY     = y.reduce(0.0) { $0 + pow($1 - meanY, 2) }
+            let coeff    = (denX * denY == 0) ? 0.0 : num / sqrt(denX * denY)
+
+            let completionRate = ruleCompleted.isEmpty ? 0.0 :
+                Double(ruleCompleted.filter { $0 }.count) / Double(ruleCompleted.count)
+
+            let half       = max(1, ruleCompleted.count / 2)
+            let firstRate  = ruleCompleted.isEmpty ? 0.0 :
+                Double(ruleCompleted.prefix(half).filter { $0 }.count) / Double(half)
+            let secondRate = ruleCompleted.isEmpty ? 0.0 :
+                Double(ruleCompleted.suffix(half).filter { $0 }.count) / Double(half)
+            let trend: RuleCorrelation.TrendDirection =
+                secondRate - firstRate > 0.1 ? .improving :
+                firstRate - secondRate > 0.1 ? .declining : .flat
+
+            let wdRates   = wdTotalCount.compactMapValues { total -> Double in
+                let wd = wdTotalCount.first(where: { $0.value == total })?.key ?? 1
+                return Double(wdCompletedCount[wd] ?? 0) / Double(total)
+            }
+            let weakestWD = wdRates.min(by: { $0.value < $1.value })?.key
+
+            ruleCorrelations.append(RuleCorrelation(
+                ruleID:                 rule.id,
+                title:                  rule.title,
+                ring:                   rule.ring,
+                correlationCoefficient: max(0, min(1, coeff)),
+                completionRate:         completionRate,
+                trendDirection:         trend,
+                weakestWeekday:         weakestWD
+            ))
+        }
+        ruleCorrelations.sort { $0.correlationCoefficient > $1.correlationCoefficient }
+
+        // --- Time-of-Day Pattern ---
+        var hourlyCounts = [Int: Int]()
+        for receipt in allReceipts {
+            let hr = calendar.component(.hour, from: receipt.loggedAt)
+            hourlyCounts[hr, default: 0] += 1
+        }
+        let timePattern = TimeOfDayPattern(hourlyCounts: hourlyCounts)
+
+        // --- Weekday Pattern ---
+        var ghostByWeekday = [Int: Int]()
+        var totalByWeekday = [Int: Int]()
+        for day in allDays {
+            let date = fmt.date(from: day.dateString + "T00:00:00Z") ?? Date()
+            let wd   = calendar.component(.weekday, from: date)
+            totalByWeekday[wd, default: 0] += 1
+            if day.ghostDay { ghostByWeekday[wd, default: 0] += 1 }
+        }
+        var ghostRateByWeekday = [Int: Double]()
+        for (wd, total) in totalByWeekday {
+            ghostRateByWeekday[wd] = Double(ghostByWeekday[wd] ?? 0) / Double(total)
+        }
+        let weekdayPattern = WeekdayPattern(ghostRateByWeekday: ghostRateByWeekday)
+
+        // --- Burnout Risk ---
+        let recent7   = Array(allDays.suffix(7))
+        let recent14  = Array(allDays.suffix(14))
+        let rate7     = recent7.isEmpty ? 0.0 : Double(recent7.filter(\.ghostDay).count) / Double(recent7.count)
+        let prevRate  = allDays.count > 14 ?
+            Double(Array(allDays.dropLast(7)).suffix(7).filter(\.ghostDay).count) / 7.0 : rate7
+        let rateDrop  = max(0.0, prevRate - rate7)
+        var cluster   = 0
+        for day in recent14.reversed() { if !day.ghostDay { cluster += 1 } else { break } }
+        let riskScore   = Int(min(100, rateDrop * 60 + Double(cluster) * 10))
+        let burnoutRisk = BurnoutRisk(score: riskScore, recentGhostRate: rate7, missedDayCluster: cluster)
+
+        // --- Summary stats ---
+        let totalGhost  = allDays.filter(\.ghostDay).count
+        let overallRate = Double(totalGhost) / Double(max(1, allDays.count)) * 100.0
+        let avgScore    = Double(allDays.map(\.score).reduce(0, +)) / Double(max(1, allDays.count))
+
+        return GhostAnalyticsReport(
+            trendWindows:          trendWindows,
+            ruleCorrelations:      ruleCorrelations,
+            timePattern:           timePattern,
+            weekdayPattern:        weekdayPattern,
+            burnoutRisk:           burnoutRisk,
+            overallCompletionRate: overallRate,
+            averageScore:          avgScore,
+            currentStreak:         streak.currentStreak,
+            bestStreak:            streak.bestStreak
+        )
+    }
+
+    // MARK: - Season Comparison & Rule History Deep-Dive
+
+    public func compareSeasons(seasonA: GhostSeason, seasonB: GhostSeason) async throws -> SeasonComparison {
+        let sideA = try await buildSide(for: seasonA)
+        let sideB = try await buildSide(for: seasonB)
+        return SeasonComparison(seasonA: sideA, seasonB: sideB)
+    }
+
+    private func buildSide(for season: GhostSeason) async throws -> SeasonComparison.Side {
+        if let stats = season.finalStats {
+            return SeasonComparison.Side(
+                id: season.id,
+                name: season.name,
+                protocolKind: season.protocolKind.title,
+                totalDays: season.totalDays,
+                ghostDays: stats.totalGhostDays,
+                completionRate: stats.completionRate,
+                bestStreak: stats.bestStreak,
+                bodyRate: stats.bodyRate,
+                mindRate: stats.mindRate,
+                silenceRate: stats.silenceRate,
+                averageScore: stats.averageScore,
+                rank: stats.finalRank
+            )
+        }
+
+        let allDays = try await store.fetchAllDays(seasonID: season.id)
+        let streak = try await computeStreakStatus()
+        let elapsed = max(1, allDays.count)
+        let ghostDays = allDays.filter(\.ghostDay).count
+        let bodyRate = Double(allDays.filter(\.bodyClosed).count) / Double(elapsed) * 100.0
+        let mindRate = Double(allDays.filter(\.mindClosed).count) / Double(elapsed) * 100.0
+        let silRate = Double(allDays.filter(\.silenceClosed).count) / Double(elapsed) * 100.0
+        let avgScore = Double(allDays.map(\.score).reduce(0, +)) / Double(elapsed)
+        let completionRate = Double(ghostDays) / Double(elapsed) * 100.0
+
+        return SeasonComparison.Side(
+            id: season.id,
+            name: season.name,
+            protocolKind: season.protocolKind.title,
+            totalDays: season.totalDays,
+            ghostDays: ghostDays,
+            completionRate: completionRate,
+            bestStreak: streak.bestStreak,
+            bodyRate: bodyRate,
+            mindRate: mindRate,
+            silenceRate: silRate,
+            averageScore: avgScore,
+            rank: streak.rank.rawValue
+        )
+    }
+
+    public struct RuleHistoryReport: Sendable {
+        public let ruleID: String
+        public let title: String
+        public let ring: GhostRing
+        public let targetValue: Double
+        public let unitLabel: String
+        public let completionRate: Double
+        public let timeline: [DayStatus]
+        public let weekdayRates: [Int: Double]
+        public let totalLoggedValue: Double
+
+        public struct DayStatus: Identifiable, Sendable {
+            public var id: String { dateString }
+            public let dateString: String
+            public let isCompleted: Bool
+            public let loggedValue: Double
+        }
+    }
+
+    public func fetchRuleHistory(ruleID: String, windowDays: Int = 30) async throws -> RuleHistoryReport? {
+        guard let season = try await store.fetchActiveSeason() else { return nil }
+        let rules = await fetchRules(for: season)
+        guard let rule = rules.first(where: { $0.id == ruleID }) else { return nil }
+
+        let allDays = try await store.fetchAllDays(seasonID: season.id)
+        let allReceipts = try await store.fetchAllReceipts(seasonID: season.id)
+        let receiptsByDay = Dictionary(grouping: allReceipts, by: \.dayID)
+        let calendar = Calendar.current
+        let fmt = ISO8601DateFormatter()
+
+        let recentDays = Array(allDays.suffix(windowDays))
+        var timeline: [RuleHistoryReport.DayStatus] = []
+        var weekdaySuccess = [Int: Int]()
+        var weekdayTotal = [Int: Int]()
+        var totalLogged: Double = 0
+
+        for day in recentDays {
+            let dayReceipts = receiptsByDay[day.id] ?? []
+            let matching = dayReceipts.filter { $0.ruleID == ruleID }
+            let val = matching.reduce(0.0) { $0 + $1.valueReal }
+            let done = val >= rule.targetValue
+            totalLogged += val
+
+            timeline.append(RuleHistoryReport.DayStatus(
+                dateString: day.dateString,
+                isCompleted: done,
+                loggedValue: val
+            ))
+
+            let date = fmt.date(from: day.dateString + "T00:00:00Z") ?? Date()
+            let wd = calendar.component(.weekday, from: date)
+            weekdayTotal[wd, default: 0] += 1
+            if done { weekdaySuccess[wd, default: 0] += 1 }
+        }
+
+        var wdRates: [Int: Double] = [:]
+        for (wd, total) in weekdayTotal {
+            wdRates[wd] = Double(weekdaySuccess[wd] ?? 0) / Double(max(1, total))
+        }
+
+        let completedCount = timeline.filter(\.isCompleted).count
+        let rate = timeline.isEmpty ? 0.0 : Double(completedCount) / Double(timeline.count)
+
+        return RuleHistoryReport(
+            ruleID: rule.id,
+            title: rule.title,
+            ring: rule.ring,
+            targetValue: rule.targetValue,
+            unitLabel: rule.unitLabel,
+            completionRate: rate,
+            timeline: timeline,
+            weekdayRates: wdRates,
+            totalLoggedValue: totalLogged
+        )
+    }
+
+    // MARK: - Factory Reset Ghost Mode
+
+    public func resetAllGhostData() async throws {
+        try await store.resetGhostData()
+    }
 }
+
+
+

@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Evening Ghost Reflection & Attestation Sheet.
 /// Allows fast check-in for Body, Mind reflection note, and Silence attestation with zero social clutter.
+/// Optionally creates a structured Markdown note in Plut0 Journal.
 public struct GhostCheckInSheet: View {
     @Environment(\.dismiss) private var dismiss
     public var onSaved: (() -> Void)?
@@ -10,6 +11,7 @@ public struct GhostCheckInSheet: View {
     @State private var mindReflectionText: String = ""
     @State private var silenceAttestedMinutes: Double = 45.0
     @State private var isSocialMediaFree: Bool = true
+    @State private var exportToJournal: Bool = true
     @State private var isSaving: Bool = false
 
     public init(onSaved: (() -> Void)? = nil) {
@@ -24,15 +26,15 @@ public struct GhostCheckInSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "moon.stars.fill")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+                            .foregroundStyle(DS.Theme.amber)
                         Text("EVENING GHOST CHECK-IN")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.white.opacity(0.6))
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(DS.Theme.amber)
                             .tracking(1.2)
                     }
                     Text("Seal Today's Ring Closures")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.white)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(DS.Theme.textPrimary)
                 }
 
                 Spacer()
@@ -42,7 +44,7 @@ public struct GhostCheckInSheet: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(Color.white.opacity(0.4))
+                        .foregroundStyle(DS.Theme.textTertiary)
                 }
                 .buttonStyle(.plain)
             }
@@ -53,83 +55,123 @@ public struct GhostCheckInSheet: View {
             Divider().opacity(0.12)
 
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 14) {
                     // 1. Body Ring
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Label("1. Body Ring — Physical Forge", systemImage: "figure.run")
                                 .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(Color(red: 0.9, green: 0.3, blue: 0.2))
+                                .foregroundStyle(Color(hex: "#E54D2E"))
                             Spacer()
                             Toggle("", isOn: $bodyClosed)
                                 .toggleStyle(.switch)
                                 .labelsHidden()
+                                .tint(Color(hex: "#E54D2E"))
                         }
                         Text("Completed workout, cold plunge, or hit daily 10k physical baseline.")
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.white.opacity(0.55))
+                            .foregroundStyle(DS.Theme.textTertiary)
                     }
                     .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DS.Theme.card)
+                    )
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
 
                     // 2. Mind Ring Reflection
                     VStack(alignment: .leading, spacing: 8) {
                         Label("2. Mind Ring — Reflection & Synthesis", systemImage: "brain.head.profile")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color(red: 0.25, green: 0.45, blue: 0.95))
+                            .foregroundStyle(Color(hex: "#3E63DD"))
 
                         TextEditor(text: $mindReflectionText)
                             .font(.system(size: 12))
-                            .frame(height: 75)
+                            .foregroundStyle(DS.Theme.textPrimary)
+                            .frame(height: 70)
                             .padding(8)
                             .background(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.black.opacity(0.3))
-                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                                    .fill(DS.Theme.surface)
                             )
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Theme.border, lineWidth: 1))
 
                         Text("What was your highest leverage output or realization today?")
                             .font(.system(size: 10.5))
-                            .foregroundStyle(Color.white.opacity(0.45))
+                            .foregroundStyle(DS.Theme.textMuted)
                     }
                     .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DS.Theme.card)
+                    )
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
 
                     // 3. Silence Ring Attestation
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Label("3. Silence Ring — Focus & Off-Grid", systemImage: "speaker.slash.fill")
                                 .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+                                .foregroundStyle(Color(hex: "#0091FF"))
                             Spacer()
                             Text("\(Int(silenceAttestedMinutes)) mins")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+                                .foregroundStyle(Color(hex: "#0091FF"))
                         }
 
                         Slider(value: $silenceAttestedMinutes, in: 0...180, step: 15)
-                            .tint(Color(red: 0.0, green: 0.85, blue: 1.0))
+                            .tint(Color(hex: "#0091FF"))
 
                         Text("Total deep work focus or deliberate offline silence logged today.")
                             .font(.system(size: 10.5))
-                            .foregroundStyle(Color.white.opacity(0.45))
+                            .foregroundStyle(DS.Theme.textMuted)
                     }
                     .padding(12)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DS.Theme.card)
+                    )
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
 
-                    // 4. Social-Free Tap
-                    Toggle(isOn: $isSocialMediaFree) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Complete Social-Media Feed Fast")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.white)
-                            Text("Zero infinite scroll feeds consumed today.")
-                                .font(.system(size: 10.5))
-                                .foregroundStyle(Color.white.opacity(0.5))
+                    // 4. Social-Free Fast & Notes Export Toggles
+                    VStack(spacing: 8) {
+                        Toggle(isOn: $isSocialMediaFree) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Complete Social-Media Feed Fast")
+                                    .font(.system(size: 11.5, weight: .semibold))
+                                    .foregroundStyle(DS.Theme.textPrimary)
+                                Text("Zero infinite scroll feeds consumed today.")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(DS.Theme.textTertiary)
+                            }
                         }
+                        .toggleStyle(.checkbox)
+
+                        Divider().opacity(0.1)
+
+                        Toggle(isOn: $exportToJournal) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "book.pages.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(DS.Theme.amber)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Export Reflection Note to Journal")
+                                        .font(.system(size: 11.5, weight: .semibold))
+                                        .foregroundStyle(DS.Theme.textPrimary)
+                                    Text("Creates a structured Markdown note in Notes & Journal.")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(DS.Theme.textTertiary)
+                                }
+                            }
+                        }
+                        .toggleStyle(.checkbox)
                     }
-                    .toggleStyle(.checkbox)
-                    .padding(10)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DS.Theme.card)
+                    )
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(DS.Theme.border, lineWidth: 1))
                 }
                 .padding(20)
             }
@@ -140,7 +182,7 @@ public struct GhostCheckInSheet: View {
             HStack {
                 Button("Dismiss") { dismiss() }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.white.opacity(0.5))
+                    .foregroundStyle(DS.Theme.textTertiary)
 
                 Spacer()
 
@@ -151,17 +193,17 @@ public struct GhostCheckInSheet: View {
                         if isSaving {
                             ProgressView().controlSize(.small)
                         } else {
-                            Image(systemName: "checkmark.circle.fill")
+                            Image(systemName: "checkmark.seal.fill")
                             Text("Seal Check-In")
                                 .font(.system(size: 12, weight: .bold))
                         }
                     }
-                    .foregroundStyle(Color.black)
+                    .foregroundStyle(DS.Theme.canvas)
                     .padding(.horizontal, 18)
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 8)
                     .background(
-                        Color(red: 0.0, green: 0.85, blue: 1.0),
-                        in: RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(DS.Theme.amber)
                     )
                 }
                 .buttonStyle(.plain)
@@ -169,10 +211,10 @@ public struct GhostCheckInSheet: View {
             }
             .padding(.horizontal, 22)
             .padding(.vertical, 14)
-            .background(Color(red: 0.06, green: 0.06, blue: 0.08))
+            .background(DS.Theme.surface)
         }
-        .frame(width: 520, height: 560)
-        .background(Color(red: 0.07, green: 0.07, blue: 0.09))
+        .frame(width: 520, height: 600)
+        .background(DS.Theme.canvas)
         .onAppear {
             loadTodayExistingValues()
         }
@@ -191,14 +233,34 @@ public struct GhostCheckInSheet: View {
 
     private func executeSaveCheckIn() {
         isSaving = true
-        Haptics.notification(.success)
+        Haptics.notify(.success)
 
         Task {
             _ = try? await GhostEngine.shared.toggleRing(ring: .body, isClosed: bodyClosed)
             if !mindReflectionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 _ = try? await GhostEngine.shared.toggleRing(ring: .mind, isClosed: true)
             }
-            _ = try? await GhostEngine.shared.recordAttestedSilenceMinutes(Int(silenceAttestedMinutes))
+            let updatedDay = try? await GhostEngine.shared.recordAttestedSilenceMinutes(Int(silenceAttestedMinutes))
+
+            if exportToJournal, let day = updatedDay {
+                let season = try? await GhostEngine.shared.fetchActiveSeason()
+                let receipts = (try? await GhostEngine.shared.fetchReceipts(for: Date())) ?? []
+                let rules = await GhostEngine.shared.fetchRules(for: season)
+
+                let fmt = DateFormatter()
+                fmt.dateFormat = "yyyy-MM-dd"
+                let intentionKey = "ghost_morning_intention_" + fmt.string(from: Date())
+                let intention = UserDefaults.standard.string(forKey: intentionKey) ?? ""
+
+                _ = try? await GhostReflectionNoteBridge.createOrUpdateReflectionNote(
+                    date: Date(),
+                    dayRecord: day,
+                    receipts: receipts,
+                    rules: rules,
+                    morningIntention: intention,
+                    eveningReflection: mindReflectionText
+                )
+            }
 
             await MainActor.run {
                 isSaving = false

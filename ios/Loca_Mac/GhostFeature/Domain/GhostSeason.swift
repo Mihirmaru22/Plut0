@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - GhostProtocolKind
 
-public enum GhostProtocolKind: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum GhostProtocolKind: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case the120            = "the120"
     case seventyFiveHard   = "seventyFiveHard"
     case custom            = "custom"
@@ -36,7 +36,7 @@ public enum GhostProtocolKind: String, Codable, CaseIterable, Identifiable, Send
 
 // MARK: - GhostDoctrine
 
-public enum GhostDoctrine: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum GhostDoctrine: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case hard = "hard"
     case arc  = "arc"
 
@@ -59,7 +59,7 @@ public enum GhostDoctrine: String, Codable, CaseIterable, Identifiable, Sendable
 
 // MARK: - GhostRing
 
-public enum GhostRing: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum GhostRing: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case body    = "body"
     case mind    = "mind"
     case silence = "silence"
@@ -93,7 +93,7 @@ public enum GhostRing: String, Codable, CaseIterable, Identifiable, Sendable {
 
 // MARK: - GhostRank
 
-public enum GhostRank: String, Codable, CaseIterable, Sendable {
+public enum GhostRank: String, Codable, CaseIterable, Hashable, Sendable {
     case uninitiated = "Uninitiated"
     case apparition  = "Apparition"
     case shadow      = "Shadow"
@@ -139,9 +139,48 @@ public enum GhostRank: String, Codable, CaseIterable, Sendable {
     }
 }
 
+// MARK: - SeasonFinalStats (Frozen Snapshot)
+
+public struct SeasonFinalStats: Codable, Equatable, Hashable, Sendable {
+    public let totalGhostDays: Int
+    public let totalElapsedDays: Int
+    public let bestStreak: Int
+    public let finalStreak: Int
+    public let completionRate: Double
+    public let bodyRate: Double
+    public let mindRate: Double
+    public let silenceRate: Double
+    public let averageScore: Double
+    public let finalRank: String
+
+    public init(
+        totalGhostDays: Int = 0,
+        totalElapsedDays: Int = 0,
+        bestStreak: Int = 0,
+        finalStreak: Int = 0,
+        completionRate: Double = 0,
+        bodyRate: Double = 0,
+        mindRate: Double = 0,
+        silenceRate: Double = 0,
+        averageScore: Double = 0,
+        finalRank: String = "Uninitiated"
+    ) {
+        self.totalGhostDays = totalGhostDays
+        self.totalElapsedDays = totalElapsedDays
+        self.bestStreak = bestStreak
+        self.finalStreak = finalStreak
+        self.completionRate = completionRate
+        self.bodyRate = bodyRate
+        self.mindRate = mindRate
+        self.silenceRate = silenceRate
+        self.averageScore = averageScore
+        self.finalRank = finalRank
+    }
+}
+
 // MARK: - GhostSeason Entity
 
-public struct GhostSeason: Identifiable, Codable, Equatable, Sendable {
+public struct GhostSeason: Identifiable, Codable, Equatable, Hashable, Sendable {
     public let id: String
     public var name: String
     public var protocolKind: GhostProtocolKind
@@ -150,6 +189,9 @@ public struct GhostSeason: Identifiable, Codable, Equatable, Sendable {
     public var doctrine: GhostDoctrine
     public var signedAt: Date
     public var deviceID: String
+    public var completedAt: Date?
+    public var finalStats: SeasonFinalStats?
+    public var passportPDFPath: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -159,7 +201,10 @@ public struct GhostSeason: Identifiable, Codable, Equatable, Sendable {
         endDate: Date = Calendar.current.date(byAdding: .day, value: 120, to: Date()) ?? Date(),
         doctrine: GhostDoctrine = .hard,
         signedAt: Date = Date(),
-        deviceID: String = Host.current().localizedName ?? "Mac"
+        deviceID: String = Host.current().localizedName ?? "Mac",
+        completedAt: Date? = nil,
+        finalStats: SeasonFinalStats? = nil,
+        passportPDFPath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -169,6 +214,13 @@ public struct GhostSeason: Identifiable, Codable, Equatable, Sendable {
         self.doctrine = doctrine
         self.signedAt = signedAt
         self.deviceID = deviceID
+        self.completedAt = completedAt
+        self.finalStats = finalStats
+        self.passportPDFPath = passportPDFPath
+    }
+
+    public var isCompleted: Bool {
+        completedAt != nil
     }
 
     public var isWinterArcSeason: Bool {

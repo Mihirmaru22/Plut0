@@ -53,9 +53,9 @@ public struct GhostChainGridView: View {
 
                 // Legend
                 HStack(spacing: 8) {
-                    legendItem(color: Color(hex: "#E54D2E") ?? .red, label: "Body")
-                    legendItem(color: Color(hex: "#3E63DD") ?? .blue, label: "Mind")
-                    legendItem(color: Color(hex: "#0091FF") ?? .cyan, label: "Silence")
+                    legendItem(color: Color(hex: "#E54D2E"), label: "Body")
+                    legendItem(color: Color(hex: "#3E63DD"), label: "Mind")
+                    legendItem(color: Color(hex: "#0091FF"), label: "Silence")
                 }
             }
             .padding(.horizontal, 2)
@@ -97,19 +97,19 @@ public struct GhostChainGridView: View {
                     // Outer: Body (Crimson)
                     Circle()
                         .trim(from: 0, to: cell.bodyClosed ? 1.0 : 0.0)
-                        .stroke(Color(hex: "#E54D2E") ?? .red, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                        .stroke(Color(hex: "#E54D2E"), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
                         .frame(width: 14, height: 14)
 
                     // Middle: Mind (Indigo)
                     Circle()
                         .trim(from: 0, to: cell.mindClosed ? 1.0 : 0.0)
-                        .stroke(Color(hex: "#3E63DD") ?? .blue, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                        .stroke(Color(hex: "#3E63DD"), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
                         .frame(width: 9.5, height: 9.5)
 
                     // Inner: Silence (Ghost Cyan)
                     Circle()
                         .trim(from: 0, to: cell.silenceClosed ? 1.0 : 0.0)
-                        .stroke(Color(hex: "#0091FF") ?? .cyan, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                        .stroke(Color(hex: "#0091FF"), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
                         .frame(width: 5, height: 5)
                 }
 
