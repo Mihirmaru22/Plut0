@@ -30,50 +30,47 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
 
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
+    @ViewBuilder
     public func body(content: Content) -> some View {
         if reduceTransparency {
             content
                 .background(DS.Theme.card, in: shape)
                 .overlay(shape.stroke(DS.Theme.border, lineWidth: 1))
         } else {
-            content
-                .background(glassBackground, in: shape)
-                .overlay(glassHighlightStroke)
-                .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 1.5)
-        }
-    }
-
-    @ViewBuilder
-    private var glassBackground: some View {
-        switch style {
-        case .regular:
-            Material.ultraThinMaterial
-        case .interactive:
-            Material.regularMaterial
-        case .prominent:
-            Material.thinMaterial
-        case .tinted(let color):
-            ZStack {
-                Material.ultraThinMaterial
-                color.opacity(0.12)
-            }
-        }
-    }
-
-    private var glassHighlightStroke: some View {
-        let opacityTop: Double = {
             switch style {
-            case .regular: return 0.24
-            case .interactive: return 0.40
-            case .prominent: return 0.48
-            case .tinted: return 0.32
-            }
-        }()
+            case .regular:
+                content
+                    .background(.ultraThinMaterial, in: shape)
+                    .overlay(glassHighlightStroke(topOpacity: 0.24))
+                    .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 1.5)
 
-        return shape.stroke(
+            case .interactive:
+                content
+                    .background(.regularMaterial, in: shape)
+                    .overlay(glassHighlightStroke(topOpacity: 0.40))
+                    .shadow(color: Color.black.opacity(0.18), radius: 5, x: 0, y: 2)
+
+            case .prominent:
+                content
+                    .background(.thinMaterial, in: shape)
+                    .overlay(glassHighlightStroke(topOpacity: 0.48))
+                    .shadow(color: Color.black.opacity(0.20), radius: 6, x: 0, y: 2)
+
+            case .tinted(let color):
+                content
+                    .background(.ultraThinMaterial, in: shape)
+                    .background(shape.fill(color.opacity(0.12)))
+                    .overlay(glassHighlightStroke(topOpacity: 0.32))
+                    .shadow(color: Color.black.opacity(0.14), radius: 4, x: 0, y: 1.5)
+            }
+        }
+    }
+
+    private func glassHighlightStroke(topOpacity: Double) -> some View {
+        shape.stroke(
             LinearGradient(
                 colors: [
-                    Color.white.opacity(opacityTop),
+                    Color.white.opacity(topOpacity),
                     Color.white.opacity(0.04)
                 ],
                 startPoint: .topLeading,
