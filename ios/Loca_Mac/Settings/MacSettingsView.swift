@@ -79,74 +79,142 @@ struct MacSettingsView: View {
         return palette[0]
     }
 
+    // Tab Switcher
+    enum SettingsTab: String, CaseIterable, Identifiable {
+        case notifications = "Notifications & Wellness"
+        case appearance   = "Appearance & Audio"
+        case system       = "System & Security"
+        case data         = "Data & Storage"
+
+        var id: String { rawValue }
+
+        var icon: String {
+            switch self {
+            case .notifications: return "bell.badge.fill"
+            case .appearance:    return "paintpalette.fill"
+            case .system:        return "lock.shield.fill"
+            case .data:          return "externaldrive.fill"
+            }
+        }
+    }
+
+    @AppStorage("mac_settings_active_tab") private var selectedTab: SettingsTab = .notifications
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
-                // Header
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Settings")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(DS.Color.textPrimary)
+                // Header & Liquid Glass Tab Switcher
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Settings")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(DS.Color.textPrimary)
 
-                    Text("System Preferences & Hardware Controls")
-                        .font(.system(size: 13))
-                        .foregroundStyle(DS.Color.textSecondary)
-                }
-                .padding(.bottom, 4)
-
-                // Bento Grid 2-Column
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
-
-                    // 1. Sound & Acoustics Bento Tile
-                    bentoTile(title: "Sound & Acoustics", icon: "speaker.wave.3.fill", accent: accentColor) {
-                        soundControlsBlock
+                        Text("System Preferences & Hardware Controls")
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(DS.Color.textSecondary)
                     }
 
-                    // 2. Biometric Vault Bento Tile
-                    bentoTile(title: "Privacy & Vault", icon: "lock.shield.fill", accent: Color(red: 0.75, green: 0.55, blue: 0.95)) {
-                        securityControlBlock
+                    Spacer()
+
+                    // Top Segmented Bar
+                    PlutoGlassCluster(spacing: 2) {
+                        ForEach(SettingsTab.allCases) { tab in
+                            let isSelected = selectedTab == tab
+                            Button {
+                                withAnimation(PlutoSpring.snappy) {
+                                    selectedTab = tab
+                                }
+                                Haptics.impact(.light)
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: tab.icon)
+                                        .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                                    Text(tab.rawValue)
+                                        .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                                }
+                                .foregroundStyle(isSelected ? Color.black : DS.Color.textSecondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background {
+                                    if isSelected {
+                                        Capsule()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(white: 0.98), Color(white: 0.90)],
+                                                    startPoint: .top,
+                                                    endPoint: .bottom
+                                                )
+                                            )
+                                            .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 0.8))
+                                            .shadow(color: Color.black.opacity(0.20), radius: 4, y: 1)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.bottom, 6)
+
+                // Tab Content Switcher
+                switch selectedTab {
+                case .notifications:
+                    VStack(spacing: 16) {
+                        bentoTile(title: "Notifications & Workday Wellness", icon: "bell.badge.fill", accent: Color(red: 0.85, green: 0.40, blue: 0.40)) {
+                            notificationsControlBlock
+                        }
                     }
 
-                    // 3. Appearance Bento Tile
-                    bentoTile(title: "Executive Accent", icon: "paintpalette.fill", accent: Color(red: 0.95, green: 0.55, blue: 0.35)) {
-                        appearanceControlBlock
+                case .appearance:
+                    VStack(spacing: 16) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
+                            bentoTile(title: "Executive Accent", icon: "paintpalette.fill", accent: Color(red: 0.95, green: 0.55, blue: 0.35)) {
+                                appearanceControlBlock
+                            }
+
+                            bentoTile(title: "Sound & Acoustics", icon: "speaker.wave.3.fill", accent: accentColor) {
+                                soundControlsBlock
+                            }
+                        }
+
+                        bentoTile(title: "Today Pillar Sub-modes", icon: "calendar.day.timeline.left", accent: Color(red: 0.95, green: 0.77, blue: 0.25)) {
+                            todaySubmodesControlBlock
+                        }
                     }
 
-                    // 4. System & General Bento Tile
-                    bentoTile(title: "General & Hotkeys", icon: "gearshape.fill", accent: Color(red: 0.35, green: 0.65, blue: 0.95)) {
-                        generalControlBlock
+                case .system:
+                    VStack(spacing: 16) {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
+                            bentoTile(title: "Privacy & Biometric Vault", icon: "lock.shield.fill", accent: Color(red: 0.75, green: 0.55, blue: 0.95)) {
+                                securityControlBlock
+                            }
+
+                            bentoTile(title: "General & Hotkeys", icon: "gearshape.fill", accent: Color(red: 0.35, green: 0.65, blue: 0.95)) {
+                                generalControlBlock
+                            }
+                        }
+
+                        bentoTile(title: "App Spotlight & Shortcuts Guide", icon: "sparkles", accent: Color(red: 0.95, green: 0.75, blue: 0.25)) {
+                            studioNotesGuideBlock
+                        }
                     }
-                }
 
-                // Today Pillar Sub-modes Bento Tile (Full Width)
-                bentoTile(title: "Today Pillar Sub-modes", icon: "calendar.day.timeline.left", accent: Color(red: 0.95, green: 0.77, blue: 0.25)) {
-                    todaySubmodesControlBlock
-                }
+                case .data:
+                    VStack(spacing: 16) {
+                        bentoTile(title: "Data Sovereignty & Local Storage", icon: "externaldrive.badge.icloud", accent: Color(red: 0.45, green: 0.85, blue: 0.55)) {
+                            dataSyncControlBlock
+                        }
 
-                // 5. Notifications Bento Tile (Full Width)
-                bentoTile(title: "Notifications & Smart Schedule", icon: "bell.badge.fill", accent: Color(red: 0.85, green: 0.40, blue: 0.40)) {
-                    notificationsControlBlock
-                }
+                        bentoTile(title: "About PLUTO Sovereign OS", icon: "info.circle.fill", accent: Color(red: 0.80, green: 0.80, blue: 0.85)) {
+                            aboutControlBlock
+                        }
 
-                // 6. Data Sovereignty & SQLite Tile (Full Width)
-                bentoTile(title: "Data Sovereignty & Local Storage", icon: "externaldrive.badge.icloud", accent: Color(red: 0.45, green: 0.85, blue: 0.55)) {
-                    dataSyncControlBlock
-                }
-
-                // 7. Danger Zone & Factory Data Reset (Full Width)
-                bentoTile(title: "Danger Zone · Factory Data Reset", icon: "trash.fill", accent: Color(red: 0.95, green: 0.35, blue: 0.35)) {
-                    dangerZoneControlBlock
-                }
-
-                // Studio Guide Tile
-                bentoTile(title: "App Spotlight & Shortcuts Guide", icon: "sparkles", accent: Color(red: 0.95, green: 0.75, blue: 0.25)) {
-                    studioNotesGuideBlock
-                }
-
-                // 8. About Pluto Tile
-                bentoTile(title: "About PLUTO OS", icon: "info.circle.fill", accent: Color(red: 0.80, green: 0.80, blue: 0.85)) {
-                    aboutControlBlock
+                        bentoTile(title: "Danger Zone · Factory Data Reset", icon: "trash.fill", accent: Color(red: 0.95, green: 0.35, blue: 0.35)) {
+                            dangerZoneControlBlock
+                        }
+                    }
                 }
 
                 Spacer(minLength: 40)
