@@ -7,7 +7,7 @@ import MapKit
 enum TravelFilter: String, CaseIterable, Identifiable {
     case all             = "All"
     case visited         = "Visited 🏆"
-    case wishlist        = "Wishlist 📍"
+    case unvisited       = "Unexplored"
     case northern        = "North"
     case western         = "West"
     case southern        = "South"
@@ -38,7 +38,7 @@ struct MacTravelAtlasCanvas: View {
     @AppStorage("mac_travel_selected_state_code_v5") private var savedSelectedStateCode: String = "RJ"
     @State private var selectedFilter: TravelFilter = .all
     @State private var searchText: String = ""
-    @State private var isSearchOpen: Bool = false
+    @State private var isSearchOpen: Bool = true
 
     // Cached Precomputed Polygon Rings for 60 FPS buttery-smooth map panning
     @State private var cachedTerritoryRings: [MapPolygonRing] = []
@@ -74,17 +74,19 @@ struct MacTravelAtlasCanvas: View {
     // Filtered States for Drawer List
     private var filteredStates: [TravelRecord] {
         activeStates.filter { state in
-            let matchesSearch = searchText.isEmpty ||
-                state.name.localizedCaseInsensitiveContains(searchText) ||
-                state.capital.localizedCaseInsensitiveContains(searchText) ||
-                state.stateCode.localizedCaseInsensitiveContains(searchText)
+            let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matchesSearch = q.isEmpty ||
+                state.name.localizedCaseInsensitiveContains(q) ||
+                state.capital.localizedCaseInsensitiveContains(q) ||
+                state.stateCode.localizedCaseInsensitiveContains(q) ||
+                state.topAttractions.contains(where: { $0.localizedCaseInsensitiveContains(q) })
 
             guard matchesSearch else { return false }
 
             switch selectedFilter {
             case .all:            return true
             case .visited:        return state.isVisited
-            case .wishlist:       return !state.isVisited
+            case .unvisited:      return !state.isVisited
             case .northern:       return state.zone == .northern
             case .western:        return state.zone == .western
             case .southern:       return state.zone == .southern
@@ -265,13 +267,58 @@ struct MacTravelAtlasCanvas: View {
 
     private var floatingSearchDrawer: some View {
         VStack(spacing: 8) {
-            // Search Input
+            // Header: Title + Progress Summary
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("State Explorer")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.white)
+                    Text("\(visitedStatesCount) of \(activeStates.count) Explored (\(Int(explorationPercentage))%)")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(visitedAccent)
+                }
+
+                Spacer()
+
+                Button {
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                        isSearchOpen = false
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(DS.Theme.textTertiary)
+                        .padding(4)
+                        .background(Color.white.opacity(0.06), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Quick Progress Bar
+            GeometryReader { gp in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.10))
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [visitedAccent, Color(red: 1.0, green: 0.85, blue: 0.2)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(0, gp.size.width * CGFloat(explorationPercentage / 100.0)))
+                }
+            }
+            .frame(height: 4)
+
+            // Search Input with Quick Clear
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11))
                     .foregroundStyle(DS.Theme.textTertiary)
 
-                TextField("Search states, capitals...", text: $searchText)
+                TextField("Search states, capitals, codes...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
 
@@ -288,7 +335,7 @@ struct MacTravelAtlasCanvas: View {
             .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(DS.Theme.border, lineWidth: 1))
 
-            // Filter Pills
+            // Filter Pills (All / Visited / Unexplored / Zones)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
                     ForEach(TravelFilter.allCases) { filter in
@@ -298,7 +345,7 @@ struct MacTravelAtlasCanvas: View {
                                 selectedFilter = filter
                             }
                         } label: {
-                            Text(filter.rawValue)
+                            Text(filterTitle(filter))
                                 .font(.system(size: 10, weight: isSelected ? .bold : .medium))
                                 .foregroundStyle(isSelected ? Color.black : DS.Theme.textSecondary)
                                 .padding(.horizontal, 7)
@@ -315,63 +362,106 @@ struct MacTravelAtlasCanvas: View {
 
             Divider().opacity(0.12)
 
-            // Results List
+            // Results List with Direct 1-Click Checkboxes
             ScrollView {
                 LazyVStack(spacing: 3) {
                     ForEach(filteredStates) { state in
                         let isSelected = selectedState?.id == state.id
-                        Button {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                selectedState = state
-                                // Smoothly pan camera to selected state
-                                mapCameraPosition = .camera(
-                                    MapCamera(
-                                        centerCoordinate: state.coordinate,
-                                        distance: 1_200_000,
-                                        heading: 0,
-                                        pitch: 0
+                        HStack(spacing: 6) {
+                            // Direct 1-Click Visited Toggle Checkbox
+                            Button {
+                                toggleVisited(state)
+                            } label: {
+                                Image(systemName: state.isVisited ? "checkmark.seal.fill" : "circle")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(state.isVisited ? visitedAccent : Color.white.opacity(0.35))
+                                    .frame(width: 22, height: 22)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(state.isVisited ? "Mark as unexplored" : "Mark as visited")
+
+                            // State Name & Capital (Click to zoom on map & inspect)
+                            Button {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                    selectedState = state
+                                    mapCameraPosition = .camera(
+                                        MapCamera(
+                                            centerCoordinate: state.coordinate,
+                                            distance: 1_200_000,
+                                            heading: 0,
+                                            pitch: 0
+                                        )
                                     )
-                                )
-                            }
-                            Haptics.impact(.light)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(state.isVisited ? visitedAccent : Color.white.opacity(0.35))
-                                    .frame(width: 6, height: 6)
-
-                                Text(state.name)
-                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                                    .foregroundStyle(Color.white)
-
-                                Spacer()
-
-                                if state.isVisited {
-                                    Text("Visited")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(visitedAccent)
-                                } else {
-                                    Text(state.capital)
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(DS.Theme.textSecondary)
                                 }
+                                Haptics.impact(.light)
+                            } label: {
+                                HStack(spacing: 6) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        HStack(spacing: 4) {
+                                            Text(state.name)
+                                                .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                                                .foregroundStyle(Color.white)
+                                            Text(state.stateCode)
+                                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                                .foregroundStyle(selectedAccent.opacity(0.85))
+                                        }
+                                        Text(state.capital)
+                                            .font(.system(size: 9.5))
+                                            .foregroundStyle(DS.Theme.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    if state.isVisited {
+                                        Text("Visited")
+                                            .font(.system(size: 8.5, weight: .bold))
+                                            .foregroundStyle(visitedAccent)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1.5)
+                                            .background(visitedAccent.opacity(0.18), in: RoundedRectangle(cornerRadius: 3))
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5.5)
-                            .background(
-                                isSelected ? selectedAccent.opacity(0.18) : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 5)
-                            )
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(
+                            isSelected ? selectedAccent.opacity(0.16) : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 5)
+                        )
                     }
                 }
             }
-            .frame(maxHeight: 320)
+            .frame(maxHeight: 380)
         }
         .padding(10)
-        .frame(width: 270)
+        .frame(width: 300)
         .machinedCard(cornerRadius: 10, accent: selectedAccent)
+    }
+
+    private func filterTitle(_ filter: TravelFilter) -> String {
+        switch filter {
+        case .all:
+            return "All (\(activeStates.count))"
+        case .visited:
+            return "Visited (\(visitedStatesCount))"
+        case .unvisited:
+            return "Unexplored (\(activeStates.count - visitedStatesCount))"
+        case .northern:
+            return "North"
+        case .western:
+            return "West"
+        case .southern:
+            return "South"
+        case .eastern:
+            return "East"
+        case .unionTerritory:
+            return "UTs"
+        }
     }
 
     // MARK: - Clean Floating State Inspector Card
@@ -392,7 +482,7 @@ struct MacTravelAtlasCanvas: View {
 
                         if state.isVisited {
                             Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 13))
                                 .foregroundStyle(visitedAccent)
                         }
                     }
@@ -444,28 +534,32 @@ struct MacTravelAtlasCanvas: View {
 
             Divider().opacity(0.12)
 
-            // Toggle Visited Button (Instantly paints/unpaints territory gold on the map)
+            // Direct 1-Click Visited / Unexplored Toggle Button
             Button {
                 toggleVisited(state)
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: state.isVisited ? "arrow.uturn.backward" : "checkmark.seal.fill")
-                        .font(.system(size: 11, weight: .bold))
-                    Text(state.isVisited ? "Mark as Wishlist" : "Mark as Visited 🏆")
+                HStack(spacing: 6) {
+                    Image(systemName: state.isVisited ? "checkmark.circle.fill" : "plus.circle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                    Text(state.isVisited ? "Visited ✓ (Click to Mark Unexplored)" : "Mark as Visited 🏆")
                         .font(.system(size: 11.5, weight: .bold))
                 }
                 .foregroundStyle(state.isVisited ? Color.white : Color.black)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
                 .background(
-                    state.isVisited ? Color.white.opacity(0.10) : visitedAccent,
+                    state.isVisited ? Color.white.opacity(0.12) : visitedAccent,
                     in: RoundedRectangle(cornerRadius: 6)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(state.isVisited ? visitedAccent.opacity(0.5) : Color.clear, lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
         }
         .padding(12)
-        .frame(width: 290)
+        .frame(width: 300)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(DS.Theme.card)
@@ -497,9 +591,11 @@ struct MacTravelAtlasCanvas: View {
             if state.isVisited {
                 state.status = .wishlist
                 state.dateVisited = nil
+                PlutoSoundEngine.shared.play(.deleteTrash)
             } else {
                 state.status = .visited
                 state.dateVisited = Date.now
+                PlutoSoundEngine.shared.play(.completePop)
                 Haptics.notify(.success)
             }
             try? modelContext.save()
