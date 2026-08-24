@@ -115,10 +115,7 @@ struct MacTodoContentColumn: View {
             )
         }
         .navigationTitle("Today")
-        // Navigation owns the structural material; interactive task controls
-        // use native Liquid Glass individually rather than stacking a legacy
-        // simulated blur underneath the entire workspace.
-        .background(Color.clear)
+        .background(DS.Theme.surface)
         .onAppear {
             let initial = TodoMode(rawValue: modeString) ?? .plan
             activeMode = visibleModes.contains(initial) ? initial : (visibleModes.first ?? .plan)

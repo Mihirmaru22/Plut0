@@ -27,7 +27,7 @@ struct MacTodoDetailColumn: View {
                 Text("Select a task or block from the agenda to view and edit details.")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.clear)
+            .background(DS.Theme.surface)
         }
     }
 }
@@ -167,7 +167,7 @@ private struct MacTodoEditor: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color.clear)
+        .background(DS.Theme.surface)
         .confirmationDialog(
             "Delete \"\(item.title)\"?",
             isPresented: $showDeleteConfirm,

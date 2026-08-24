@@ -44,6 +44,7 @@ struct MacTodoQuickAdd: View {
                 TextField("Add a task (e.g. Design review tomorrow at 10am for 1h #work !!)…", text: $text)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Color.white)
                     .focused($focused)
                     .onSubmit(submit)
                     .onExitCommand { text = ""; focused = false }

@@ -16,63 +16,36 @@ extension DS {
             }))
         }
 
-        // MARK: - Canvas & Surfaces (Solid Plain Canvas Obsidian Hierarchy)
+        // MARK: - Canvas & Surfaces (Translucent Obsidian Hierarchy for Wallpaper Glass)
 
         /// Deepest background canvas (e.g. Window body, behind split panes).
-        public static let canvas = dynamic(
-            dark: NSColor(red: 0.035, green: 0.038, blue: 0.044, alpha: 1.0),
-            light: NSColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
-        )
+        public static let canvas = SwiftUI.Color.black.opacity(0.35)
 
         /// Sidebar background tone.
-        public static let sidebar = dynamic(
-            dark: NSColor(red: 0.048, green: 0.052, blue: 0.060, alpha: 1.0),
-            light: NSColor(red: 0.95, green: 0.95, blue: 0.96, alpha: 1.0)
-        )
+        public static let sidebar = SwiftUI.Color(red: 0.045, green: 0.048, blue: 0.056).opacity(0.50)
 
-        /// Content column surface.
-        public static let surface = dynamic(
-            dark: NSColor(red: 0.058, green: 0.062, blue: 0.072, alpha: 1.0),
-            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
-        )
+        /// Content column surface (Translucent tint for Columns 2 & 3).
+        public static let surface = SwiftUI.Color(red: 0.045, green: 0.048, blue: 0.056).opacity(0.45)
 
         /// Elevated card fill.
-        public static let card = dynamic(
-            dark: NSColor(red: 0.072, green: 0.078, blue: 0.090, alpha: 1.0),
-            light: NSColor(red: 0.94, green: 0.94, blue: 0.96, alpha: 1.0)
-        )
+        public static let card = SwiftUI.Color.white.opacity(0.06)
 
         /// Interactive card hover state.
-        public static let cardHover = dynamic(
-            dark: NSColor(red: 0.092, green: 0.098, blue: 0.112, alpha: 1.0),
-            light: NSColor(red: 0.90, green: 0.90, blue: 0.92, alpha: 1.0)
-        )
+        public static let cardHover = SwiftUI.Color.white.opacity(0.10)
 
         /// Selected item background.
-        public static let cardSelected = dynamic(
-            dark: NSColor(red: 0.110, green: 0.118, blue: 0.135, alpha: 1.0),
-            light: NSColor(red: 0.86, green: 0.86, blue: 0.89, alpha: 1.0)
-        )
+        public static let cardSelected = SwiftUI.Color.white.opacity(0.14)
 
         // MARK: - Hairline Borders
 
         /// Standard 1px precision boundary stroke.
-        public static let border = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.07),
-            light: NSColor(white: 0.0, alpha: 0.08)
-        )
+        public static let border = SwiftUI.Color.white.opacity(0.08)
 
         /// Extremely subtle internal divider.
-        public static let borderSubtle = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.035),
-            light: NSColor(white: 0.0, alpha: 0.045)
-        )
+        public static let borderSubtle = SwiftUI.Color.white.opacity(0.04)
 
         /// Focused / Active element outline.
-        public static let borderActive = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.18),
-            light: NSColor(white: 0.0, alpha: 0.20)
-        )
+        public static let borderActive = SwiftUI.Color.white.opacity(0.22)
 
         // MARK: - Vivid Precision Accents
 
@@ -94,27 +67,15 @@ extension DS {
         /// High Priority / Alert Coral.
         public static let coral = SwiftUI.Color(red: 0.96, green: 0.32, blue: 0.45)
 
-        // MARK: - Typography Shades
+        // MARK: - Typography Shades (Always High Contrast White over Wallpaper)
 
-        public static let textPrimary = dynamic(
-            dark: NSColor(white: 1.0, alpha: 1.0),
-            light: NSColor(red: 0.10, green: 0.11, blue: 0.13, alpha: 1.0)
-        )
+        public static let textPrimary = SwiftUI.Color.white
         
-        public static let textSecondary = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.68),
-            light: NSColor(red: 0.36, green: 0.38, blue: 0.42, alpha: 1.0)
-        )
+        public static let textSecondary = SwiftUI.Color.white.opacity(0.72)
         
-        public static let textTertiary = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.40),
-            light: NSColor(red: 0.56, green: 0.58, blue: 0.62, alpha: 1.0)
-        )
+        public static let textTertiary = SwiftUI.Color.white.opacity(0.48)
         
-        public static let textMuted = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.22),
-            light: NSColor(red: 0.72, green: 0.74, blue: 0.78, alpha: 1.0)
-        )
+        public static let textMuted = SwiftUI.Color.white.opacity(0.28)
     }
 }
 
