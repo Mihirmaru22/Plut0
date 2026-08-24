@@ -232,9 +232,11 @@ public struct GhostSeason: Identifiable, Codable, Equatable, Hashable, Sendable 
     }
 
     public var elapsedDays: Int {
-        let today = Date()
-        guard today >= startDate else { return 0 }
-        let comps = Calendar.current.dateComponents([.day], from: startDate, to: today).day ?? 0
-        return min(totalDays, max(0, comps + 1))
+        let cal = Calendar.current
+        let start = cal.startOfDay(for: startDate)
+        let today = cal.startOfDay(for: Date())
+        guard today >= start else { return 0 }
+        let comps = cal.dateComponents([.day], from: start, to: today).day ?? 0
+        return min(totalDays, max(1, comps + 1))
     }
 }

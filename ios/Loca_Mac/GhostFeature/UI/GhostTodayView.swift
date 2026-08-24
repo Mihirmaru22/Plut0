@@ -134,29 +134,30 @@ public struct GhostTodayView: View {
         HStack(spacing: 10) {
             ringStatusPill(
                 ring: .body,
-                isClosed: todayRecord?.bodyClosed ?? false,
+                isClosed: isRingClosed(.body),
                 color: Color(hex: "#E54D2E")
             )
             ringStatusPill(
                 ring: .mind,
-                isClosed: todayRecord?.mindClosed ?? false,
+                isClosed: isRingClosed(.mind),
                 color: Color(hex: "#3E63DD")
             )
             ringStatusPill(
                 ring: .silence,
-                isClosed: todayRecord?.silenceClosed ?? false,
+                isClosed: isRingClosed(.silence),
                 color: Color(hex: "#0091FF")
             )
 
             Spacer()
 
             // Ghost day indicator
-            let isGhost = todayRecord?.ghostDay ?? false
+            let isGhost = isGhostDay
             HStack(spacing: 5) {
                 Image(systemName: isGhost ? "checkmark.seal.fill" : "seal")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(isGhost ? DS.Theme.amber : DS.Theme.textMuted)
-                Text(isGhost ? "GHOST DAY" : "UNSEALED")
+                    .symbolEffect(.bounce, value: isGhost)
+                Text(isGhost ? "GHOST DAY • 100%" : "UNSEALED")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(isGhost ? DS.Theme.amber : DS.Theme.textMuted)
                     .tracking(0.8)
@@ -190,12 +191,12 @@ public struct GhostTodayView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
-                isClosed ? color.opacity(0.08) : DS.Theme.card,
+                isClosed ? color.opacity(0.12) : DS.Theme.card,
                 in: RoundedRectangle(cornerRadius: 20)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(isClosed ? color.opacity(0.35) : DS.Theme.border, lineWidth: 1)
+                    .stroke(isClosed ? color.opacity(0.45) : DS.Theme.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -224,18 +225,9 @@ public struct GhostTodayView: View {
     // MARK: - Rule Row
 
     private func toggleRule(_ rule: GhostProtocolRule) {
-        if rule.proofKind == .artifact {
-            pickPhoto(for: rule)
-            return
-        }
         let isCurrentlyDone = isRuleDone(rule)
         let nextValue: Double = isCurrentlyDone ? 0.0 : max(1.0, rule.targetValue)
         Haptics.impact(.medium)
-        if !isCurrentlyDone {
-            PlutoSoundEngine.shared.play(.checkmark)
-        } else {
-            PlutoSoundEngine.shared.play(.tabSwitch)
-        }
 
         // 1. Instant Synchronous Optimistic Update (Zero Latency)
         withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
@@ -250,6 +242,23 @@ public struct GhostTodayView: View {
                 )
                 todayReceipts.append(receipt)
             }
+        }
+
+        // Check if all rules are done now
+        let activeRules = protocolRules.filter { $0.isEnabled }
+        let allDone = !activeRules.isEmpty && activeRules.allSatisfy { r in
+            let matching = todayReceipts.filter { $0.ruleID == r.id }
+            let total = matching.reduce(0.0) { $0 + $1.valueReal }
+            return total >= r.targetValue
+        }
+
+        if allDone {
+            PlutoSoundEngine.shared.play(.taskComplete)
+            Haptics.notify(.success)
+        } else if !isCurrentlyDone {
+            PlutoSoundEngine.shared.play(.checkmark)
+        } else {
+            PlutoSoundEngine.shared.play(.tabSwitch)
         }
 
         // 2. Persist in background
@@ -315,7 +324,7 @@ public struct GhostTodayView: View {
 
             Spacer()
 
-            // Inline proof control (Photo uploader for artifact, or clean status read-out)
+            // Inline proof control
             proofControl(rule, done: done, ringColor: ringColor)
 
             // Edit button for custom rules
@@ -467,9 +476,9 @@ public struct GhostTodayView: View {
                     .foregroundStyle(DS.Theme.textMuted)
                     .tracking(1.0)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(todayRecord?.score ?? 0)")
+                    Text("\(liveScore)")
                         .font(.system(size: 28, weight: .black, design: .monospaced))
-                        .foregroundStyle(DS.Theme.textPrimary)
+                        .foregroundStyle(liveScore == 100 ? DS.Theme.amber : DS.Theme.textPrimary)
                     Text("/ 100")
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(DS.Theme.textTertiary)
@@ -483,8 +492,8 @@ public struct GhostTodayView: View {
                         .fill(DS.Theme.border)
                     RoundedRectangle(cornerRadius: 2)
                         .fill(DS.Theme.amber)
-                        .frame(width: geo.size.width * CGFloat(todayRecord?.score ?? 0) / 100.0)
-                        .animation(.easeOut(duration: 0.4), value: todayRecord?.score)
+                        .frame(width: geo.size.width * CGFloat(liveScore) / 100.0)
+                        .animation(.easeOut(duration: 0.3), value: liveScore)
                 }
             }
             .frame(height: 4)
@@ -495,21 +504,42 @@ public struct GhostTodayView: View {
                 showCheckIn = true
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "moon.stars.fill")
+                    Image(systemName: isGhostDay ? "checkmark.seal.fill" : "moon.stars.fill")
                         .font(.system(size: 11, weight: .bold))
-                    Text("Evening Seal")
+                    Text(isGhostDay ? "Day 100% Sealed" : "Evening Seal")
                         .font(.system(size: 12, weight: .bold))
                 }
                 .foregroundStyle(DS.Theme.canvas)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(DS.Theme.amber, in: RoundedRectangle(cornerRadius: 8))
+                .background(isGhostDay ? Color.emerald : DS.Theme.amber, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
         }
     }
 
     // MARK: - Helpers
+
+    private var liveScore: Int {
+        let activeRules = protocolRules.filter { $0.isEnabled }
+        guard !activeRules.isEmpty else { return todayRecord?.score ?? 0 }
+        let doneCount = activeRules.filter { isRuleDone($0) }.count
+        return Int((Double(doneCount) / Double(activeRules.count)) * 100.0)
+    }
+
+    private func isRingClosed(_ ring: GhostRing) -> Bool {
+        let ringRules = protocolRules.filter { $0.isEnabled && $0.ring == ring }
+        if ringRules.isEmpty {
+            return todayRecord?.isRingClosed(ring) ?? false
+        }
+        return ringRules.allSatisfy { isRuleDone($0) }
+    }
+
+    private var isGhostDay: Bool {
+        let activeRules = protocolRules.filter { $0.isEnabled }
+        guard !activeRules.isEmpty else { return todayRecord?.ghostDay ?? false }
+        return activeRules.allSatisfy { isRuleDone($0) }
+    }
 
     private var formattedDate: String {
         let f = DateFormatter()

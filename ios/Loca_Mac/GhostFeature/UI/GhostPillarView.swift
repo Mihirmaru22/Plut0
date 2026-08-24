@@ -348,6 +348,9 @@ public struct GhostPillarView: View {
             if let result = try? await GhostEngine.shared.logReceipt(
                 ruleID: rule.id, proofKind: proofKind, value: value, photoPath: photoPath
             ) {
+                let streak = try? await GhostEngine.shared.computeStreakStatus()
+                let ridge  = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
+                let grid   = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
                 await MainActor.run {
                     self.todayRecord = result.day
                     var current = self.todayReceipts.filter { $0.ruleID != rule.id }
@@ -355,6 +358,9 @@ public struct GhostPillarView: View {
                         current.append(updated)
                     }
                     self.todayReceipts = current
+                    if let s = streak { self.streakStatus = s }
+                    self.ridgePoints = ridge
+                    self.chainCells  = grid
                 }
             }
         }
