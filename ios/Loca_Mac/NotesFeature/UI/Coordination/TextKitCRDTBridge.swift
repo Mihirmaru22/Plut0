@@ -108,7 +108,7 @@ public final class TextKitCRDTBridge: @unchecked Sendable {
     
     public var doc: CRDTDoc
     public let deviceID: String
-    private let lock = NSLock()
+    private let lock = NSRecursiveLock()
     
     // Cached map of block ID to its global NSRange in the rendered attributed string
     public private(set) var blockRanges: [UUID: NSRange] = [:]
