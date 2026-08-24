@@ -16,16 +16,6 @@ struct MacSidebarView: View {
             // Material Sidebar Backing (Tahoe Flush)
             VStack(spacing: 0) {
 
-                // Top Workspace Brand Header
-                brandHeader
-                    .padding(.horizontal, 14)
-                    .padding(.top, 14)
-                    .padding(.bottom, 12)
-
-                Divider()
-                    .opacity(0.12)
-                    .padding(.horizontal, 10)
-
                 // Main Navigation Section List
                 ScrollView {
                     VStack(spacing: 4) {
@@ -34,7 +24,7 @@ struct MacSidebarView: View {
                         }
                     }
                     .padding(.horizontal, 10)
-                    .padding(.top, 10)
+                    .padding(.top, 46)
                     .padding(.bottom, 8)
                 }
 
@@ -61,48 +51,6 @@ struct MacSidebarView: View {
                 .ignoresSafeArea()
         }
         .navigationTitle("PLUTO")
-    }
-
-    // MARK: - Top Brand Header
-
-    private var brandHeader: some View {
-        HStack(spacing: 9) {
-            // Illuminated Monolith Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                DS.Theme.amber,
-                                Color(red: 0.88, green: 0.45, blue: 0.12)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 22, height: 22)
-                    .shadow(color: DS.Theme.amber.opacity(0.35), radius: 6, x: 0, y: 1)
-
-                Image(systemName: "circle.circle.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.black.opacity(0.85))
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text("PLUTO")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.white)
-                    .tracking(1.2)
-
-                Text("EXECUTIVE OS")
-                    .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(DS.Theme.textTertiary)
-                    .tracking(0.8)
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 2)
     }
 
     // MARK: - Sidebar Item Button (Sliding Glass Selection Pill)
