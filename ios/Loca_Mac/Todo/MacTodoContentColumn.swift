@@ -214,28 +214,15 @@ struct MacTodoContentColumn: View {
                                 )
                         }
                     }
-                    .foregroundStyle(isSelected ? Color.black.opacity(0.92) : (isHovered ? Color.white : DS.Theme.textSecondary))
+                    .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.9) : DS.Theme.textSecondary))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5.5)
                     .background {
                         if isSelected {
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color(white: 0.98), Color(white: 0.90)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.9), lineWidth: 0.8)
-                                )
-                                .shadow(color: Color.black.opacity(0.22), radius: 5, x: 0, y: 2)
-                                .matchedGeometryEffect(id: "todayPillarSelectedPill", in: pillarNamespace)
+                            LiquidGlassLensPill(namespace: pillarNamespace, id: "todayPillarSelectedPill")
                         } else if isHovered {
                             Capsule()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.white.opacity(0.04))
                         }
                     }
                     .contentShape(Capsule())

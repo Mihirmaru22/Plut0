@@ -61,25 +61,15 @@ struct MacWorkWorkspaceView: View {
             
             // Top Mode Switcher Bar (Clean Liquid Glass)
             HStack(spacing: 12) {
-                PlutoGlassCluster(spacing: 3) {
-                    ForEach(WorkSubmode.allCases) { mode in
-                        let isSelected = submode.wrappedValue == mode
-                        Button {
-                            withAnimation(PlutoSpring.snappy) {
-                                submode.wrappedValue = mode
-                            }
-                            Haptics.impact(.light)
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: mode.icon)
-                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
-                                    .symbolEffect(.bounce, value: isSelected)
-                                Text(mode.rawValue)
-                                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                            }
-                        }
-                        .buttonStyle(.plutoGlass(isProminent: isSelected, tint: isSelected ? Color.accentColor : nil))
+                PlutoGlassSegmentedPicker(selection: submode, items: WorkSubmode.allCases) { mode, isSelected in
+                    HStack(spacing: 6) {
+                        Image(systemName: mode.icon)
+                            .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                            .symbolEffect(.bounce, value: isSelected)
+                        Text(mode.rawValue)
+                            .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                     }
+                    .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.65))
                 }
                 
                 Spacer()

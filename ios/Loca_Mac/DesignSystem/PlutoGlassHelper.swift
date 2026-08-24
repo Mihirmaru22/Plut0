@@ -405,6 +405,155 @@ public struct PlutoGlassCluster<Content: View>: View {
     }
 }
 
+// MARK: - Liquid Glass Optical Lens Pill (Chromatic Aberration & Spectral Rim)
+
+public struct LiquidGlassLensPill: View {
+    public let namespace: Namespace.ID
+    public var id: String = "liquidGlassLensPill"
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    public init(namespace: Namespace.ID, id: String = "liquidGlassLensPill") {
+        self.namespace = namespace
+        self.id = id
+    }
+
+    public var body: some View {
+        Capsule()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.24),
+                        Color.white.opacity(0.08)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .background(.ultraThinMaterial, in: Capsule())
+            // Top/Bottom Specular Edge Reflection
+            .overlay(
+                Capsule()
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.90),
+                                Color.white.opacity(0.18),
+                                Color.white.opacity(0.45)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1.0
+                    )
+            )
+            // Chromatic Spectral Dispersion Rim (Cyan ➔ Amber ➔ Magenta Prismatic Refraction)
+            .overlay(
+                Capsule()
+                    .stroke(
+                        AngularGradient(
+                            gradient: Gradient(colors: [
+                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.70),
+                                Color.white.opacity(0.95),
+                                Color(red: 1.0, green: 0.65, blue: 0.15).opacity(0.75),
+                                Color(red: 0.95, green: 0.35, blue: 0.75).opacity(0.60),
+                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.70)
+                            ]),
+                            center: .center
+                        ),
+                        lineWidth: 0.9
+                    )
+                    .blendMode(.screen)
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 7, x: 0, y: 2.5)
+            .matchedGeometryEffect(id: id, in: namespace)
+    }
+}
+
+// MARK: - PlutoGlassSegmentedPicker (macOS Golden Gate Segmented Glass Control)
+
+public struct PlutoGlassSegmentedPicker<SelectionValue: Hashable, Content: View>: View {
+    @Binding public var selection: SelectionValue
+    public let items: [SelectionValue]
+    public let content: (SelectionValue, Bool) -> Content
+    
+    @Namespace private var pickerNamespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    
+    public init(
+        selection: Binding<SelectionValue>,
+        items: [SelectionValue],
+        @ViewBuilder content: @escaping (SelectionValue, Bool) -> Content
+    ) {
+        self._selection = selection
+        self.items = items
+        self.content = content
+    }
+    
+    public var body: some View {
+        HStack(spacing: 2) {
+            ForEach(items, id: \.self) { item in
+                let isSelected = selection == item
+                Button {
+                    guard selection != item else { return }
+                    withAnimation(reduceMotion ? nil : PlutoSpring.snappy) {
+                        selection = item
+                    }
+                    Haptics.selection()
+                } label: {
+                    content(item, isSelected)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 5.5)
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .background {
+                    if isSelected {
+                        LiquidGlassLensPill(namespace: pickerNamespace)
+                    }
+                }
+            }
+        }
+        .padding(3)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.06))
+                .background(.ultraThinMaterial, in: Capsule())
+        )
+        .overlay(
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.05)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
+                )
+        )
+    }
+}
+
+public struct PlutoGlassSegmentedControl: View {
+    @Binding public var selection: String
+    public let options: [String]
+    
+    public init(selection: Binding<String>, options: [String]) {
+        self._selection = selection
+        self.options = options
+    }
+    
+    public var body: some View {
+        PlutoGlassSegmentedPicker(selection: $selection, items: options) { item, isSelected in
+            Text(item)
+                .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.65))
+        }
+    }
+}
+
 // MARK: - Ambient Light Glow View (6-10% Opacity Mesh / Drift)
 
 public struct PlutoAmbientGlowView: View {
