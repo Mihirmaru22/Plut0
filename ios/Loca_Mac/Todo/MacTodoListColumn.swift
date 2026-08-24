@@ -432,17 +432,13 @@ private struct List1CardRow: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 8)
         .background {
-            if isSelected {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(DS.Theme.cardSelected)
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.35), lineWidth: 0.8))
-                    .matchedGeometryEffect(id: "taskSelectionHighlight", in: selectionNamespace)
-            } else if isHovered {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white.opacity(0.05))
-            }
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(isSelected ? 0.58 : (isHovered ? 0.48 : 0.36)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(isSelected ? 0.35 : (isHovered ? 0.22 : 0.10)), lineWidth: 1)
+                )
         }
-        .plutoGlass(isSelected ? .interactive : (isHovered ? .regular : .regular), in: RoundedRectangle(cornerRadius: 10))
         .offset(y: isHovered ? -1 : 0)
         .animation(PlutoSpring.snappy, value: isHovered)
         .contentShape(Rectangle())

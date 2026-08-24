@@ -57,7 +57,7 @@ private struct MacTodoEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // MARK: Hero — glass glyph tile + display title + glass actions
+            // MARK: Hero Header Glass Card
             HStack(alignment: .center, spacing: DS.Space.md) {
                 Button { showIconPicker.toggle() } label: {
                     Image(systemName: item.iconName ?? "checklist")
@@ -65,7 +65,7 @@ private struct MacTodoEditor: View {
                         .foregroundStyle(item.isCompleted ? DS.Theme.emerald : DS.Theme.amber)
                         .symbolEffect(.bounce, value: item.isCompleted)
                         .frame(width: 38, height: 38)
-                        .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .regular, in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
                 .help("Change icon")
@@ -79,10 +79,10 @@ private struct MacTodoEditor: View {
                 }
 
                 TextField("Task title", text: $item.title, axis: .vertical)
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .tracking(-0.4)
                     .textFieldStyle(.plain)
-                    .foregroundStyle(item.isCompleted ? DS.Theme.textTertiary : DS.Theme.textPrimary)
+                    .foregroundStyle(item.isCompleted ? DS.Theme.textTertiary : Color.white)
                     .strikethrough(item.isCompleted, color: DS.Theme.textTertiary)
                     .animation(.easeInOut(duration: 0.15), value: item.isCompleted)
                     .onChange(of: item.title) { _, _ in autosave() }
@@ -97,12 +97,15 @@ private struct MacTodoEditor: View {
                             .symbolEffect(.bounce, value: item.isCompleted)
                         Text(item.isCompleted ? "Done" : "Mark Done")
                             .font(.system(size: 11.5, weight: .semibold))
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                     .foregroundStyle(item.isCompleted ? DS.Theme.emerald : Color.white)
                     .padding(.horizontal, 11)
                     .padding(.vertical, 6)
-                    .plutoGlass(item.isCompleted ? .tinted(DS.Theme.emerald) : .interactive, in: Capsule())
+                    .background(
+                        Capsule()
+                            .fill(item.isCompleted ? DS.Theme.emerald.opacity(0.2) : Color.white.opacity(0.12))
+                            .overlay(Capsule().stroke(item.isCompleted ? DS.Theme.emerald.opacity(0.4) : Color.white.opacity(0.20), lineWidth: 1))
+                    )
                 }
                 .buttonStyle(.plain)
                 .animation(PlutoSpring.smooth, value: item.isCompleted)
@@ -119,9 +122,9 @@ private struct MacTodoEditor: View {
                     } label: {
                         Image(systemName: item.priority > 0 ? "flag.fill" : "flag")
                             .font(.system(size: 13))
-                            .foregroundStyle(item.priority > 0 ? DS.Theme.amber : DS.Theme.textTertiary)
+                            .foregroundStyle(item.priority > 0 ? DS.Theme.amber : Color.white.opacity(0.7))
                             .frame(width: 28, height: 28)
-                            .plutoGlass(.regular, in: Circle())
+                            .background(Color.white.opacity(0.08), in: Circle())
                     }
                     .menuStyle(.borderlessButton)
                     .help(item.priority > 0 ? "Priority: \(priorityLabel(item.priority))" : "Set priority")
@@ -131,17 +134,26 @@ private struct MacTodoEditor: View {
                 Button(role: .destructive) { showDeleteConfirm = true } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 13))
-                        .foregroundStyle(isDeleteHovered ? Color.red : DS.Theme.textTertiary)
+                        .foregroundStyle(isDeleteHovered ? Color.red : Color.white.opacity(0.6))
                         .frame(width: 28, height: 28)
-                        .plutoGlass(isDeleteHovered ? .tinted(.red) : .regular, in: Circle())
+                        .background(Color.white.opacity(isDeleteHovered ? 0.15 : 0.08), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Archive this task")
                 .onHover { isDeleteHovered = $0 }
             }
-            .padding(.top, DS.Space.xl)
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.black.opacity(0.40))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            )
+            .padding(.top, DS.Space.lg)
             .padding(.bottom, DS.Space.md)
-            .padding(.horizontal, DS.Space.xl)
+            .padding(.horizontal, DS.Space.lg)
 
             // MARK: Chip row — date · time · flag
             chipRow

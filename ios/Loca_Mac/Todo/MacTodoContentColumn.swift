@@ -114,8 +114,15 @@ struct MacTodoContentColumn: View {
                 value: activeMode
             )
         }
-        .navigationTitle("Today")
-        .background(DS.Theme.surface)
+        .background(
+            Color.black.opacity(0.35)
+                .overlay(
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 1),
+                    alignment: .trailing
+                )
+        )
         .onAppear {
             let initial = TodoMode(rawValue: modeString) ?? .plan
             activeMode = visibleModes.contains(initial) ? initial : (visibleModes.first ?? .plan)

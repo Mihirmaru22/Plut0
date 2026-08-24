@@ -70,11 +70,14 @@ struct MacTodoQuickAdd: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .plutoGlass(focused ? .interactive : .regular, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(focused ? DS.Theme.amber.opacity(0.6) : Color.clear, lineWidth: 1)
-            )
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.black.opacity(focused ? 0.55 : 0.40))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(focused ? DS.Theme.amber.opacity(0.8) : Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            }
             .onTapGesture { focused = true }
 
             // Live token preview in frosted glass chips
