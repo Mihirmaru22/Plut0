@@ -149,9 +149,10 @@ struct MacRootView: View {
                 .frame(width: 1)
                 .ignoresSafeArea()
 
-            // 3. Opaque Content Plane (Solid #161618 Obsidian, covering under titlebar)
+            // 3. Golden Gate Liquid Glass Content Plane
             contentPane
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
                 .background(DS.Theme.canvas)
                 .ignoresSafeArea()
         }

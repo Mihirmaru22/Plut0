@@ -226,7 +226,8 @@ struct MacSettingsView: View {
             .padding(28)
             .frame(maxWidth: 960)
         }
-        .background(DS.Color.background)
+        .background(.ultraThinMaterial)
+        .background(DS.Theme.canvas)
         .confirmationDialog(
             "Reset Whole App Data?",
             isPresented: $showingResetConfirmation,

@@ -131,6 +131,7 @@ struct MacTodoContentColumn: View {
             )
         }
         .navigationTitle("Today")
+        .background(.ultraThinMaterial)
         .background(DS.Theme.surface)
         .onAppear {
             ensureValidMode()

@@ -717,6 +717,8 @@ struct AppleJournalEntriesList: View {
                 }
             }
         }
+        .background(.ultraThinMaterial)
+        .background(DS.Theme.surface)
         .onAppear {
             if selectedNote == nil, let first = activeNotes.first {
                 selectedNote = first
@@ -1359,10 +1361,11 @@ struct AppleJournalEditorCanvas: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 6)
-                .background(Color(red: 0.08, green: 0.07, blue: 0.12))
+                .background(DS.Theme.surface)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(red: 0.09, green: 0.08, blue: 0.13))
+            .background(.ultraThinMaterial)
+            .background(DS.Theme.canvas)
             .sheet(item: $previewImageURL) { url in
                 JournalPhotoPreviewModal(url: url)
             }

@@ -42,7 +42,8 @@ struct MacStudioWorkspaceView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color(nsColor: NSColor(red: 0.09, green: 0.09, blue: 0.10, alpha: 1.0)))
+            .background(.ultraThinMaterial)
+            .background(DS.Theme.surface)
             .background(PlutoAmbientGlowView(accent: Color(red: 0.68, green: 0.32, blue: 0.88)))
 
             Divider().opacity(0.12)
@@ -58,7 +59,8 @@ struct MacStudioWorkspaceView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(DS.Color.background)
+        .background(.ultraThinMaterial)
+        .background(DS.Theme.canvas)
     }
 
     @ViewBuilder

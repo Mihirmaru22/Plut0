@@ -87,6 +87,7 @@ struct MacLifeView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
+            .background(.ultraThinMaterial)
             .background(DS.Theme.surface)
             .background(PlutoAmbientGlowView(accent: Color(red: 0.18, green: 0.82, blue: 0.35)))
 
@@ -110,7 +111,8 @@ struct MacLifeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(DS.Color.background)
+        .background(.ultraThinMaterial)
+        .background(DS.Theme.canvas)
     }
 }
 

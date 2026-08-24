@@ -64,6 +64,7 @@ public struct GhostPillarView: View {
                 emptyHero
             }
         }
+        .background(.ultraThinMaterial)
         .background(DS.Theme.canvas)
         .sheet(isPresented: $showOnboarding) {
             ContractOnboardingView { newSeason in

@@ -16,42 +16,42 @@ extension DS {
             }))
         }
 
-        // MARK: - Canvas & Surfaces (Dynamic Obsidian Slate / Studio Hierarchy)
+        // MARK: - Canvas & Surfaces (Dynamic Obsidian Slate / Studio Hierarchy - Golden Gate Liquid Glass)
 
         /// Deepest background canvas (e.g. Window body, behind split panes).
         public static let canvas = dynamic(
-            dark: NSColor(red: 0.048, green: 0.052, blue: 0.059, alpha: 1.0),
-            light: NSColor(red: 0.965, green: 0.970, blue: 0.978, alpha: 1.0)
+            dark: NSColor(red: 0.048, green: 0.052, blue: 0.059, alpha: 0.72),
+            light: NSColor(red: 0.965, green: 0.970, blue: 0.978, alpha: 0.78)
         )
 
         /// Sidebar background tone.
         public static let sidebar = dynamic(
-            dark: NSColor(red: 0.063, green: 0.071, blue: 0.082, alpha: 1.0),
-            light: NSColor(red: 0.925, green: 0.935, blue: 0.948, alpha: 1.0)
+            dark: NSColor(red: 0.063, green: 0.071, blue: 0.082, alpha: 0.50),
+            light: NSColor(red: 0.925, green: 0.935, blue: 0.948, alpha: 0.60)
         )
 
         /// Content column surface.
         public static let surface = dynamic(
-            dark: NSColor(red: 0.078, green: 0.090, blue: 0.106, alpha: 1.0),
-            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+            dark: NSColor(red: 0.078, green: 0.090, blue: 0.106, alpha: 0.60),
+            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.70)
         )
 
         /// Elevated bento card fill.
         public static let card = dynamic(
-            dark: NSColor(red: 0.098, green: 0.114, blue: 0.133, alpha: 1.0),
-            light: NSColor(red: 0.955, green: 0.962, blue: 0.972, alpha: 1.0)
+            dark: NSColor(red: 0.098, green: 0.114, blue: 0.133, alpha: 0.65),
+            light: NSColor(red: 0.955, green: 0.962, blue: 0.972, alpha: 0.75)
         )
 
         /// Interactive card hover state.
         public static let cardHover = dynamic(
-            dark: NSColor(red: 0.122, green: 0.141, blue: 0.169, alpha: 1.0),
-            light: NSColor(red: 0.915, green: 0.925, blue: 0.938, alpha: 1.0)
+            dark: NSColor(red: 0.122, green: 0.141, blue: 0.169, alpha: 0.75),
+            light: NSColor(red: 0.915, green: 0.925, blue: 0.938, alpha: 0.85)
         )
 
         /// Selected item background.
         public static let cardSelected = dynamic(
-            dark: NSColor(red: 0.141, green: 0.165, blue: 0.200, alpha: 1.0),
-            light: NSColor(red: 0.875, green: 0.890, blue: 0.910, alpha: 1.0)
+            dark: NSColor(red: 0.141, green: 0.165, blue: 0.200, alpha: 0.80),
+            light: NSColor(red: 0.875, green: 0.890, blue: 0.910, alpha: 0.90)
         )
 
         // MARK: - Machined Borders & Rim Lighting
