@@ -225,28 +225,16 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
 public struct PlutoGlassButtonStyle<S: Shape>: ButtonStyle {
     public let shape: S
     public let tint: Color?
+    public let isProminent: Bool
 
-    public init(shape: S, tint: Color? = nil) {
+    public init(shape: S, tint: Color? = nil, isProminent: Bool = false) {
         self.shape = shape
         self.tint = tint
+        self.isProminent = isProminent
     }
 
     public func makeBody(configuration: Configuration) -> some View {
-        PlutoGlassButtonBody(configuration: configuration, shape: shape, tint: tint, isProminent: false)
-    }
-}
-
-public struct PlutoGlassProminentButtonStyle<S: Shape>: ButtonStyle {
-    public let shape: S
-    public let tint: Color?
-
-    public init(shape: S, tint: Color? = nil) {
-        self.shape = shape
-        self.tint = tint
-    }
-
-    public func makeBody(configuration: Configuration) -> some View {
-        PlutoGlassButtonBody(configuration: configuration, shape: shape, tint: tint, isProminent: true)
+        PlutoGlassButtonBody(configuration: configuration, shape: shape, tint: tint, isProminent: isProminent)
     }
 }
 
@@ -341,31 +329,37 @@ private struct PlutoGlassButtonBody<S: Shape>: View {
 
 extension ButtonStyle where Self == PlutoGlassButtonStyle<Capsule> {
     public static var plutoGlass: PlutoGlassButtonStyle<Capsule> {
-        PlutoGlassButtonStyle(shape: Capsule())
+        PlutoGlassButtonStyle(shape: Capsule(), tint: nil, isProminent: false)
+    }
+
+    public static var plutoGlassProminent: PlutoGlassButtonStyle<Capsule> {
+        PlutoGlassButtonStyle(shape: Capsule(), tint: nil, isProminent: true)
+    }
+
+    public static func plutoGlass(isProminent: Bool = false, tint: Color? = nil) -> PlutoGlassButtonStyle<Capsule> {
+        PlutoGlassButtonStyle(shape: Capsule(), tint: tint, isProminent: isProminent)
     }
 
     public static func plutoGlass(tint: Color?) -> PlutoGlassButtonStyle<Capsule> {
-        PlutoGlassButtonStyle(shape: Capsule(), tint: tint)
-    }
-}
-
-extension ButtonStyle where Self == PlutoGlassProminentButtonStyle<Capsule> {
-    public static var plutoGlassProminent: PlutoGlassProminentButtonStyle<Capsule> {
-        PlutoGlassProminentButtonStyle(shape: Capsule())
+        PlutoGlassButtonStyle(shape: Capsule(), tint: tint, isProminent: false)
     }
 
-    public static func plutoGlassProminent(tint: Color?) -> PlutoGlassProminentButtonStyle<Capsule> {
-        PlutoGlassProminentButtonStyle(shape: Capsule(), tint: tint)
+    public static func plutoGlassProminent(tint: Color?) -> PlutoGlassButtonStyle<Capsule> {
+        PlutoGlassButtonStyle(shape: Capsule(), tint: tint, isProminent: true)
     }
 }
 
 extension ButtonStyle {
-    public static func plutoGlass<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
-        PlutoGlassButtonStyle(shape: shape, tint: tint)
+    public static func plutoGlass<S: Shape>(shape: S, isProminent: Bool = false, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: isProminent)
     }
 
-    public static func plutoGlassProminent<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassProminentButtonStyle<S> {
-        PlutoGlassProminentButtonStyle(shape: shape, tint: tint)
+    public static func plutoGlass<S: Shape>(shape: S, tint: Color?) -> PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: false)
+    }
+
+    public static func plutoGlassProminent<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: true)
     }
 }
 

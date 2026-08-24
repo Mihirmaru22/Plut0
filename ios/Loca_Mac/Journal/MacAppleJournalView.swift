@@ -664,7 +664,7 @@ struct AppleJournalEntriesList: View {
                                     .font(.system(size: 10, weight: isSelected ? .bold : .medium))
                             }
                         }
-                        .buttonStyle(isSelected ? .plutoGlassProminent(tint: Color(red: 0.38, green: 0.45, blue: 0.98)) : .plutoGlass)
+                        .buttonStyle(.plutoGlass(isProminent: isSelected, tint: isSelected ? Color(red: 0.38, green: 0.45, blue: 0.98) : nil))
                     }
                     Spacer()
                 }

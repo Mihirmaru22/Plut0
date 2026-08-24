@@ -78,7 +78,7 @@ struct MacWorkWorkspaceView: View {
                                     .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                             }
                         }
-                        .buttonStyle(isSelected ? .plutoGlassProminent(tint: Color.accentColor) : .plutoGlass)
+                        .buttonStyle(.plutoGlass(isProminent: isSelected, tint: isSelected ? Color.accentColor : nil))
                     }
                 }
                 
