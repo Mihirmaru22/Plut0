@@ -615,17 +615,13 @@ struct AppleJournalEntriesList: View {
                     Button {
                         createNewEntry()
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "plus")
                             Text("New Entry")
                         }
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(Color(red: 0.38, green: 0.45, blue: 0.98), in: RoundedRectangle(cornerRadius: 6))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlassProminent(tint: Color(red: 0.38, green: 0.45, blue: 0.98)))
                     .keyboardShortcut("n", modifiers: .command)
                 }
 
@@ -643,7 +639,7 @@ struct AppleJournalEntriesList: View {
                             searchText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 11))
+                                .font(.system(size: 10))
                                 .foregroundStyle(DS.Color.textTertiary)
                         }
                         .buttonStyle(.plain)
@@ -656,25 +652,19 @@ struct AppleJournalEntriesList: View {
                 // Quick Filter Pills
                 HStack(spacing: 4) {
                     ForEach(JournalFilterType.allCases) { filter in
+                        let isSelected = selectedFilter == filter
                         Button {
                             selectedFilter = filter
                             Haptics.selection()
                         } label: {
-                            HStack(spacing: 3) {
+                            HStack(spacing: 4) {
                                 Image(systemName: filter.icon)
                                     .font(.system(size: 9))
                                 Text(filter.rawValue)
-                                    .font(.system(size: 10, weight: selectedFilter == filter ? .bold : .medium))
+                                    .font(.system(size: 10, weight: isSelected ? .bold : .medium))
                             }
-                            .foregroundStyle(selectedFilter == filter ? Color.white : DS.Color.textTertiary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                selectedFilter == filter ? Color(red: 0.38, green: 0.45, blue: 0.98) : Color.clear,
-                                in: Capsule()
-                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(isSelected ? .plutoGlassProminent(tint: Color(red: 0.38, green: 0.45, blue: 0.98)) : .plutoGlass)
                     }
                     Spacer()
                 }
@@ -1200,18 +1190,16 @@ struct AppleJournalEditorCanvas: View {
                                     saveNote()
                                     Haptics.impact(.light)
                                 } label: {
-                                    HStack(spacing: 4) {
+                                    HStack(spacing: 5) {
                                         Image(systemName: "plus.circle.fill")
                                         Text("Insert into Reflection")
                                     }
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: 11, weight: .bold))
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
+                                .buttonStyle(.plutoGlassProminent(tint: Color.yellow))
                             }
                             .padding(10)
-                            .background(Color.yellow.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.yellow.opacity(0.20), lineWidth: 1))
+                            .plutoGlass(.tinted(Color.yellow), in: RoundedRectangle(cornerRadius: 10))
                             .padding(.vertical, 4)
                         }
 

@@ -61,36 +61,26 @@ struct MacWorkWorkspaceView: View {
             
             // Top Mode Switcher Bar (Clean Liquid Glass)
             HStack(spacing: 12) {
-                HStack(spacing: 4) {
+                PlutoGlassCluster(spacing: 3) {
                     ForEach(WorkSubmode.allCases) { mode in
                         let isSelected = submode.wrappedValue == mode
                         Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
+                            withAnimation(PlutoSpring.snappy) {
                                 submode.wrappedValue = mode
                             }
                             Haptics.impact(.light)
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: mode.icon)
-                                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                                    .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
+                                    .symbolEffect(.bounce, value: isSelected)
                                 Text(mode.rawValue)
-                                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
                             }
-                            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.6))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(
-                                isSelected
-                                    ? Color.accentColor
-                                    : Color.white.opacity(0.04),
-                                in: Capsule()
-                            )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(isSelected ? .plutoGlassProminent(tint: Color.accentColor) : .plutoGlass)
                     }
                 }
-                .padding(4)
-                .background(Color.white.opacity(0.06), in: Capsule())
                 
                 Spacer()
                 
@@ -103,14 +93,10 @@ struct MacWorkWorkspaceView: View {
                             Image(systemName: "plus")
                                 .font(.system(size: 11, weight: .bold))
                             Text("New Project")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 12, weight: .bold))
                         }
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 7))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlassProminent(tint: Color.accentColor))
                     .help("Create New Project (⌘⇧N)")
                     .keyboardShortcut("n", modifiers: [.command, .shift])
                 }

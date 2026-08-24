@@ -1131,12 +1131,8 @@ struct MacSettingsView: View {
                         Text("Whole App Spotlight Tour (⌘/) ✦")
                             .font(.system(size: 11.5, weight: .bold))
                     }
-                    .foregroundStyle(Color.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(red: 0.95, green: 0.75, blue: 0.25), in: RoundedRectangle(cornerRadius: 6))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassProminent(tint: Color(red: 0.95, green: 0.75, blue: 0.25)))
             }
         }
     }

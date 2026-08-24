@@ -187,12 +187,8 @@ private struct Life1BlueprintPrinciplesView: View {
                     } label: {
                         Text(isEditingMission ? "Save" : "Edit")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.Color.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(DS.Color.surfaceRecessed, in: RoundedRectangle(cornerRadius: 6))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlass)
                 }
 
                 if isEditingMission {
@@ -1034,17 +1030,9 @@ private struct Life4SelfMasteryAuditsView: View {
                         }
                     } label: {
                         Text(auditSaved ? "Audit Logged ✓" : "Record Audit")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(DS.Color.textPrimary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(DS.Color.surfaceRecessed, in: RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(DS.Color.border.opacity(0.5), lineWidth: 1)
-                            )
+                            .font(.system(size: 11, weight: .bold))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlassProminent(tint: DS.Theme.amber))
                 }
 
                 Divider()

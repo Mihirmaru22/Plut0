@@ -220,6 +220,155 @@ public struct PlutoGlassModifier<S: Shape>: ViewModifier {
     }
 }
 
+// MARK: - Native Liquid Glass Button Styles (macOS Golden Gate HIG)
+
+public struct PlutoGlassButtonStyle<S: Shape>: ButtonStyle {
+    public let shape: S
+    public let tint: Color?
+
+    public init(shape: S, tint: Color? = nil) {
+        self.shape = shape
+        self.tint = tint
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        PlutoGlassButtonBody(configuration: configuration, shape: shape, tint: tint, isProminent: false)
+    }
+}
+
+public struct PlutoGlassProminentButtonStyle<S: Shape>: ButtonStyle {
+    public let shape: S
+    public let tint: Color?
+
+    public init(shape: S, tint: Color? = nil) {
+        self.shape = shape
+        self.tint = tint
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        PlutoGlassButtonBody(configuration: configuration, shape: shape, tint: tint, isProminent: true)
+    }
+}
+
+private struct PlutoGlassButtonBody<S: Shape>: View {
+    let configuration: ButtonStyle.Configuration
+    let shape: S
+    let tint: Color?
+    let isProminent: Bool
+
+    @State private var isHovered: Bool = false
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        configuration.label
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background {
+                if reduceTransparency {
+                    shape
+                        .fill(isProminent ? (tint ?? DS.Theme.amber) : DS.Theme.card)
+                } else if isProminent {
+                    // Prominent Glass Fill
+                    ZStack {
+                        let baseColor = tint ?? DS.Theme.amber
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        baseColor.opacity(isHovered ? 0.95 : 0.85),
+                                        baseColor.opacity(isHovered ? 0.80 : 0.70)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        shape
+                            .stroke(Color.white.opacity(0.40), lineWidth: 0.8)
+                    }
+                    .shadow(color: (tint ?? DS.Theme.amber).opacity(isHovered ? 0.35 : 0.20), radius: isHovered ? 6 : 3, y: 1.5)
+                } else {
+                    // Standard Liquid Glass Fill
+                    ZStack {
+                        if let tint = tint {
+                            shape.fill(tint.opacity(isHovered ? 0.18 : 0.10))
+                        } else {
+                            shape.fill(Color.white.opacity(isHovered ? 0.12 : 0.05))
+                        }
+                    }
+                    .background(.ultraThinMaterial, in: shape)
+                    .overlay(
+                        shape.stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isHovered ? 0.45 : 0.25),
+                                    Color.white.opacity(isHovered ? 0.15 : 0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.8
+                        )
+                    )
+                    .shadow(color: Color.black.opacity(isHovered ? 0.20 : 0.10), radius: isHovered ? 5 : 2.5, y: 1.5)
+                }
+            }
+            .contentShape(shape)
+            .scaleEffect(configuration.isPressed ? 0.96 : (isHovered ? 1.01 : 1.0))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.88 : 1.0) : 0.45)
+            .animation(reduceMotion ? nil : PlutoSpring.snappy, value: isHovered)
+            .animation(reduceMotion ? nil : PlutoSpring.snappy, value: configuration.isPressed)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+
+    private var foregroundColor: Color {
+        if !isEnabled { return DS.Theme.textTertiary }
+        if isProminent {
+            return (tint == nil || tint == DS.Theme.amber) ? Color.black.opacity(0.92) : Color.white
+        }
+        if let tint = tint {
+            return tint
+        }
+        return isHovered ? Color.white : DS.Theme.textPrimary
+    }
+}
+
+// MARK: - ButtonStyle Static Extensions
+
+extension ButtonStyle where Self == PlutoGlassButtonStyle<Capsule> {
+    public static var plutoGlass: PlutoGlassButtonStyle<Capsule> {
+        PlutoGlassButtonStyle(shape: Capsule())
+    }
+
+    public static func plutoGlass(tint: Color?) -> PlutoGlassButtonStyle<Capsule> {
+        PlutoGlassButtonStyle(shape: Capsule(), tint: tint)
+    }
+}
+
+extension ButtonStyle where Self == PlutoGlassProminentButtonStyle<Capsule> {
+    public static var plutoGlassProminent: PlutoGlassProminentButtonStyle<Capsule> {
+        PlutoGlassProminentButtonStyle(shape: Capsule())
+    }
+
+    public static func plutoGlassProminent(tint: Color?) -> PlutoGlassProminentButtonStyle<Capsule> {
+        PlutoGlassProminentButtonStyle(shape: Capsule(), tint: tint)
+    }
+}
+
+extension ButtonStyle {
+    public static func plutoGlass<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint)
+    }
+
+    public static func plutoGlassProminent<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassProminentButtonStyle<S> {
+        PlutoGlassProminentButtonStyle(shape: shape, tint: tint)
+    }
+}
+
 // MARK: - View Extensions
 
 extension View {
