@@ -615,34 +615,85 @@ struct MacSettingsView: View {
     // 5. Notifications
     private var notificationsControlBlock: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Toggle(isOn: $masterNotificationsEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Master Notification Engine")
-                        .font(.system(size: 13, weight: .bold))
-                    Text("Deliver native macOS alerts and scheduled focus prompts.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(DS.Color.textSecondary)
+            HStack {
+                Toggle(isOn: Binding(
+                    get: { masterNotificationsEnabled },
+                    set: { newVal in
+                        masterNotificationsEnabled = newVal
+                        PlutoNotificationManager.shared.rescheduleAllFromAppStorage()
+                        Haptics.impact(.light)
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Master Notification Engine")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Deliver native macOS alerts and scheduled focus prompts.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(DS.Color.textSecondary)
+                    }
                 }
+                .toggleStyle(.switch)
+                .tint(accentColor)
+
+                Spacer()
+
+                Button {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "gearshape")
+                        Text("macOS System Notifications ↗")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(DS.Color.textTertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(DS.Color.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(DS.Color.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
-            .toggleStyle(.switch)
-            .tint(accentColor)
 
             HStack(spacing: 20) {
-                Toggle(isOn: $eveningReflectionEnabled) {
+                Toggle(isOn: Binding(
+                    get: { eveningReflectionEnabled },
+                    set: { newVal in
+                        eveningReflectionEnabled = newVal
+                        PlutoNotificationManager.shared.rescheduleAllFromAppStorage()
+                        Haptics.impact(.light)
+                    }
+                )) {
                     Text("Evening Reflection (21:00)")
                         .font(.system(size: 12))
                 }
                 .toggleStyle(.switch)
                 .tint(accentColor)
 
-                Toggle(isOn: $streakAlertEnabled) {
+                Toggle(isOn: Binding(
+                    get: { streakAlertEnabled },
+                    set: { newVal in
+                        streakAlertEnabled = newVal
+                        PlutoNotificationManager.shared.rescheduleAllFromAppStorage()
+                        Haptics.impact(.light)
+                    }
+                )) {
                     Text("Streak Protection Guard (22:00)")
                         .font(.system(size: 12))
                 }
                 .toggleStyle(.switch)
                 .tint(accentColor)
 
-                Toggle(isOn: $weeklyDigestEnabled) {
+                Toggle(isOn: Binding(
+                    get: { weeklyDigestEnabled },
+                    set: { newVal in
+                        weeklyDigestEnabled = newVal
+                        PlutoNotificationManager.shared.rescheduleAllFromAppStorage()
+                        Haptics.impact(.light)
+                    }
+                )) {
                     Text("Sunday Digest")
                         .font(.system(size: 12))
                 }

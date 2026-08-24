@@ -31,6 +31,7 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
     // MARK: - Published State
 
     @Published var isAuthorized: Bool = false
+    @Published var authorizationStatusDescription: String = "Checking..."
     @Published var pendingRequestsCount: Int = 0
 
     // MARK: - Notification Category Identifiers
@@ -199,6 +200,18 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
             DispatchQueue.main.async {
                 self?.isAuthorized = (settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional)
+                switch settings.authorizationStatus {
+                case .authorized:
+                    self?.authorizationStatusDescription = "Authorized"
+                case .denied:
+                    self?.authorizationStatusDescription = "Disabled in macOS System Settings"
+                case .notDetermined:
+                    self?.authorizationStatusDescription = "Permission Required"
+                case .provisional:
+                    self?.authorizationStatusDescription = "Provisional"
+                @unknown default:
+                    self?.authorizationStatusDescription = "Unknown"
+                }
                 self?.refreshPendingCount()
             }
         }
@@ -210,12 +223,56 @@ final class PlutoNotificationManager: NSObject, ObservableObject {
                 options: [.alert, .sound, .badge]
             )
             self.isAuthorized = granted
-            self.refreshPendingCount()
+            self.checkAuthorization()
             return granted
         } catch {
             self.isAuthorized = false
+            self.checkAuthorization()
             return false
         }
+    }
+
+    /// Reschedules all active notifications based on current user preferences stored in UserDefaults.
+    func rescheduleAllFromAppStorage() {
+        let master = (UserDefaults.standard.object(forKey: "mac_notifications_master_enabled") as? Bool) ?? true
+        guard master else {
+            UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+            refreshPendingCount()
+            return
+        }
+
+        let evening = (UserDefaults.standard.object(forKey: "mac_evening_reflection_enabled") as? Bool) ?? true
+        if evening {
+            scheduleEveningReflectionPrompt(timeString: "21:00")
+        } else {
+            cancelEveningReflectionPrompt()
+        }
+
+        let streak = (UserDefaults.standard.object(forKey: "mac_streak_alert_enabled") as? Bool) ?? true
+        if streak {
+            scheduleStreakBreakAlert(timeString: "22:00")
+        } else {
+            cancelStreakBreakAlert()
+        }
+
+        let weekly = (UserDefaults.standard.object(forKey: "mac_weekly_digest_enabled") as? Bool) ?? true
+        if weekly {
+            scheduleWeeklyProgressDigest()
+        } else {
+            cancelWeeklyProgressDigest()
+        }
+
+        let wellness = (UserDefaults.standard.object(forKey: "mac_workday_wellness_enabled") as? Bool) ?? true
+        let startHour = UserDefaults.standard.integer(forKey: "mac_workday_start_hour")
+        let endHour = UserDefaults.standard.integer(forKey: "mac_workday_end_hour")
+        let interval = UserDefaults.standard.integer(forKey: "mac_workday_interval_mins")
+
+        scheduleWorkdayWellnessReminders(
+            enabled: wellness,
+            startHour: startHour == 0 ? 9 : startHour,
+            endHour: endHour == 0 ? 18 : endHour,
+            intervalMinutes: interval == 0 ? 60 : interval
+        )
     }
 
     /// Sends an immediate test notification with auto-authorization request and 1s delivery.

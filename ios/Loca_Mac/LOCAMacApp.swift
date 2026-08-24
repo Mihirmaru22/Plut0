@@ -86,6 +86,12 @@ struct LOCAMacApp: App {
                         // Start invisible alpha telemetry engine
                         PlutoTelemetryEngine.shared.start()
 
+                        // Check & request notification authorization, sync active schedules
+                        Task {
+                            _ = await PlutoNotificationManager.shared.requestAuthorization()
+                            PlutoNotificationManager.shared.rescheduleAllFromAppStorage()
+                        }
+
                         // Defer global hotkey registration until the app
                         // window is fully displayed and the run loop is active.
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
