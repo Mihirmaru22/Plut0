@@ -115,10 +115,10 @@ struct MacTodoContentColumn: View {
             )
         }
         .background(
-            Color.black.opacity(0.35)
+            DS.Theme.sidebar
                 .overlay(
                     Rectangle()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(DS.Theme.border)
                         .frame(width: 1),
                     alignment: .trailing
                 )

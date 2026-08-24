@@ -16,16 +16,16 @@ extension DS {
             }))
         }
 
-        // MARK: - Canvas & Surfaces (Translucent Obsidian Hierarchy for Wallpaper Glass)
-
-        /// Deepest background canvas (e.g. Window body, behind split panes).
-        public static let canvas = SwiftUI.Color.black.opacity(0.35)
+        // MARK: - Canvas & Surfaces (Unified Column 1 Sidebar Tone across all columns)
 
         /// Sidebar background tone.
         public static let sidebar = SwiftUI.Color(red: 0.045, green: 0.048, blue: 0.056).opacity(0.50)
 
-        /// Content column surface (Translucent tint for Columns 2 & 3).
-        public static let surface = SwiftUI.Color(red: 0.045, green: 0.048, blue: 0.056).opacity(0.45)
+        /// Deepest background canvas (Matched exactly to Column 1).
+        public static let canvas = sidebar
+
+        /// Content column surface (Matched exactly to Column 1).
+        public static let surface = sidebar
 
         /// Elevated card fill.
         public static let card = SwiftUI.Color.white.opacity(0.06)
