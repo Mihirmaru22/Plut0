@@ -64,6 +64,7 @@ struct MacTodoContentColumn: View {
     @State private var transitionDirection: TransitionDirection = .forward
     @State private var lastModeIndex: Int = 0
     @State private var hoveredMode: TodoMode? = nil
+    @Namespace private var pillarNamespace
 
     private var visibleModes: [TodoMode] {
         var modes: [TodoMode] = []
@@ -169,17 +170,17 @@ struct MacTodoContentColumn: View {
         }
     }
 
-    // MARK: - Linear Machined Segmented Switcher
+    // MARK: - Apple HIG Liquid Glass Segmented Switcher
 
     private var linearPillarSwitcher: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             ForEach(visibleModes) { m in
                 let isSelected = mode.wrappedValue == m
                 let isHovered = hoveredMode == m
 
                 Button {
                     guard mode.wrappedValue != m else { return }
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.80)) {
+                    withAnimation(PlutoSpring.snappy) {
                         mode.wrappedValue = m
                     }
                     Haptics.impact(.light)
@@ -187,52 +188,57 @@ struct MacTodoContentColumn: View {
                     HStack(spacing: 6) {
                         Image(systemName: m.icon)
                             .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                            .foregroundStyle(isSelected ? DS.Theme.amber : (isHovered ? Color.white : DS.Theme.textSecondary))
+                            .symbolEffect(.bounce, value: isSelected)
 
                         Text(m.rawValue)
-                            .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
-                            .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white : DS.Theme.textSecondary))
+                            .font(.system(size: 12, weight: isSelected ? .bold : .medium))
 
                         // Count Badges
                         if m == .plan && !scheduledItems.isEmpty {
                             Text("\(scheduledItems.count)")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textTertiary)
-                                .padding(.horizontal, 4.5)
-                                .padding(.vertical, 1)
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1.5)
                                 .background(
-                                    isSelected ? DS.Theme.amber.opacity(0.15) : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 3)
+                                    isSelected ? Color.black.opacity(0.12) : Color.white.opacity(0.06),
+                                    in: Capsule()
                                 )
                         } else if m == .list && !openItems.isEmpty {
                             Text("\(openItems.count)")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundStyle(isSelected ? DS.Theme.amber : DS.Theme.textTertiary)
-                                .padding(.horizontal, 4.5)
-                                .padding(.vertical, 1)
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1.5)
                                 .background(
-                                    isSelected ? DS.Theme.amber.opacity(0.15) : Color.white.opacity(0.06),
-                                    in: RoundedRectangle(cornerRadius: 3)
+                                    isSelected ? Color.black.opacity(0.12) : Color.white.opacity(0.06),
+                                    in: Capsule()
                                 )
                         }
                     }
+                    .foregroundStyle(isSelected ? Color.black.opacity(0.92) : (isHovered ? Color.white : DS.Theme.textSecondary))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(
-                                isSelected
-                                    ? DS.Theme.cardSelected
-                                    : (isHovered ? Color.white.opacity(0.05) : Color.clear)
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(
-                                isSelected ? Color.white.opacity(0.14) : Color.clear,
-                                lineWidth: 1
-                            )
-                    )
+                    .background {
+                        if isSelected {
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(white: 0.98), Color(white: 0.90)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.9), lineWidth: 0.8)
+                                )
+                                .shadow(color: Color.black.opacity(0.22), radius: 5, x: 0, y: 2)
+                                .matchedGeometryEffect(id: "todayPillarSelectedPill", in: pillarNamespace)
+                        } else if isHovered {
+                            Capsule()
+                                .fill(Color.white.opacity(0.06))
+                        }
+                    }
+                    .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .onHover { hovering in
@@ -242,11 +248,11 @@ struct MacTodoContentColumn: View {
         }
         .padding(3)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            Capsule()
                 .fill(DS.Theme.card)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            Capsule()
                 .stroke(DS.Theme.border, lineWidth: 1)
         )
     }
