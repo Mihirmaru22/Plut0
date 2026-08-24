@@ -512,7 +512,7 @@ public struct GhostTodayView: View {
                 .foregroundStyle(DS.Theme.canvas)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(isGhostDay ? Color.emerald : DS.Theme.amber, in: RoundedRectangle(cornerRadius: 8))
+                .background(isGhostDay ? DS.Theme.emerald : DS.Theme.amber, in: RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)
         }
@@ -530,7 +530,11 @@ public struct GhostTodayView: View {
     private func isRingClosed(_ ring: GhostRing) -> Bool {
         let ringRules = protocolRules.filter { $0.isEnabled && $0.ring == ring }
         if ringRules.isEmpty {
-            return todayRecord?.isRingClosed(ring) ?? false
+            switch ring {
+            case .body:    return todayRecord?.bodyClosed ?? false
+            case .mind:    return todayRecord?.mindClosed ?? false
+            case .silence: return todayRecord?.silenceClosed ?? false
+            }
         }
         return ringRules.allSatisfy { isRuleDone($0) }
     }
