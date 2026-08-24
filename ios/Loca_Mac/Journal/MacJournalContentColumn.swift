@@ -5,7 +5,7 @@ import SwiftData
 
 /// The sub-category modes shown in the Journal middle column.
 enum JournalRow: String, CaseIterable, Identifiable {
-    case todaysLog = "Today's log"
+    case todaysLog = "Today's Log"
     case notes     = "Notes"
     case analyse   = "Analyse"
 
@@ -51,17 +51,21 @@ struct MacJournalContentColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             // Top Sub-Category Segmented Switcher (Matching Today Plan/List)
-            VStack(spacing: 8) {
-                Picker("Journal Mode", selection: Binding(
+            PlutoGlassSegmentedPicker(
+                selection: Binding(
                     get: { selectedRow ?? .todaysLog },
                     set: { selectedRow = $0 }
-                )) {
-                    ForEach(JournalRow.allCases) { row in
-                        Text(row.rawValue).tag(row)
-                    }
+                ),
+                items: JournalRow.allCases
+            ) { row, isSelected in
+                HStack(spacing: 5) {
+                    Image(systemName: row.icon)
+                        .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                        .symbolEffect(.bounce, value: isSelected)
+                    Text(row.rawValue)
+                        .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
             }
             .padding(.horizontal, DS.Space.md)
             .padding(.vertical, DS.Space.sm)

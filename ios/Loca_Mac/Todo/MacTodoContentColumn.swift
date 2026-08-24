@@ -61,6 +61,7 @@ struct MacTodoContentColumn: View {
     @Query(sort: [SortDescriptor(\TodoItem.createdAt)], animation: .default)
     private var allItems: [TodoItem]
 
+    @State private var activeMode: TodoMode = .plan
     @State private var transitionDirection: TransitionDirection = .forward
     @State private var lastModeIndex: Int = 0
     @State private var hoveredMode: TodoMode? = nil
@@ -82,27 +83,9 @@ struct MacTodoContentColumn: View {
         allItems.filter { !$0.isArchived && $0.parentID == nil && $0.startTime != nil }
     }
 
-    private var mode: Binding<TodoMode> {
-        Binding(
-            get: {
-                let current = TodoMode(rawValue: modeString) ?? .plan
-                if visibleModes.contains(current) {
-                    return current
-                }
-                return visibleModes.first ?? .plan
-            },
-            set: { newMode in
-                let newIndex = newMode.index
-                transitionDirection = newIndex >= lastModeIndex ? .forward : .backward
-                lastModeIndex = newIndex
-                modeString = newMode.rawValue
-            }
-        )
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            // Linear Machined Segmented Control
+            // macOS HIG Liquid Glass Tabbed Switcher
             if visibleModes.count > 1 {
                 linearPillarSwitcher
                     .padding(.horizontal, DS.Space.md)
@@ -112,12 +95,12 @@ struct MacTodoContentColumn: View {
                     .opacity(0.12)
             }
 
-            // Direction-Aware Viewport (Plan ↔ List ↔ Time)
+            // Direction-Aware Inset Viewport Pane (Plan ↔ List ↔ Time)
             ZStack {
-                if mode.wrappedValue == .plan {
+                if activeMode == .plan {
                     MacDayPlannerColumn(selection: $selection)
                         .transition(contentTransition)
-                } else if mode.wrappedValue == .list {
+                } else if activeMode == .list {
                     MacTodoListColumn(selection: $selection)
                         .transition(contentTransition)
                 } else {
@@ -127,27 +110,46 @@ struct MacTodoContentColumn: View {
             }
             .clipped()
             .animation(
-                reduceMotion ? .linear(duration: 0.12) : .spring(response: 0.28, dampingFraction: 0.82),
-                value: mode.wrappedValue
+                reduceMotion ? .linear(duration: 0.12) : PlutoSpring.snappy,
+                value: activeMode
             )
         }
         .navigationTitle("Today")
         .background(.ultraThinMaterial)
         .background(DS.Theme.surface)
         .onAppear {
-            ensureValidMode()
-            lastModeIndex = (TodoMode(rawValue: modeString) ?? .plan).index
+            let initial = TodoMode(rawValue: modeString) ?? .plan
+            activeMode = visibleModes.contains(initial) ? initial : (visibleModes.first ?? .plan)
+            lastModeIndex = activeMode.index
         }
         .onChange(of: enablePlan) { _, _ in ensureValidMode() }
         .onChange(of: enableList) { _, _ in ensureValidMode() }
         .onChange(of: enableTime) { _, _ in ensureValidMode() }
+        .onChange(of: modeString) { _, newString in
+            if let target = TodoMode(rawValue: newString), target != activeMode {
+                withAnimation(PlutoSpring.snappy) {
+                    activeMode = target
+                }
+            }
+        }
     }
 
     private func ensureValidMode() {
-        let current = TodoMode(rawValue: modeString) ?? .plan
-        if !visibleModes.contains(current), let first = visibleModes.first {
-            modeString = first.rawValue
+        if !visibleModes.contains(activeMode), let first = visibleModes.first {
+            selectMode(first)
         }
+    }
+
+    private func selectMode(_ newMode: TodoMode) {
+        guard activeMode != newMode else { return }
+        let newIndex = newMode.index
+        transitionDirection = newIndex >= lastModeIndex ? .forward : .backward
+        lastModeIndex = newIndex
+        withAnimation(PlutoSpring.snappy) {
+            activeMode = newMode
+        }
+        modeString = newMode.rawValue
+        Haptics.selection()
     }
 
     // MARK: - Spatial Content Transition
@@ -159,13 +161,13 @@ struct MacTodoContentColumn: View {
         switch transitionDirection {
         case .forward:
             return .asymmetric(
-                insertion: .offset(x: 20).combined(with: .opacity),
-                removal: .offset(x: -20).combined(with: .opacity)
+                insertion: .offset(x: 18).combined(with: .opacity),
+                removal: .offset(x: -18).combined(with: .opacity)
             )
         case .backward:
             return .asymmetric(
-                insertion: .offset(x: -20).combined(with: .opacity),
-                removal: .offset(x: 20).combined(with: .opacity)
+                insertion: .offset(x: -18).combined(with: .opacity),
+                removal: .offset(x: 18).combined(with: .opacity)
             )
         }
     }
@@ -173,19 +175,15 @@ struct MacTodoContentColumn: View {
     // MARK: - Apple HIG Liquid Glass Segmented Switcher
 
     private var linearPillarSwitcher: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(visibleModes) { m in
-                let isSelected = mode.wrappedValue == m
+                let isSelected = activeMode == m
                 let isHovered = hoveredMode == m
 
                 Button {
-                    guard mode.wrappedValue != m else { return }
-                    withAnimation(PlutoSpring.snappy) {
-                        mode.wrappedValue = m
-                    }
-                    Haptics.impact(.light)
+                    selectMode(m)
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: m.icon)
                             .font(.system(size: 11, weight: isSelected ? .bold : .medium))
                             .symbolEffect(.bounce, value: isSelected)
@@ -200,7 +198,7 @@ struct MacTodoContentColumn: View {
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1.5)
                                 .background(
-                                    isSelected ? Color.black.opacity(0.12) : Color.white.opacity(0.06),
+                                    isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08),
                                     in: Capsule()
                                 )
                         } else if m == .list && !openItems.isEmpty {
@@ -209,38 +207,58 @@ struct MacTodoContentColumn: View {
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1.5)
                                 .background(
-                                    isSelected ? Color.black.opacity(0.12) : Color.white.opacity(0.06),
+                                    isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08),
                                     in: Capsule()
                                 )
                         }
                     }
-                    .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.9) : DS.Theme.textSecondary))
+                    .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.9) : Color.white.opacity(0.55)))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5.5)
-                    .background {
-                        if isSelected {
-                            LiquidGlassLensPill(namespace: pillarNamespace, id: "todayPillarSelectedPill")
-                        } else if isHovered {
-                            Capsule()
-                                .fill(Color.white.opacity(0.04))
-                        }
-                    }
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .help(tabTooltip(for: m))
                 .onHover { hovering in
                     hoveredMode = hovering ? m : nil
+                }
+                .background {
+                    if isSelected {
+                        LiquidGlassLensPill(namespace: pillarNamespace, id: "todayPillarSelectedPill")
+                    } else if isHovered {
+                        Capsule()
+                            .fill(Color.white.opacity(0.04))
+                    }
                 }
             }
         }
         .padding(3)
         .background(
             Capsule()
-                .fill(DS.Theme.card)
+                .fill(Color.white.opacity(0.06))
+                .background(.ultraThinMaterial, in: Capsule())
         )
         .overlay(
             Capsule()
-                .stroke(DS.Theme.border, lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.20),
+                            Color.white.opacity(0.05)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
+                )
         )
+    }
+
+    private func tabTooltip(for mode: TodoMode) -> String {
+        switch mode {
+        case .plan: return "Day Planner — Visual timeline & time-blocking schedule (⌘1)"
+        case .list: return "Task Queues — Prioritized GTD lists and inbox (⌘2)"
+        case .time: return "Focus Studio — Flow timer, stopwatch, and sound mixer (⌘3)"
+        }
     }
 }
