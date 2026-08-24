@@ -30,18 +30,14 @@ struct SoundMixerPanel: View {
                 Button {
                     soundVM.togglePauseAll()
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: soundVM.isAllPaused ? "play.fill" : "pause.fill")
                             .font(.system(size: 10, weight: .bold))
                         Text(soundVM.isAllPaused ? "Resume" : "Mute All")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10.5, weight: .bold))
                     }
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.12), in: Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlass(isProminent: soundVM.isAllPaused, tint: soundVM.isAllPaused ? Color.blue : nil))
                 .help(soundVM.isAllPaused ? "Resume All Tracks" : "Mute All Tracks")
 
                 Button {
@@ -49,11 +45,10 @@ struct SoundMixerPanel: View {
                     Haptics.impact(.light)
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .frame(width: 22, height: 22)
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 20, height: 20)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
             }
 
             // Quick Atmospheric Preset Switcher
@@ -87,13 +82,8 @@ struct SoundMixerPanel: View {
             .frame(maxHeight: 280)
         }
         .padding(16)
-        .frame(width: 310)
-        .background(
-            Color.black.opacity(0.80)
-                .background(.ultraThinMaterial)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.15), lineWidth: 1))
+        .frame(width: 320)
+        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.55), radius: 24, x: 0, y: 10)
     }
 
@@ -102,14 +92,9 @@ struct SoundMixerPanel: View {
             soundVM.applyPreset(lofi: lofi, nature: nature, rain: rain, fire: fire, library: lib, piano: piano)
         } label: {
             Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.85))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.white.opacity(0.08), in: Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.6))
+                .font(.system(size: 10.5, weight: .semibold))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plutoGlass)
     }
 
     private func trackRow(track: AmbientSoundTrack) -> some View {
@@ -145,11 +130,10 @@ struct SoundMixerPanel: View {
                     Haptics.impact(.light)
                 } label: {
                     Image(systemName: (track.volume > 0.001 && !track.isMuted) ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle((track.volume > 0.001 && !track.isMuted) ? Color.blue : Color.white.opacity(0.35))
-                        .frame(width: 24, height: 24)
+                        .font(.system(size: 10.5, weight: .bold))
+                        .frame(width: 22, height: 22)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle(tint: (track.volume > 0.001 && !track.isMuted) ? Color.blue : nil))
             }
 
             HStack(spacing: 8) {

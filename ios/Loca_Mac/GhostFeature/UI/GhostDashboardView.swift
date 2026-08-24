@@ -150,7 +150,7 @@ public struct GhostDashboardView: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color(red: 0.08, green: 0.08, blue: 0.11), in: RoundedRectangle(cornerRadius: 10))
+                    .plutoGlass(.regular, in: Capsule())
 
                     // Reconfigure Covenant Button
                     Button {
@@ -162,12 +162,8 @@ public struct GhostDashboardView: View {
                             Text("Covenant")
                                 .font(.system(size: 12, weight: .semibold))
                         }
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlass)
                     .help("Reconfigure Sovereign Covenant Protocol & Rules")
 
                     // Photo Wall Button
@@ -180,12 +176,8 @@ public struct GhostDashboardView: View {
                             Text("Photo Wall")
                                 .font(.system(size: 12, weight: .semibold))
                         }
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlass)
 
                     // Evening Check-In Button
                     Button {
@@ -197,12 +189,8 @@ public struct GhostDashboardView: View {
                             Text("Evening Check-In")
                                 .font(.system(size: 12, weight: .bold))
                         }
-                        .foregroundStyle(Color.black)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(red: 0.0, green: 0.85, blue: 1.0), in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlassProminent(tint: Color(red: 0.0, green: 0.85, blue: 1.0)))
                 }
 
                 // Three Rings Header (Dynamic Next Task Name)

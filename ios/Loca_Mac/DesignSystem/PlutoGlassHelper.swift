@@ -278,29 +278,62 @@ private struct PlutoGlassButtonBody<S: Shape>: View {
                     }
                     .shadow(color: (tint ?? DS.Theme.amber).opacity(isHovered ? 0.35 : 0.20), radius: isHovered ? 6 : 3, y: 1.5)
                 } else {
-                    // Standard Liquid Glass Fill
+                    // Standard Translucent Liquid Glass Fill
                     ZStack {
                         if let tint = tint {
-                            shape.fill(tint.opacity(isHovered ? 0.18 : 0.10))
+                            shape.fill(tint.opacity(isHovered ? 0.22 : 0.12))
                         } else {
-                            shape.fill(Color.white.opacity(isHovered ? 0.12 : 0.05))
+                            shape.fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(isHovered ? 0.22 : 0.12),
+                                        Color.white.opacity(isHovered ? 0.08 : 0.03)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
                         }
                     }
                     .background(.ultraThinMaterial, in: shape)
+                    // Specular Top/Bottom Edge Stroke
                     .overlay(
                         shape.stroke(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(isHovered ? 0.45 : 0.25),
-                                    Color.white.opacity(isHovered ? 0.15 : 0.04)
+                                    Color.white.opacity(isHovered ? 0.85 : 0.40),
+                                    Color.white.opacity(isHovered ? 0.20 : 0.08),
+                                    Color.white.opacity(isHovered ? 0.40 : 0.15)
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             ),
-                            lineWidth: 0.8
+                            lineWidth: isHovered ? 1.0 : 0.8
                         )
                     )
-                    .shadow(color: Color.black.opacity(isHovered ? 0.20 : 0.10), radius: isHovered ? 5 : 2.5, y: 1.5)
+                    // Chromatic Dispersion Rim on Hover
+                    .overlay(
+                        Group {
+                            if isHovered && !reduceMotion {
+                                shape
+                                    .stroke(
+                                        AngularGradient(
+                                            gradient: Gradient(colors: [
+                                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.65),
+                                                Color.white.opacity(0.85),
+                                                Color(red: 1.0, green: 0.65, blue: 0.15).opacity(0.70),
+                                                Color(red: 0.95, green: 0.35, blue: 0.75).opacity(0.55),
+                                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.65)
+                                            ]),
+                                            center: .center
+                                        ),
+                                        lineWidth: 0.85
+                                    )
+                                    .blendMode(.screen)
+                            }
+                        }
+                    )
+                    .shadow(color: Color.black.opacity(isHovered ? 0.30 : 0.15), radius: isHovered ? 6 : 3, y: 1.5)
                 }
             }
             .contentShape(shape)
@@ -349,17 +382,13 @@ extension ButtonStyle where Self == PlutoGlassButtonStyle<Capsule> {
     }
 }
 
-extension ButtonStyle {
-    public static func plutoGlass<S: Shape>(shape: S, isProminent: Bool = false, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
-        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: isProminent)
+extension ButtonStyle where Self == PlutoGlassButtonStyle<Circle> {
+    public static var plutoGlassCircle: PlutoGlassButtonStyle<Circle> {
+        PlutoGlassButtonStyle(shape: Circle(), tint: nil, isProminent: false)
     }
 
-    public static func plutoGlass<S: Shape>(shape: S, tint: Color?) -> PlutoGlassButtonStyle<S> {
-        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: false)
-    }
-
-    public static func plutoGlassProminent<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassButtonStyle<S> {
-        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: true)
+    public static func plutoGlassCircle(tint: Color? = nil) -> PlutoGlassButtonStyle<Circle> {
+        PlutoGlassButtonStyle(shape: Circle(), tint: tint, isProminent: false)
     }
 }
 

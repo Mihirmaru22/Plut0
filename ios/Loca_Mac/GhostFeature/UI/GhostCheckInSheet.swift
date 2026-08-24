@@ -42,11 +42,11 @@ public struct GhostCheckInSheet: View {
                 Button {
                     dismiss()
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(DS.Theme.textTertiary)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 20, height: 20)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
             }
             .padding(.horizontal, 22)
             .padding(.top, 20)
@@ -119,10 +119,10 @@ public struct GhostCheckInSheet: View {
                                 .foregroundStyle(Color(hex: "#0091FF"))
                         }
 
-                        Slider(value: $silenceAttestedMinutes, in: 0...180, step: 15)
+                        Slider(value: $silenceAttestedMinutes, in: 0...240, step: 15)
                             .tint(Color(hex: "#0091FF"))
 
-                        Text("Total deep work focus or deliberate offline silence logged today.")
+                        Text("Unplugged deep work, no notifications or social feeds.")
                             .font(.system(size: 10.5))
                             .foregroundStyle(DS.Theme.textMuted)
                     }
@@ -181,8 +181,7 @@ public struct GhostCheckInSheet: View {
             // Save Action
             HStack {
                 Button("Dismiss") { dismiss() }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DS.Theme.textTertiary)
+                    .buttonStyle(.plutoGlass)
 
                 Spacer()
 
@@ -198,23 +197,16 @@ public struct GhostCheckInSheet: View {
                                 .font(.system(size: 12, weight: .bold))
                         }
                     }
-                    .foregroundStyle(DS.Theme.canvas)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(DS.Theme.amber)
-                    )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassProminent(tint: DS.Theme.amber))
                 .disabled(isSaving)
             }
             .padding(.horizontal, 22)
             .padding(.vertical, 14)
-            .background(DS.Theme.surface)
+            .background(DS.Theme.surface.opacity(0.6))
         }
         .frame(width: 520, height: 600)
-        .background(DS.Theme.canvas)
+        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 16))
         .onAppear {
             loadTodayExistingValues()
         }

@@ -62,17 +62,17 @@ struct PlutoQuickActionHUD: View {
                 Button {
                     onClose()
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(DS.Color.textTertiary)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 20, height: 20)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
             }
             .padding(.horizontal, DS.Space.lg)
             .padding(.vertical, 12)
-            .background(DS.Color.surface)
+            .background(DS.Color.surface.opacity(0.6))
 
-            Divider()
+            Divider().opacity(0.2)
 
             // Main Input Field
             HStack(spacing: 10) {
@@ -94,19 +94,15 @@ struct PlutoQuickActionHUD: View {
                     } label: {
                         Text("Add ↵")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 4))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.plutoGlassProminent(tint: Color.accentColor))
                 }
             }
             .padding(.horizontal, DS.Space.lg)
             .padding(.vertical, 14)
-            .background(DS.Color.surfaceRecessed)
+            .background(DS.Color.surfaceRecessed.opacity(0.6))
 
-            Divider()
+            Divider().opacity(0.2)
 
             // Quick Habit Check-ins
             VStack(alignment: .leading, spacing: 8) {
@@ -140,7 +136,6 @@ struct PlutoQuickActionHUD: View {
 
                                     Text(habit.name)
                                         .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(DS.Color.textPrimary)
 
                                     if habit.currentStreak > 0 {
                                         Text("\(habit.currentStreak)d")
@@ -148,15 +143,8 @@ struct PlutoQuickActionHUD: View {
                                             .foregroundStyle(DS.Color.streak)
                                     }
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(DS.Color.surface, in: RoundedRectangle(cornerRadius: 6))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(DS.Color.border.opacity(0.4), lineWidth: 1)
-                                )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.plutoGlass)
                         }
                     }
                     .padding(.horizontal, DS.Space.lg)
@@ -164,7 +152,7 @@ struct PlutoQuickActionHUD: View {
                 }
             }
 
-            Divider()
+            Divider().opacity(0.2)
 
             // Bottom Quick Actions Dock
             HStack(spacing: 12) {
@@ -181,9 +169,8 @@ struct PlutoQuickActionHUD: View {
                         Text("Start 25m Focus")
                     }
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(DS.Color.textSecondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlass)
 
                 Spacer()
 
@@ -200,21 +187,16 @@ struct PlutoQuickActionHUD: View {
                         Text("Open Today")
                     }
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(DS.Color.textSecondary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlass)
             }
             .padding(.horizontal, DS.Space.lg)
             .padding(.vertical, 10)
-            .background(DS.Color.surface)
+            .background(DS.Color.surface.opacity(0.6))
         }
         .frame(width: 480)
-        .background(DS.Color.background, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(DS.Color.border.opacity(0.6), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 12)
+        .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(color: Color.black.opacity(0.40), radius: 24, x: 0, y: 12)
     }
 
     // MARK: - Actions
