@@ -23,7 +23,9 @@ struct MacSettingsView: View {
     @Query private var allTreks: [TrekRecord]
 
     // Settings Storage
-    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "dark"
+    // Follow macOS by default. Light and Dark remain explicit, reversible
+    // per-app choices for people who need them.
+    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "system"
     @AppStorage("mac_sound_effects_enabled") private var soundEffectsEnabled: Bool = true
     @AppStorage("mac_open_full_window_on_launch") private var openFullWindow: Bool = true
     @AppStorage("mac_enable_haptics") private var enableHaptics: Bool = true
@@ -226,8 +228,9 @@ struct MacSettingsView: View {
             .padding(28)
             .frame(maxWidth: 960)
         }
-        .background(.ultraThinMaterial)
-        .background(DS.Theme.canvas)
+        // Custom controls and tiles use the native glass modifier supplied by
+        // PlutoGlassHelper. Do not add a second, simulated material layer.
+        .background(Color.clear)
         .confirmationDialog(
             "Reset Whole App Data?",
             isPresented: $showingResetConfirmation,

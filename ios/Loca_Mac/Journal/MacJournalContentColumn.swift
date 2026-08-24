@@ -36,6 +36,8 @@ struct MacJournalContentColumn: View {
     @Query(sort: [SortDescriptor(\JournalNote.date, order: .reverse)])
     private var allJournalNotes: [JournalNote]
 
+    @Namespace private var journalPickerNamespace
+    
     private var dailyRoutines: [HabitBoard] {
         habitCandidates.filter { $0.archivedAt == nil }
     }
@@ -56,7 +58,8 @@ struct MacJournalContentColumn: View {
                     get: { selectedRow ?? .todaysLog },
                     set: { selectedRow = $0 }
                 ),
-                items: JournalRow.allCases
+                items: JournalRow.allCases,
+                namespace: journalPickerNamespace
             ) { row, isSelected in
                 HStack(spacing: 5) {
                     Image(systemName: row.icon)

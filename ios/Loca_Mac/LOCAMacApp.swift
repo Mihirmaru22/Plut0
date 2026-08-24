@@ -17,8 +17,8 @@ import os.log
 /// is called exactly once here, and the resulting container is injected
 /// into the environment for all child views via `.modelContainer(_:)`.
 ///
-/// Deployment target: macOS 14.0 (Sonoma) — required for SwiftData and
-/// the `NavigationSplitView` APIs used by `MacRootView`.
+/// Deployment target: macOS 27.0 — Liquid Glass is the app's native visual
+/// baseline, alongside the SwiftData and navigation APIs used by `MacRootView`.
 @main
 @MainActor
 struct LOCAMacApp: App {
@@ -29,13 +29,7 @@ struct LOCAMacApp: App {
     init() {
         // Runtime Reality Logging
         let osVersion = ProcessInfo.processInfo.operatingSystemVersion
-        let isGlassActive: Bool
-        if #available(macOS 26.0, *) {
-            isGlassActive = true
-        } else {
-            isGlassActive = false
-        }
-        print("🚀 [Pluto Runtime Reality] macOS \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion) | macOS 26+ Glass Active: \(isGlassActive)")
+        print("🚀 [Pluto Runtime Reality] macOS \(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion) | Liquid Glass baseline active")
 
         // Initialize Apple Native Notification Delegate & Categories (A1-A8)
         PlutoNotificationManager.shared.configure()
@@ -58,7 +52,10 @@ struct LOCAMacApp: App {
         }
     }
 
-    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "dark"
+    // System is the default: Liquid Glass is designed to follow macOS
+    // appearance and accessibility settings unless a person explicitly
+    // chooses a per-app appearance in Settings.
+    @AppStorage("mac_appearance_mode") private var appearanceMode: String = "system"
 
     private var preferredScheme: ColorScheme? {
         switch appearanceMode {
@@ -129,4 +126,3 @@ private struct MacContainerUnavailableView: View {
         .padding(DS.Space.xxxl)
     }
 }
-

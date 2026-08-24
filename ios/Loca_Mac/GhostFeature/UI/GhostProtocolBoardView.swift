@@ -86,24 +86,58 @@ public struct GhostProtocolBoardView: View {
         }
     }
 
-    // MARK: - Protocol Row
+    private func toggleRule(_ rule: GhostProtocolRule) {
+        if rule.proofKind == .artifact {
+            pickPhotoForArtifact(rule: rule)
+            return
+        }
+        let isDone = isRuleCompleted(rule)
+        let newVal: Double = isDone ? 0.0 : max(1.0, rule.targetValue)
+        Haptics.impact(.medium)
+        if !isDone {
+            PlutoSoundEngine.shared.play(.checkmark)
+        } else {
+            PlutoSoundEngine.shared.play(.tabSwitch)
+        }
+        withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
+            onLogReceipt(rule, rule.proofKind, newVal, nil)
+        }
+    }
 
     private func protocolRow(rule: GhostProtocolRule) -> some View {
         let isDone = isRuleCompleted(rule)
         let currentVal = currentRuleValue(rule)
         let isHovered = hoveredRuleID == rule.id
+        let ringColor = Color(hex: rule.ring.accentHex) ?? Color.white
 
         return HStack(spacing: 12) {
-            // Icon & Ring Indicator
-            ZStack {
-                Circle()
-                    .fill(isDone ? (Color(hex: rule.ring.accentHex) ?? Color.white).opacity(0.2) : Color.white.opacity(0.04))
-                    .frame(width: 32, height: 32)
+            // Icon & Ring Indicator Button (Instant 1-tap checkout)
+            Button {
+                toggleRule(rule)
+            } label: {
+                ZStack {
+                    Circle()
+                        .stroke(isDone ? Color.white.opacity(0.8) : Color.white.opacity(0.20), lineWidth: 1.5)
+                        .frame(width: 24, height: 24)
 
-                Image(systemName: isDone ? "checkmark" : rule.icon)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(isDone ? (Color(hex: rule.ring.accentHex) ?? Color.white) : Color.white.opacity(0.5))
+                    if isDone {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 19, height: 19)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9.5, weight: .black))
+                            .foregroundStyle(Color.black)
+                            .symbolEffect(.bounce, value: isDone)
+                    } else {
+                        Image(systemName: rule.icon)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                    }
+                }
+                .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .help(isDone ? "Mark Incomplete" : "Mark Complete")
 
             // Title & Subtitle
             VStack(alignment: .leading, spacing: 2) {
@@ -111,14 +145,15 @@ public struct GhostProtocolBoardView: View {
                     Text(rule.title)
                         .font(.system(size: 12.5, weight: isDone ? .bold : .medium))
                         .foregroundStyle(isDone ? Color.white : Color.white.opacity(0.85))
+                        .strikethrough(isDone, color: Color.white.opacity(0.4))
 
                     if rule.isOutdoorRequired {
                         Text("OUTDOOR")
                             .font(.system(size: 8, weight: .black))
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Color.white.opacity(0.8))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 3))
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 3))
                     }
                 }
 
@@ -127,20 +162,24 @@ public struct GhostProtocolBoardView: View {
                     .foregroundStyle(Color.white.opacity(0.5))
                     .lineLimit(1)
             }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                toggleRule(rule)
+            }
 
             Spacer()
 
-            // Proof Control by Kind
-            proofControl(for: rule, currentValue: currentVal, isDone: isDone)
+            // Proof Control by Kind (Photo proof or clean status badge)
+            proofControl(for: rule, currentValue: currentVal, isDone: isDone, ringColor: ringColor)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(isDone ? Color.white.opacity(0.04) : (isHovered ? Color.white.opacity(0.02) : Color.clear))
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovered ? DS.Theme.cardHover : DS.Theme.card)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isDone ? (Color(hex: rule.ring.accentHex) ?? Color.white).opacity(0.25) : Color.white.opacity(0.04), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isDone ? Color.white.opacity(0.15) : DS.Theme.borderSubtle, lineWidth: 1)
                 )
         )
         .onHover { h in hoveredRuleID = h ? rule.id : nil }
@@ -149,81 +188,70 @@ public struct GhostProtocolBoardView: View {
     // MARK: - Proof Controls
 
     @ViewBuilder
-    private func proofControl(for rule: GhostProtocolRule, currentValue: Double, isDone: Bool) -> some View {
+    private func proofControl(for rule: GhostProtocolRule, currentValue: Double, isDone: Bool, ringColor: Color) -> some View {
         switch rule.proofKind {
         case .binary:
-            Button {
-                Haptics.impact(.medium)
-                let newVal = isDone ? 0.0 : 1.0
-                onLogReceipt(rule, .binary, newVal, nil)
-            } label: {
-                Image(systemName: isDone ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(isDone ? (Color(hex: rule.ring.accentHex) ?? Color(red: 0.0, green: 0.85, blue: 1.0)) : Color.white.opacity(0.3))
-            }
-            .buttonStyle(.plain)
+            EmptyView()
 
         case .quantity:
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Text("\(Int(currentValue))/\(Int(rule.targetValue)) \(rule.unitLabel)")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(isDone ? Color(red: 0.0, green: 0.85, blue: 1.0) : Color.white.opacity(0.6))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isDone ? ringColor : Color.white.opacity(0.6))
                     .contentTransition(.numericText())
 
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Button {
                         Haptics.impact(.light)
                         let next = max(0.0, currentValue - 1.0)
                         onLogReceipt(rule, .quantity, next, nil)
                     } label: {
                         Image(systemName: "minus")
-                            .font(.system(size: 9, weight: .bold))
-                            .frame(width: 20, height: 20)
-                            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                            .frame(width: 18, height: 18)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
 
                     Button {
                         Haptics.impact(.light)
-                        let next = min(rule.targetValue * 2, currentValue + 1.0)
+                        let next = currentValue + 1.0
                         onLogReceipt(rule, .quantity, next, nil)
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
-                            .frame(width: 20, height: 20)
-                            .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                            .frame(width: 18, height: 18)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
                 }
             }
 
         case .duration:
-            HStack(spacing: 8) {
-                Text("\(Int(currentValue))m")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(isDone ? Color(red: 0.0, green: 0.85, blue: 1.0) : Color.white.opacity(0.6))
+            HStack(spacing: 6) {
+                Text("\(Int(currentValue))/\(Int(rule.targetValue)) min")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isDone ? ringColor : Color.white.opacity(0.6))
                     .contentTransition(.numericText())
-
-                Button("+45m") {
-                    Haptics.impact(.medium)
-                    onLogReceipt(rule, .duration, currentValue + 45.0, nil)
-                }
-                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                .buttonStyle(.plain)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .plutoGlass(.regular, in: RoundedRectangle(cornerRadius: 4))
             }
 
         case .artifact:
             HStack(spacing: 6) {
                 if let photoReceipt = receipts.first(where: { $0.ruleID == rule.id && $0.photoPath != nil }) {
-                    Image(systemName: "photo.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
-                    Text("Sealed")
-                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
+                    HStack(spacing: 4) {
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 10.5, weight: .bold))
+                        Text("Photo Logged")
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 8, weight: .black))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .foregroundStyle(ringColor)
+                    .background(ringColor.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
                 } else {
                     Button {
                         pickPhotoForArtifact(rule: rule)
@@ -237,9 +265,14 @@ public struct GhostProtocolBoardView: View {
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .plutoGlass(.interactive, in: RoundedRectangle(cornerRadius: 5))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(
+                        PlutoGlassButtonStyle(
+                            shape: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                            tint: ringColor.opacity(0.3),
+                            isProminent: false
+                        )
+                    )
                 }
             }
         }

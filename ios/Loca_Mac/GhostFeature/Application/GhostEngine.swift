@@ -132,15 +132,20 @@ public actor GhostEngine {
         guard var day = try await getOrCreateDayRecord(for: date) else { return nil }
         guard let season = try await store.fetchActiveSeason() else { return nil }
 
-        let receipt = GhostReceipt(
-            dayID: day.id,
-            ruleID: ruleID,
-            kind: proofKind,
-            valueReal: value,
-            photoPath: photoPath,
-            loggedAt: Date()
-        )
-        try await store.saveReceipt(receipt)
+        // Clear previous receipts for this rule & day before logging updated value
+        try await store.deleteReceipts(dayID: day.id, ruleID: ruleID)
+
+        if value > 0 || photoPath != nil {
+            let receipt = GhostReceipt(
+                dayID: day.id,
+                ruleID: ruleID,
+                kind: proofKind,
+                valueReal: value,
+                photoPath: photoPath,
+                loggedAt: Date()
+            )
+            try await store.saveReceipt(receipt)
+        }
 
         let allReceipts = try await store.fetchReceipts(dayID: day.id)
         let rules = await fetchRules(for: season)

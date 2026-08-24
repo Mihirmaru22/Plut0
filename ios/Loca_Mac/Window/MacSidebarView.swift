@@ -8,13 +8,31 @@ struct MacSidebarView: View {
     @Binding var selection: MacSection?
     @State private var hoveredSection: MacSection? = nil
     @Namespace private var sidebarNamespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let mainSections: [MacSection] = [.today, .notes, .studio, .life, .ghost]
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            // Material Sidebar Backing (Tahoe Flush)
-            VStack(spacing: 0) {
+            // A stable navigation canvas keeps labels readable; the selected
+            // navigation control above it supplies the native glass surface.
+            sidebarContent
+                // The selected item is the only custom glass surface in this
+                // navigation layer. Keeping the container at this scope lets
+                // SwiftUI morph it between section rows efficiently.
+                .modifier(SidebarGlassContainerModifier())
+
+            // Right-hand 1px Boundary Divider
+            Rectangle()
+                .fill(DS.Theme.border)
+                .frame(width: 1)
+                .ignoresSafeArea()
+        }
+        .navigationTitle("PLUTO")
+    }
+
+    private var sidebarContent: some View {
+        VStack(spacing: 0) {
 
                 // Main Navigation Section List
                 ScrollView {
@@ -40,17 +58,9 @@ struct MacSidebarView: View {
                         .padding(.horizontal, 10)
                         .padding(.bottom, 12)
                 }
-            }
-            .background(.ultraThinMaterial)
-            .ignoresSafeArea()
-
-            // Right-hand 1px Boundary Divider
-            Rectangle()
-                .fill(DS.Theme.border)
-                .frame(width: 1)
-                .ignoresSafeArea()
         }
-        .navigationTitle("PLUTO")
+        .background(DS.Theme.sidebar)
+        .ignoresSafeArea()
     }
 
     // MARK: - Sidebar Item Button (Sliding Glass Selection Pill)
@@ -58,10 +68,9 @@ struct MacSidebarView: View {
     private func sidebarItemButton(section: MacSection) -> some View {
         let isSelected = selection == section
         let isHovered = hoveredSection == section
-        let accent = sectionAccent(section)
 
         return Button {
-            withAnimation(PlutoSpring.snappy) {
+            withAnimation(reduceMotion ? nil : PlutoSpring.snappy) {
                 selection = section
             }
             Haptics.impact(.light)
@@ -70,14 +79,14 @@ struct MacSidebarView: View {
                 // Section Icon with subtle tinting and bounce
                 Image(systemName: section.systemImage)
                     .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? Color.black.opacity(0.9) : (isHovered ? Color.white : DS.Theme.textSecondary))
+                    .foregroundStyle(isSelected ? selectedForeground : (isHovered ? Color.white : DS.Theme.textSecondary))
                     .symbolEffect(.bounce, value: isSelected)
                     .frame(width: 20, height: 20)
 
                 // Section Title
                 Text(section.rawValue)
                     .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? Color.black.opacity(0.92) : (isHovered ? Color.white : DS.Theme.textSecondary))
+                    .foregroundStyle(isSelected ? selectedForeground : (isHovered ? Color.white : DS.Theme.textSecondary))
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
@@ -86,7 +95,7 @@ struct MacSidebarView: View {
                 if let kbd = shortcutFor(section) {
                     Text(kbd)
                         .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(isSelected ? Color.black.opacity(0.7) : DS.Theme.textMuted)
+                        .foregroundStyle(isSelected ? selectedShortcutForeground : DS.Theme.textMuted)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(
@@ -100,20 +109,7 @@ struct MacSidebarView: View {
             .padding(.vertical, 7)
             .background {
                 if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(white: 0.98), Color(white: 0.90)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.white.opacity(0.9), lineWidth: 1)
-                        )
-                        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 2)
-                        .matchedGeometryEffect(id: "sidebarSelectionPill", in: sidebarNamespace)
+                    selectedItemBackground(for: section)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.white.opacity(0.06))
@@ -127,6 +123,24 @@ struct MacSidebarView: View {
         }
     }
 
+    @ViewBuilder
+    private func selectedItemBackground(for section: MacSection) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+
+        Color.clear
+            .glassEffect(.regular.interactive(), in: shape)
+            .glassEffectID(section.id, in: sidebarNamespace)
+            .glassEffectTransition(.matchedGeometry)
+    }
+
+    private var selectedForeground: Color {
+        DS.Theme.textPrimary
+    }
+
+    private var selectedShortcutForeground: Color {
+        DS.Theme.textSecondary
+    }
+
     private func shortcutFor(_ section: MacSection) -> String? {
         switch section {
         case .today:    return "⌘1"
@@ -138,14 +152,13 @@ struct MacSidebarView: View {
         }
     }
 
-    private func sectionAccent(_ section: MacSection) -> Color {
-        switch section {
-        case .today:    return DS.Theme.amber
-        case .notes:    return DS.Theme.cyan
-        case .studio:   return DS.Theme.violet
-        case .life:     return DS.Theme.emerald
-        case .ghost:    return Color(red: 0.0, green: 0.85, blue: 1.0)
-        case .settings: return Color.white.opacity(0.85)
+}
+
+/// Groups the sidebar's moving selection surface for efficient morphing.
+private struct SidebarGlassContainerModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        GlassEffectContainer(spacing: 8) {
+            content
         }
     }
 }

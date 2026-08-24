@@ -348,17 +348,13 @@ public struct GhostPillarView: View {
             if let result = try? await GhostEngine.shared.logReceipt(
                 ruleID: rule.id, proofKind: proofKind, value: value, photoPath: photoPath
             ) {
-                let streak = (try? await GhostEngine.shared.computeStreakStatus()) ?? streakStatus
-                let ridge  = (try? await GhostEngine.shared.fetchRidgeSeries()) ?? []
-                let grid   = (try? await GhostEngine.shared.fetchChainGrid()) ?? []
-                let photos = (try? await GhostEngine.shared.fetchAllPhotoArtifacts()) ?? []
                 await MainActor.run {
-                    self.todayRecord   = result.day
-                    self.todayReceipts = result.receipts
-                    self.streakStatus  = streak
-                    self.ridgePoints   = ridge
-                    self.chainCells    = grid
-                    self.photoArtifacts = photos
+                    self.todayRecord = result.day
+                    var current = self.todayReceipts.filter { $0.ruleID != rule.id }
+                    if let updated = result.receipts.first(where: { $0.ruleID == rule.id }) {
+                        current.append(updated)
+                    }
+                    self.todayReceipts = current
                 }
             }
         }

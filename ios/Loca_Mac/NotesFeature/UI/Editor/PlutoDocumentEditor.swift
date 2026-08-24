@@ -154,17 +154,13 @@ public struct PlutoDocumentEditor: View {
                                 } label: {
                                     HStack(spacing: 5) {
                                         Text(Self.headerDateFormatter.string(from: entryDate))
-                                            .font(.system(size: 13, weight: .bold))
-                                            .foregroundStyle(DS.Color.textPrimary)
+                                            .font(.system(size: 12.5, weight: .bold))
                                         Image(systemName: "chevron.down")
-                                            .font(.system(size: 9, weight: .bold))
+                                            .font(.system(size: 8.5, weight: .bold))
                                             .foregroundStyle(DS.Color.textTertiary)
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: RoundedRectangle(cornerRadius: 6))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.plutoGlass)
                                 .popover(isPresented: $showDatePopover) {
                                     VStack(spacing: 10) {
                                         DatePicker("Entry Date & Time", selection: $entryDate, displayedComponents: [.date, .hourAndMinute])
@@ -175,11 +171,11 @@ public struct PlutoDocumentEditor: View {
                                                 entryDate = Date()
                                                 showDatePopover = false
                                             }
-                                            .buttonStyle(.plain)
+                                            .buttonStyle(.plutoGlass)
                                             .font(.caption)
                                             Spacer()
                                             Button("Done") { showDatePopover = false }
-                                                .buttonStyle(.borderedProminent)
+                                                .buttonStyle(.plutoGlassProminent(tint: Color.accentColor))
                                                 .controlSize(.small)
                                         }
                                     }
@@ -188,12 +184,9 @@ public struct PlutoDocumentEditor: View {
                             } else if let onToggle = config.onToggleNavigator, !config.isNavigatorVisible {
                                 Button(action: onToggle) {
                                     Image(systemName: "line.3.horizontal")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(DS.Color.textSecondary)
-                                        .padding(6)
-                                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+                                        .font(.system(size: 12, weight: .medium))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.plutoGlassCircle)
                                 .help("Show Sidebar (⌘⌥S)")
                             }
                             
@@ -210,16 +203,12 @@ public struct PlutoDocumentEditor: View {
                             
                             // Center: Floating Media Capsule
                             if config.mediaBar {
-                                HStack(spacing: 4) {
+                                PlutoGlassCluster(spacing: 4) {
                                     toolbarCapsuleItem(icon: "text.alignleft", label: "Text Mode", isActive: true) {}
                                     toolbarCapsuleItem(icon: "photo", label: "Photos", isActive: false) {}
                                     toolbarCapsuleItem(icon: "location.north.line.fill", label: "Location", isActive: false) {}
                                     toolbarCapsuleItem(icon: "waveform", label: "Voice Studio", isActive: false) {}
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Capsule())
-                                .overlay(Capsule().stroke(DS.Color.border.opacity(0.3), lineWidth: 1))
                                 
                                 Spacer()
                             }
@@ -231,15 +220,11 @@ public struct PlutoDocumentEditor: View {
                                         showFormattingPopover.toggle()
                                     } label: {
                                         HStack(spacing: 3) {
-                                            Text("Aa").font(.system(size: 13, weight: .bold))
-                                            Image(systemName: "pencil.and.outline").font(.system(size: 10))
+                                            Text("Aa").font(.system(size: 12.5, weight: .bold))
+                                            Image(systemName: "pencil.and.outline").font(.system(size: 9.5))
                                         }
-                                        .foregroundStyle(DS.Color.textPrimary)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Capsule())
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.plutoGlass)
                                     .popover(isPresented: $showFormattingPopover) {
                                         PlutoTypographyPopover(state: state)
                                     }
@@ -251,12 +236,10 @@ public struct PlutoDocumentEditor: View {
                                         Haptics.impact(.light)
                                     } label: {
                                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(isBookmarked ? Color.yellow : DS.Color.textSecondary)
-                                            .padding(7)
-                                            .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Circle())
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(isBookmarked ? Color.yellow : Color.white.opacity(0.85))
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(.plutoGlassCircle(tint: isBookmarked ? Color.yellow.opacity(0.25) : nil))
                                 }
                                 
                                 if config.doneButton {
@@ -267,16 +250,11 @@ public struct PlutoDocumentEditor: View {
                                             showSavedToast = false
                                         }
                                     } label: {
-                                        ZStack {
-                                            Circle()
-                                                .fill(Color(red: 0.38, green: 0.45, blue: 0.98))
-                                                .frame(width: 28, height: 28)
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundStyle(.white)
-                                        }
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundStyle(.white)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(PlutoGlassButtonStyle(shape: Circle(), tint: Color(red: 0.38, green: 0.45, blue: 0.98), isProminent: true))
                                 }
                             }
                         }
@@ -349,12 +327,16 @@ public struct PlutoDocumentEditor: View {
     private func toolbarCapsuleItem(icon: String, label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: isActive ? .bold : .medium))
-                .foregroundStyle(isActive ? Color.white : DS.Color.textSecondary)
-                .frame(width: 28, height: 26)
-                .background(isActive ? Color.white.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                .font(.system(size: 11.5, weight: isActive ? .bold : .medium))
+                .frame(width: 14, height: 14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            PlutoGlassButtonStyle(
+                shape: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                tint: isActive ? Color.accentColor : nil,
+                isProminent: isActive
+            )
+        )
         .help(label)
     }
     

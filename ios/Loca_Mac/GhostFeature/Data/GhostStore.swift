@@ -307,6 +307,18 @@ public actor GhostStore {
         }
     }
 
+    public func deleteReceipts(dayID: String, ruleID: String) throws {
+        try database.write { db in
+            let sql = "DELETE FROM ghost_receipts WHERE day_id = ? AND rule_id = ?;"
+            let statement = try SQLiteHelper.prepare(sql: sql, on: db)
+            defer { sqlite3_finalize(statement) }
+
+            SQLiteHelper.bind(text: dayID, at: 1, statement: statement)
+            SQLiteHelper.bind(text: ruleID, at: 2, statement: statement)
+            _ = sqlite3_step(statement)
+        }
+    }
+
     // MARK: - Custom Rules CRUD (Migration v6)
 
     public func saveCustomRule(_ rule: GhostProtocolRule, seasonID: String) throws {

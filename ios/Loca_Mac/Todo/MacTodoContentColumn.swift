@@ -115,8 +115,10 @@ struct MacTodoContentColumn: View {
             )
         }
         .navigationTitle("Today")
-        .background(.ultraThinMaterial)
-        .background(DS.Theme.surface)
+        // Navigation owns the structural material; interactive task controls
+        // use native Liquid Glass individually rather than stacking a legacy
+        // simulated blur underneath the entire workspace.
+        .background(Color.clear)
         .onAppear {
             let initial = TodoMode(rawValue: modeString) ?? .plan
             activeMode = visibleModes.contains(initial) ? initial : (visibleModes.first ?? .plan)
@@ -173,85 +175,46 @@ struct MacTodoContentColumn: View {
     }
 
     // MARK: - Apple HIG Liquid Glass Segmented Switcher
-
+    
     private var linearPillarSwitcher: some View {
-        HStack(spacing: 2) {
-            ForEach(visibleModes) { m in
-                let isSelected = activeMode == m
-                let isHovered = hoveredMode == m
-
-                Button {
-                    selectMode(m)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: m.icon)
-                            .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                            .symbolEffect(.bounce, value: isSelected)
-
-                        Text(m.rawValue)
-                            .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-
-                        // Count Badges
-                        if m == .plan && !scheduledItems.isEmpty {
-                            Text("\(scheduledItems.count)")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1.5)
-                                .background(
-                                    isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08),
-                                    in: Capsule()
-                                )
-                        } else if m == .list && !openItems.isEmpty {
-                            Text("\(openItems.count)")
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1.5)
-                                .background(
-                                    isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08),
-                                    in: Capsule()
-                                )
-                        }
-                    }
-                    .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white.opacity(0.9) : Color.white.opacity(0.55)))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5.5)
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .help(tabTooltip(for: m))
-                .onHover { hovering in
-                    hoveredMode = hovering ? m : nil
-                }
-                .background {
-                    if isSelected {
-                        LiquidGlassLensPill(namespace: pillarNamespace, id: "todayPillarSelectedPill")
-                    } else if isHovered {
-                        Capsule()
-                            .fill(Color.white.opacity(0.04))
-                    }
+        PlutoGlassSegmentedPicker(
+            selection: Binding(
+                get: { activeMode },
+                set: { selectMode($0) }
+            ),
+            items: visibleModes,
+            namespace: pillarNamespace
+        ) { mode, isSelected in
+            HStack(spacing: 5) {
+                Image(systemName: mode.icon)
+                    .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                    .symbolEffect(.bounce, value: isSelected)
+                Text(mode.rawValue)
+                    .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                // Count Badges
+                if mode == .plan && !scheduledItems.isEmpty {
+                    Text("\(scheduledItems.count)")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08), in: Capsule())
+                } else if mode == .list && !openItems.isEmpty {
+                    Text("\(openItems.count)")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1.5)
+                        .background(isSelected ? Color.white.opacity(0.18) : Color.white.opacity(0.08), in: Capsule())
                 }
             }
+            .foregroundStyle(isSelected ? Color.white : (hoveredMode == mode ? Color.white.opacity(0.9) : Color.white.opacity(0.55)))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 5.5)
+            .contentShape(Capsule())
+            .help(tabTooltip(for: mode))
+            .onHover { hovering in
+                hoveredMode = hovering ? mode : nil
+            }
         }
-        .padding(3)
-        .background(
-            Capsule()
-                .fill(Color.white.opacity(0.06))
-                .background(.ultraThinMaterial, in: Capsule())
-        )
-        .overlay(
-            Capsule()
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.20),
-                            Color.white.opacity(0.05)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.8
-                )
-        )
     }
 
     private func tabTooltip(for mode: TodoMode) -> String {

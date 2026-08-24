@@ -7,21 +7,24 @@ public struct NotesFormattingToolbar: View {
     public let onToggleBold: () -> Void
     public let onToggleItalic: () -> Void
     public let onToggleBlockType: (EditorBlockType) -> Void
+    public var onAISummary: (() -> Void)? = nil
     
     public init(
         state: FormattingState,
         onToggleBold: @escaping () -> Void,
         onToggleItalic: @escaping () -> Void,
-        onToggleBlockType: @escaping (EditorBlockType) -> Void
+        onToggleBlockType: @escaping (EditorBlockType) -> Void,
+        onAISummary: (() -> Void)? = nil
     ) {
         self.state = state
         self.onToggleBold = onToggleBold
         self.onToggleItalic = onToggleItalic
         self.onToggleBlockType = onToggleBlockType
+        self.onAISummary = onAISummary
     }
     
     public var body: some View {
-        HStack(spacing: 3) {
+        PlutoGlassCluster(spacing: 3) {
             // Inline marks group (Combine with each other and with any block type)
             toolbarButton(
                 title: "B",
@@ -51,6 +54,7 @@ public struct NotesFormattingToolbar: View {
             
             Divider()
                 .frame(height: 14)
+                .opacity(0.2)
                 .padding(.horizontal, 2)
             
             // Exclusive Headings Group
@@ -92,6 +96,7 @@ public struct NotesFormattingToolbar: View {
             
             Divider()
                 .frame(height: 14)
+                .opacity(0.2)
                 .padding(.horizontal, 2)
             
             // Lists & Paragraph Group
@@ -130,16 +135,32 @@ public struct NotesFormattingToolbar: View {
                     }
                 }
             )
+            
+            // Optional AI Summary button
+            if let onAISummary = onAISummary {
+                Divider()
+                    .frame(height: 14)
+                    .opacity(0.2)
+                    .padding(.horizontal, 2)
+                
+                Button(action: onAISummary) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10.5, weight: .bold))
+                        Text("AI")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    }
+                }
+                .buttonStyle(
+                    PlutoGlassButtonStyle(
+                        shape: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                        tint: DS.Theme.amber,
+                        isProminent: false
+                    )
+                )
+                .help("AI Note Synthesis (⌘J)")
+            }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.04), radius: 3, x: 0, y: 1)
     }
     
     private func toolbarButton(
@@ -152,34 +173,28 @@ public struct NotesFormattingToolbar: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            ZStack {
-                if isActive {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .stroke(Color.accentColor.opacity(0.4), lineWidth: 0.8)
-                        )
+            Group {
+                if let title = title {
+                    Text(title)
+                        .font(.system(size: 11, weight: isBoldFont ? .heavy : .semibold))
+                        .italic(isItalicFont)
+                } else if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .medium))
                 }
-                
-                Group {
-                    if let title = title {
-                        Text(title)
-                            .font(.system(size: 11, weight: isBoldFont ? .heavy : .semibold))
-                            .italic(isItalicFont)
-                    } else if let icon = icon {
-                        Image(systemName: icon)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                }
-                .foregroundColor(isActive ? .accentColor : .primary.opacity(0.85))
             }
-            .frame(width: 26, height: 22)
-            .contentShape(Rectangle())
+            .frame(width: 14, height: 14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            PlutoGlassButtonStyle(
+                shape: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                tint: isActive ? Color.accentColor : nil,
+                isProminent: isActive
+            )
+        )
         .help(help)
         .accessibilityLabel(help)
         .accessibilityValue(isActive ? "Selected" : "Not selected")
     }
 }
+

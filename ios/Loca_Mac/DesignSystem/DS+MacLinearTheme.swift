@@ -16,62 +16,62 @@ extension DS {
             }))
         }
 
-        // MARK: - Canvas & Surfaces (Dynamic Obsidian Slate / Studio Hierarchy - Golden Gate Liquid Glass)
+        // MARK: - Canvas & Surfaces (Solid Plain Canvas Obsidian Hierarchy)
 
         /// Deepest background canvas (e.g. Window body, behind split panes).
         public static let canvas = dynamic(
-            dark: NSColor(red: 0.048, green: 0.052, blue: 0.059, alpha: 0.72),
-            light: NSColor(red: 0.965, green: 0.970, blue: 0.978, alpha: 0.78)
+            dark: NSColor(red: 0.035, green: 0.038, blue: 0.044, alpha: 1.0),
+            light: NSColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
         )
 
         /// Sidebar background tone.
         public static let sidebar = dynamic(
-            dark: NSColor(red: 0.063, green: 0.071, blue: 0.082, alpha: 0.50),
-            light: NSColor(red: 0.925, green: 0.935, blue: 0.948, alpha: 0.60)
+            dark: NSColor(red: 0.048, green: 0.052, blue: 0.060, alpha: 1.0),
+            light: NSColor(red: 0.95, green: 0.95, blue: 0.96, alpha: 1.0)
         )
 
         /// Content column surface.
         public static let surface = dynamic(
-            dark: NSColor(red: 0.078, green: 0.090, blue: 0.106, alpha: 0.60),
-            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.70)
+            dark: NSColor(red: 0.058, green: 0.062, blue: 0.072, alpha: 1.0),
+            light: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
         )
 
-        /// Elevated bento card fill.
+        /// Elevated card fill.
         public static let card = dynamic(
-            dark: NSColor(red: 0.098, green: 0.114, blue: 0.133, alpha: 0.65),
-            light: NSColor(red: 0.955, green: 0.962, blue: 0.972, alpha: 0.75)
+            dark: NSColor(red: 0.072, green: 0.078, blue: 0.090, alpha: 1.0),
+            light: NSColor(red: 0.94, green: 0.94, blue: 0.96, alpha: 1.0)
         )
 
         /// Interactive card hover state.
         public static let cardHover = dynamic(
-            dark: NSColor(red: 0.122, green: 0.141, blue: 0.169, alpha: 0.75),
-            light: NSColor(red: 0.915, green: 0.925, blue: 0.938, alpha: 0.85)
+            dark: NSColor(red: 0.092, green: 0.098, blue: 0.112, alpha: 1.0),
+            light: NSColor(red: 0.90, green: 0.90, blue: 0.92, alpha: 1.0)
         )
 
         /// Selected item background.
         public static let cardSelected = dynamic(
-            dark: NSColor(red: 0.141, green: 0.165, blue: 0.200, alpha: 0.80),
-            light: NSColor(red: 0.875, green: 0.890, blue: 0.910, alpha: 0.90)
+            dark: NSColor(red: 0.110, green: 0.118, blue: 0.135, alpha: 1.0),
+            light: NSColor(red: 0.86, green: 0.86, blue: 0.89, alpha: 1.0)
         )
 
-        // MARK: - Machined Borders & Rim Lighting
+        // MARK: - Hairline Borders
 
         /// Standard 1px precision boundary stroke.
         public static let border = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.08),
-            light: NSColor(white: 0.0, alpha: 0.09)
+            dark: NSColor(white: 1.0, alpha: 0.07),
+            light: NSColor(white: 0.0, alpha: 0.08)
         )
 
         /// Extremely subtle internal divider.
         public static let borderSubtle = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.04),
-            light: NSColor(white: 0.0, alpha: 0.05)
+            dark: NSColor(white: 1.0, alpha: 0.035),
+            light: NSColor(white: 0.0, alpha: 0.045)
         )
 
         /// Focused / Active element outline.
         public static let borderActive = dynamic(
-            dark: NSColor(white: 1.0, alpha: 0.20),
-            light: NSColor(white: 0.0, alpha: 0.22)
+            dark: NSColor(white: 1.0, alpha: 0.18),
+            light: NSColor(white: 0.0, alpha: 0.20)
         )
 
         // MARK: - Vivid Precision Accents

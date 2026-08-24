@@ -33,6 +33,7 @@ struct MacWorkWorkspaceView: View {
     @State private var newProjectIcon: String = "folder.fill"
     @State private var newProjectColorHex: String = "#3B82F6"
     @State private var projectSearchText: String = ""
+    @Namespace private var workPickerNamespace
     
     private var submode: Binding<WorkSubmode> {
         Binding(
@@ -61,7 +62,7 @@ struct MacWorkWorkspaceView: View {
             
             // Top Mode Switcher Bar (Clean Liquid Glass)
             HStack(spacing: 12) {
-                PlutoGlassSegmentedPicker(selection: submode, items: WorkSubmode.allCases) { mode, isSelected in
+                PlutoGlassSegmentedPicker(selection: submode, items: WorkSubmode.allCases, namespace: workPickerNamespace) { mode, isSelected in
                     HStack(spacing: 6) {
                         Image(systemName: mode.icon)
                             .font(.system(size: 11.5, weight: isSelected ? .bold : .medium))

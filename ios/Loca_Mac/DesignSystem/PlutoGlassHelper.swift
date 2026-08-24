@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Pluto Glass Styles
+// MARK: - Native Liquid Glass Styles
 
 public enum PlutoGlassStyle {
     case regular
@@ -11,216 +11,49 @@ public enum PlutoGlassStyle {
     case brightActive
 }
 
-// MARK: - Spring Vocabulary
+// MARK: - Spring Vocabulary (Crisp & Snappy)
 
 public enum PlutoSpring {
     /// For sliding indicators, selection pills, and spatial tracking
-    public static let snappy: Animation = .snappy(duration: 0.28, extraBounce: 0.08)
+    public static let snappy: Animation = .snappy(duration: 0.22, extraBounce: 0.0)
     /// For content swaps, focus transitions, and disclosure rotations
-    public static let smooth: Animation = .smooth(duration: 0.25)
-    /// ONLY for celebratory actions (e.g. task checkmark completion bounce)
-    public static let bouncy: Animation = .bouncy(duration: 0.35, extraBounce: 0.22)
+    public static let smooth: Animation = .smooth(duration: 0.20)
+    /// For checkmark toggle
+    public static let bouncy: Animation = .bouncy(duration: 0.25, extraBounce: 0.15)
     /// Fallback crossfade for reduce motion
-    public static let reduceMotion: Animation = .linear(duration: 0.15)
+    public static let reduceMotion: Animation = .linear(duration: 0.12)
 }
 
-// MARK: - Liquid Glass View Modifier (Real Glass on macOS 26+, Anatomy Fallback Below)
+// MARK: - Native Liquid Glass View Modifier
 
 public struct PlutoGlassModifier<S: Shape>: ViewModifier {
     let style: PlutoGlassStyle
     let shape: S
 
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovered: Bool = false
-    @State private var sheenOffset: CGFloat = -1.0
+    /// A semantic native-glass choice, not a simulated blur-strength control.
+    /// The resulting material still follows macOS appearance and accessibility.
+    @AppStorage("mac_glass_variant") private var glassVariant = "regular"
 
-    @ViewBuilder
     public func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(DS.Theme.card, in: shape)
-                .overlay(shape.stroke(DS.Theme.border, lineWidth: 1))
-        } else if #available(macOS 26.0, *) {
-            // MARK: - Real Native Liquid Glass (macOS 26+)
-            switch style {
-            case .regular:
-                content.glassEffect(.regular, in: shape)
-
-            case .interactive:
-                content.glassEffect(.regular.interactive(), in: shape)
-
-            case .prominent:
-                content.glassEffect(.regular, in: shape)
-
-            case .tinted(let color):
-                content.glassEffect(.regular.tint(color), in: shape)
-
-            case .brightActive:
-                content
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color(white: 0.98),
-                                Color(white: 0.90)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        in: shape
-                    )
-                    .overlay(
-                        shape.stroke(
-                            Color.white.opacity(0.85),
-                            lineWidth: 1.0
-                        )
-                    )
-                    .shadow(color: Color.black.opacity(0.30), radius: 6, x: 0, y: 2)
-            }
-        } else {
-            // MARK: - Legacy Simulated Glass Anatomy Fallback (< macOS 26)
-            switch style {
-            case .regular:
-                content
-                    .background(glassFillGradient, in: shape)
-                    .background(.ultraThinMaterial, in: shape)
-                    .overlay(glassHighlightStroke(topOpacity: 0.28, bottomOpacity: 0.04))
-                    .shadow(color: Color.black.opacity(0.18), radius: 4, x: 0, y: 1.5)
-
-            case .interactive:
-                content
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(isHovered ? 0.14 : 0.08),
-                                Color.white.opacity(isHovered ? 0.05 : 0.02)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        in: shape
-                    )
-                    .background(.regularMaterial, in: shape)
-                    .overlay(glassHighlightStroke(topOpacity: isHovered ? 0.50 : 0.38, bottomOpacity: 0.06))
-                    .overlay(sheenOverlay)
-                    .shadow(color: Color.black.opacity(isHovered ? 0.25 : 0.16), radius: isHovered ? 6 : 4, x: 0, y: 2)
-                    .onHover { hovering in
-                        withAnimation(PlutoSpring.snappy) {
-                            isHovered = hovering
-                        }
-                        if hovering && !reduceMotion {
-                            sheenOffset = -1.0
-                            withAnimation(.easeInOut(duration: 0.45)) {
-                                sheenOffset = 1.5
-                            }
-                        }
-                    }
-
-            case .prominent:
-                content
-                    .background(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        in: shape
-                    )
-                    .background(.thinMaterial, in: shape)
-                    .overlay(glassHighlightStroke(topOpacity: 0.55, bottomOpacity: 0.08))
-                    .shadow(color: Color.black.opacity(0.28), radius: 8, x: 0, y: 3)
-
-            case .tinted(let color):
-                content
-                    .background(color.opacity(0.14), in: shape)
-                    .background(glassFillGradient, in: shape)
-                    .background(.ultraThinMaterial, in: shape)
-                    .overlay(
-                        shape.stroke(
-                            LinearGradient(
-                                colors: [
-                                    color.opacity(0.50),
-                                    color.opacity(0.10)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.0
-                        )
-                    )
-                    .shadow(color: color.opacity(0.18), radius: 5, x: 0, y: 2)
-
-            case .brightActive:
-                content
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color(white: 0.98),
-                                Color(white: 0.90)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        in: shape
-                    )
-                    .overlay(
-                        shape.stroke(
-                            Color.white.opacity(0.85),
-                            lineWidth: 1.0
-                        )
-                    )
-                    .shadow(color: Color.black.opacity(0.30), radius: 6, x: 0, y: 2)
-            }
-        }
+        content.glassEffect(glass, in: shape)
     }
 
-    private var glassFillGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.white.opacity(0.08),
-                Color.white.opacity(0.02)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    private func glassHighlightStroke(topOpacity: Double, bottomOpacity: Double) -> some View {
-        shape.stroke(
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(topOpacity),
-                    Color.white.opacity(bottomOpacity)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            ),
-            lineWidth: 1.0
-        )
-    }
-
-    @ViewBuilder
-    private var sheenOverlay: some View {
-        if isHovered && !reduceMotion {
-            shape
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color.white.opacity(0.35),
-                            Color.clear
-                        ],
-                        startPoint: UnitPoint(x: sheenOffset - 0.3, y: 0.0),
-                        endPoint: UnitPoint(x: sheenOffset + 0.3, y: 1.0)
-                    ),
-                    lineWidth: 1.5
-                )
-                .allowsHitTesting(false)
+    private var glass: Glass {
+        let base: Glass = glassVariant == "clear" ? .clear : .regular
+        switch style {
+        case .regular, .prominent:
+            return base
+        case .interactive:
+            return base.interactive()
+        case .tinted(let color):
+            return base.tint(color)
+        case .brightActive:
+            return Glass.clear.interactive()
         }
     }
 }
 
-// MARK: - Native Liquid Glass Button Styles (macOS Golden Gate HIG)
+// MARK: - Native Liquid Glass Button Styles
 
 public struct PlutoGlassButtonStyle<S: Shape>: ButtonStyle {
     public let shape: S
@@ -244,117 +77,29 @@ private struct PlutoGlassButtonBody<S: Shape>: View {
     let tint: Color?
     let isProminent: Bool
 
-    @State private var isHovered: Bool = false
     @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("mac_glass_variant") private var glassVariant = "regular"
 
     var body: some View {
         configuration.label
-            .foregroundStyle(foregroundColor)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background {
-                if reduceTransparency {
-                    shape
-                        .fill(isProminent ? (tint ?? DS.Theme.amber) : DS.Theme.card)
-                } else if isProminent {
-                    // Prominent Glass Fill
-                    ZStack {
-                        let baseColor = tint ?? DS.Theme.amber
-                        shape
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        baseColor.opacity(isHovered ? 0.95 : 0.85),
-                                        baseColor.opacity(isHovered ? 0.80 : 0.70)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                        shape
-                            .stroke(Color.white.opacity(0.40), lineWidth: 0.8)
-                    }
-                    .shadow(color: (tint ?? DS.Theme.amber).opacity(isHovered ? 0.35 : 0.20), radius: isHovered ? 6 : 3, y: 1.5)
-                } else {
-                    // Standard Translucent Liquid Glass Fill
-                    ZStack {
-                        if let tint = tint {
-                            shape.fill(tint.opacity(isHovered ? 0.22 : 0.12))
-                        } else {
-                            shape.fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(isHovered ? 0.22 : 0.12),
-                                        Color.white.opacity(isHovered ? 0.08 : 0.03)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                        }
-                    }
-                    .background(.ultraThinMaterial, in: shape)
-                    // Specular Top/Bottom Edge Stroke
-                    .overlay(
-                        shape.stroke(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(isHovered ? 0.85 : 0.40),
-                                    Color.white.opacity(isHovered ? 0.20 : 0.08),
-                                    Color.white.opacity(isHovered ? 0.40 : 0.15)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: isHovered ? 1.0 : 0.8
-                        )
-                    )
-                    // Chromatic Dispersion Rim on Hover
-                    .overlay(
-                        Group {
-                            if isHovered && !reduceMotion {
-                                shape
-                                    .stroke(
-                                        AngularGradient(
-                                            gradient: Gradient(colors: [
-                                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.65),
-                                                Color.white.opacity(0.85),
-                                                Color(red: 1.0, green: 0.65, blue: 0.15).opacity(0.70),
-                                                Color(red: 0.95, green: 0.35, blue: 0.75).opacity(0.55),
-                                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.65)
-                                            ]),
-                                            center: .center
-                                        ),
-                                        lineWidth: 0.85
-                                    )
-                                    .blendMode(.screen)
-                            }
-                        }
-                    )
-                    .shadow(color: Color.black.opacity(isHovered ? 0.30 : 0.15), radius: isHovered ? 6 : 3, y: 1.5)
-                }
-            }
-            .contentShape(shape)
-            .scaleEffect(configuration.isPressed ? 0.96 : (isHovered ? 1.01 : 1.0))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.88 : 1.0) : 0.45)
-            .animation(reduceMotion ? nil : PlutoSpring.snappy, value: isHovered)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .glassEffect(nativeGlass, in: shape)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.4)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(reduceMotion ? nil : PlutoSpring.snappy, value: configuration.isPressed)
-            .onHover { hovering in
-                isHovered = hovering
-            }
     }
 
-    private var foregroundColor: Color {
-        if !isEnabled { return DS.Theme.textTertiary }
+    private var nativeGlass: Glass {
+        let base: Glass = glassVariant == "clear" ? .clear : .regular
+        if let tint {
+            return base.tint(tint).interactive()
+        }
         if isProminent {
-            return (tint == nil || tint == DS.Theme.amber) ? Color.black.opacity(0.92) : Color.white
+            return base.tint(DS.Theme.amber).interactive()
         }
-        if let tint = tint {
-            return tint
-        }
-        return isHovered ? Color.white : DS.Theme.textPrimary
+        return base.interactive()
     }
 }
 
@@ -392,6 +137,22 @@ extension ButtonStyle where Self == PlutoGlassButtonStyle<Circle> {
     }
 }
 
+extension ButtonStyle {
+    public static func plutoGlass<S: Shape>(shape: S, tint: Color? = nil, isProminent: Bool = false) -> PlutoGlassButtonStyle<S> where Self == PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: isProminent)
+    }
+
+    public static func plutoGlassProminent<S: Shape>(shape: S, tint: Color? = nil) -> PlutoGlassButtonStyle<S> where Self == PlutoGlassButtonStyle<S> {
+        PlutoGlassButtonStyle(shape: shape, tint: tint, isProminent: true)
+    }
+}
+
+extension ButtonStyle where Self == PlutoGlassButtonStyle<RoundedRectangle> {
+    public static func plutoGlass(cornerRadius: CGFloat = 6, tint: Color? = nil, isProminent: Bool = false) -> PlutoGlassButtonStyle<RoundedRectangle> {
+        PlutoGlassButtonStyle(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), tint: tint, isProminent: isProminent)
+    }
+}
+
 // MARK: - View Extensions
 
 extension View {
@@ -406,40 +167,31 @@ extension View {
     }
 }
 
-// MARK: - PlutoGlassCluster (Unshadowed Container Helper)
+// MARK: - PlutoGlassCluster
 
 public struct PlutoGlassCluster<Content: View>: View {
     public let spacing: CGFloat
     @ViewBuilder public let content: () -> Content
 
-    public init(spacing: CGFloat = 4, @ViewBuilder content: @escaping () -> Content) {
+    public init(spacing: CGFloat = 3, @ViewBuilder content: @escaping () -> Content) {
         self.spacing = spacing
         self.content = content
     }
 
     public var body: some View {
-        if #available(macOS 26.0, *) {
-            GlassEffectContainer(spacing: spacing) {
-                HStack(spacing: spacing) {
-                    content()
-                }
-            }
-        } else {
+        GlassEffectContainer(spacing: spacing) {
             HStack(spacing: spacing) {
                 content()
             }
-            .padding(3)
-            .plutoGlass(.regular, in: Capsule())
         }
     }
 }
 
-// MARK: - Liquid Glass Optical Lens Pill (Chromatic Aberration & Spectral Rim)
+// MARK: - Native Liquid Glass Active Pill
 
 public struct LiquidGlassLensPill: View {
     public let namespace: Namespace.ID
     public var id: String = "liquidGlassLensPill"
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     public init(namespace: Namespace.ID, id: String = "liquidGlassLensPill") {
         self.namespace = namespace
@@ -448,120 +200,70 @@ public struct LiquidGlassLensPill: View {
 
     public var body: some View {
         Capsule()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.24),
-                        Color.white.opacity(0.08)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .background(.ultraThinMaterial, in: Capsule())
-            // Top/Bottom Specular Edge Reflection
-            .overlay(
-                Capsule()
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.90),
-                                Color.white.opacity(0.18),
-                                Color.white.opacity(0.45)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1.0
-                    )
-            )
-            // Chromatic Spectral Dispersion Rim (Cyan ➔ Amber ➔ Magenta Prismatic Refraction)
-            .overlay(
-                Capsule()
-                    .stroke(
-                        AngularGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.70),
-                                Color.white.opacity(0.95),
-                                Color(red: 1.0, green: 0.65, blue: 0.15).opacity(0.75),
-                                Color(red: 0.95, green: 0.35, blue: 0.75).opacity(0.60),
-                                Color(red: 0.0, green: 0.85, blue: 1.0).opacity(0.70)
-                            ]),
-                            center: .center
-                        ),
-                        lineWidth: 0.9
-                    )
-                    .blendMode(.screen)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 7, x: 0, y: 2.5)
-            .matchedGeometryEffect(id: id, in: namespace)
+            .fill(.clear)
+            .glassEffect(.regular.interactive(), in: Capsule())
+            .glassEffectID(id, in: namespace)
+            .glassEffectTransition(.matchedGeometry)
     }
 }
 
-// MARK: - PlutoGlassSegmentedPicker (macOS Golden Gate Segmented Glass Control)
+// MARK: - Native Liquid Glass Segmented Switcher
 
 public struct PlutoGlassSegmentedPicker<SelectionValue: Hashable, Content: View>: View {
     @Binding public var selection: SelectionValue
     public let items: [SelectionValue]
     public let content: (SelectionValue, Bool) -> Content
-    
-    @Namespace private var pickerNamespace
+    public let externalNamespace: Namespace.ID?
+
+    @Namespace private var internalNamespace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    
+
+    private var effectiveNamespace: Namespace.ID {
+        externalNamespace ?? internalNamespace
+    }
+
     public init(
         selection: Binding<SelectionValue>,
         items: [SelectionValue],
+        namespace: Namespace.ID? = nil,
         @ViewBuilder content: @escaping (SelectionValue, Bool) -> Content
     ) {
         self._selection = selection
         self.items = items
+        self.externalNamespace = namespace
         self.content = content
     }
     
     public var body: some View {
-        HStack(spacing: 2) {
-            ForEach(items, id: \.self) { item in
-                let isSelected = selection == item
-                Button {
-                    guard selection != item else { return }
-                    withAnimation(reduceMotion ? nil : PlutoSpring.snappy) {
-                        selection = item
+        GlassEffectContainer(spacing: 2) {
+            HStack(spacing: 2) {
+                ForEach(items, id: \.self) { item in
+                    let isSelected = selection == item
+                    Button {
+                        guard selection != item else { return }
+                        if reduceMotion {
+                            selection = item
+                        } else {
+                            withAnimation(PlutoSpring.snappy) {
+                                selection = item
+                            }
+                        }
+                        Haptics.selection()
+                    } label: {
+                        content(item, isSelected)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .contentShape(Capsule())
                     }
-                    Haptics.selection()
-                } label: {
-                    content(item, isSelected)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 5.5)
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .background {
-                    if isSelected {
-                        LiquidGlassLensPill(namespace: pickerNamespace)
+                    .buttonStyle(.plain)
+                    .background {
+                        if isSelected {
+                            LiquidGlassLensPill(namespace: effectiveNamespace)
+                        }
                     }
                 }
             }
         }
-        .padding(3)
-        .background(
-            Capsule()
-                .fill(Color.white.opacity(0.06))
-                .background(.ultraThinMaterial, in: Capsule())
-        )
-        .overlay(
-            Capsule()
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.20),
-                            Color.white.opacity(0.05)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.8
-                )
-        )
     }
 }
 
@@ -577,59 +279,28 @@ public struct PlutoGlassSegmentedControl: View {
     public var body: some View {
         PlutoGlassSegmentedPicker(selection: $selection, items: options) { item, isSelected in
             Text(item)
-                .font(.system(size: 12.5, weight: isSelected ? .bold : .medium))
-                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.65))
+                .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
         }
     }
 }
 
-// MARK: - Ambient Light Glow View (6-10% Opacity Mesh / Drift)
+// MARK: - Ambient Light Glow View (Zero Glow in Plain Canvas)
 
 public struct PlutoAmbientGlowView: View {
     public let accent: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(accent: Color) {
         self.accent = accent
     }
 
     public var body: some View {
-        if reduceMotion {
-            RadialGradient(
-                colors: [
-                    accent.opacity(0.08),
-                    accent.opacity(0.02),
-                    Color.clear
-                ],
-                center: .topLeading,
-                startRadius: 10,
-                endRadius: 460
-            )
+        Color.clear
             .allowsHitTesting(false)
-        } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-                let now = timeline.date.timeIntervalSinceReferenceDate
-                let phase = (now.truncatingRemainder(dividingBy: 60.0)) / 60.0
-                let xOffset = sin(phase * 2 * .pi) * 0.12
-                let yOffset = cos(phase * 2 * .pi) * 0.08
-
-                RadialGradient(
-                    colors: [
-                        accent.opacity(0.09),
-                        accent.opacity(0.03),
-                        Color.clear
-                    ],
-                    center: UnitPoint(x: 0.25 + xOffset, y: 0.15 + yOffset),
-                    startRadius: 20,
-                    endRadius: 480
-                )
-                .allowsHitTesting(false)
-            }
-        }
     }
 }
 
-// MARK: - AppKit Window Configurator (Desktop Wallpaper Blur Through Sidebar)
+// MARK: - AppKit Window Configurator
 
 public struct PlutoWindowAccessor: NSViewRepresentable {
     public init() {}

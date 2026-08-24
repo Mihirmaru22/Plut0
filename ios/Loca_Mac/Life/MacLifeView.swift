@@ -27,6 +27,7 @@ enum LifeDesignVariant: String, CaseIterable, Identifiable {
 struct MacLifeView: View {
 
     @AppStorage("mac_life_layout_v4") private var selectedVariant: LifeDesignVariant = .mountainAtlas
+    @Namespace private var lifePickerNamespace
 
     var body: some View {
         VStack(spacing: 0) {
@@ -46,7 +47,7 @@ struct MacLifeView: View {
                 Spacer()
 
                 // Liquid Glass Segmented Switcher
-                PlutoGlassSegmentedPicker(selection: $selectedVariant, items: LifeDesignVariant.allCases) { variant, isSelected in
+                PlutoGlassSegmentedPicker(selection: $selectedVariant, items: LifeDesignVariant.allCases, namespace: lifePickerNamespace) { variant, isSelected in
                     HStack(spacing: 5) {
                         Image(systemName: variant.icon)
                             .font(.system(size: 11, weight: isSelected ? .bold : .medium))

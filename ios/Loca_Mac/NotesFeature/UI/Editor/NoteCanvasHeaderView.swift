@@ -22,13 +22,9 @@ public struct NoteCanvasHeaderView: View {
             if !isNavigatorVisible {
                 Button(action: onToggleNavigator) {
                     Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 26, height: 26)
-                        .background(Color.secondary.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .font(.system(size: 12, weight: .medium))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
                 .help("Show Notes List (⌘⌥S)")
             }
             

@@ -223,6 +223,39 @@ public struct GhostTodayView: View {
 
     // MARK: - Rule Row
 
+    private func toggleRule(_ rule: GhostProtocolRule) {
+        if rule.proofKind == .artifact {
+            pickPhoto(for: rule)
+            return
+        }
+        let isCurrentlyDone = isRuleDone(rule)
+        let nextValue: Double = isCurrentlyDone ? 0.0 : max(1.0, rule.targetValue)
+        Haptics.impact(.medium)
+        if !isCurrentlyDone {
+            PlutoSoundEngine.shared.play(.checkmark)
+        } else {
+            PlutoSoundEngine.shared.play(.tabSwitch)
+        }
+
+        // 1. Instant Synchronous Optimistic Update (Zero Latency)
+        withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
+            todayReceipts.removeAll { $0.ruleID == rule.id }
+            if nextValue > 0 {
+                let receipt = GhostReceipt(
+                    dayID: todayRecord?.id ?? "today",
+                    ruleID: rule.id,
+                    kind: rule.proofKind,
+                    valueReal: nextValue,
+                    loggedAt: Date()
+                )
+                todayReceipts.append(receipt)
+            }
+        }
+
+        // 2. Persist in background
+        onLogReceipt(rule, rule.proofKind, nextValue, nil)
+    }
+
     private func ruleRow(_ rule: GhostProtocolRule) -> some View {
         let done    = isRuleDone(rule)
         let partial = partialProgress(rule)
@@ -234,39 +267,45 @@ public struct GhostTodayView: View {
             }
         }()
 
-        return HStack(spacing: 10) {
-            // Left ring accent bar
-            Rectangle()
-                .fill(done ? ringColor : ringColor.opacity(0.3))
-                .frame(width: 3)
-                .clipShape(Capsule())
-
-            // Status circle
-            ZStack {
-                Circle()
-                    .stroke(done ? ringColor : DS.Theme.border, lineWidth: 1.5)
-                    .frame(width: 22, height: 22)
-                if done {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(ringColor)
-                } else if partial > 0 {
+        return HStack(spacing: 12) {
+            // Status Circle Button (Spacious 30x30 click target)
+            Button {
+                toggleRule(rule)
+            } label: {
+                ZStack {
                     Circle()
-                        .fill(ringColor.opacity(0.4))
-                        .frame(width: 10, height: 10)
+                        .stroke(done ? Color.white.opacity(0.8) : Color.white.opacity(0.20), lineWidth: 1.5)
+                        .frame(width: 22, height: 22)
+                    if done {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 18, height: 18)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9.5, weight: .black))
+                            .foregroundStyle(Color.black)
+                            .symbolEffect(.bounce, value: done)
+                    } else if partial > 0 {
+                        Circle()
+                            .fill(Color.white.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                    }
                 }
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .help(done ? "Mark Incomplete" : "Mark Complete")
 
             // Icon
             Image(systemName: rule.icon)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(done ? ringColor : DS.Theme.textTertiary)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(done ? Color.white : DS.Theme.textTertiary)
                 .frame(width: 18)
 
             // Title + target
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(rule.title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12.5, weight: done ? .semibold : .medium))
                     .foregroundStyle(done ? DS.Theme.textPrimary : DS.Theme.textSecondary)
                     .strikethrough(done, color: DS.Theme.textTertiary)
                 Text(targetDescription(rule))
@@ -276,7 +315,7 @@ public struct GhostTodayView: View {
 
             Spacer()
 
-            // Inline proof control
+            // Inline proof control (Photo uploader for artifact, or clean status read-out)
             proofControl(rule, done: done, ringColor: ringColor)
 
             // Edit button for custom rules
@@ -287,21 +326,25 @@ public struct GhostTodayView: View {
                     Image(systemName: "pencil")
                         .font(.system(size: 11))
                         .foregroundStyle(DS.Theme.textMuted)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            toggleRule(rule)
+        }
         .background(
-            done
-                ? ringColor.opacity(0.05)
-                : (hoveredRuleID == rule.id ? DS.Theme.cardHover : DS.Theme.card),
-            in: RoundedRectangle(cornerRadius: 8)
+            hoveredRuleID == rule.id ? DS.Theme.cardHover : DS.Theme.card,
+            in: RoundedRectangle(cornerRadius: 6)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(done ? ringColor.opacity(0.2) : DS.Theme.borderSubtle, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(done ? Color.white.opacity(0.15) : DS.Theme.borderSubtle, lineWidth: 1)
         )
         .onHover { hoveredRuleID = $0 ? rule.id : nil }
     }
@@ -310,42 +353,51 @@ public struct GhostTodayView: View {
     private func proofControl(_ rule: GhostProtocolRule, done: Bool, ringColor: Color) -> some View {
         switch rule.proofKind {
         case .binary:
-            Button {
-                onLogReceipt(rule, .binary, done ? 0 : 1.0, nil)
-            } label: {
-                Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(done ? ringColor : DS.Theme.textMuted)
-            }
-            .buttonStyle(.plain)
+            EmptyView()
 
         case .quantity:
             let current = currentValue(for: rule)
-            HStack(spacing: 4) {
+            HStack(spacing: 6) {
+                Text("\(Int(current))/\(Int(rule.targetValue))\(rule.unitLabel.isEmpty ? "" : " \(rule.unitLabel)")")
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(done ? ringColor : DS.Theme.textSecondary)
+
+                // Micro adjusters
                 Button {
-                    if current > 0 { onLogReceipt(rule, .quantity, -1, nil) }
+                    if current > 0 {
+                        Haptics.impact(.light)
+                        let next = max(0, current - 1)
+                        withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
+                            todayReceipts.removeAll { $0.ruleID == rule.id }
+                            if next > 0 {
+                                todayReceipts.append(GhostReceipt(dayID: todayRecord?.id ?? "today", ruleID: rule.id, kind: rule.proofKind, valueReal: next))
+                            }
+                        }
+                        onLogReceipt(rule, .quantity, next, nil)
+                    }
                 } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 5))
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(DS.Theme.textTertiary)
+                        .frame(width: 20, height: 20)
+                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
 
-                Text("\(Int(current))/\(Int(rule.targetValue))\(rule.unitLabel.isEmpty ? "" : " \(rule.unitLabel)")")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(done ? ringColor : DS.Theme.textSecondary)
-                    .frame(minWidth: 50)
-
                 Button {
-                    onLogReceipt(rule, .quantity, 1, nil)
+                    Haptics.impact(.light)
+                    let next = current + 1
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
+                        todayReceipts.removeAll { $0.ruleID == rule.id }
+                        todayReceipts.append(GhostReceipt(dayID: todayRecord?.id ?? "today", ruleID: rule.id, kind: rule.proofKind, valueReal: next))
+                    }
+                    onLogReceipt(rule, .quantity, next, nil)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(DS.Theme.textSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 5))
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(DS.Theme.textTertiary)
+                        .frame(width: 20, height: 20)
+                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
             }
@@ -353,51 +405,37 @@ public struct GhostTodayView: View {
         case .duration:
             let current = currentValue(for: rule)
             HStack(spacing: 4) {
-                TextField("0", text: Binding(
-                    get: { durationInputs[rule.id] ?? (current > 0 ? "\(Int(current))" : "") },
-                    set: { durationInputs[rule.id] = $0 }
-                ))
-                .textFieldStyle(.plain)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(DS.Theme.textPrimary)
-                .frame(width: 36)
-                .multilineTextAlignment(.center)
-                .padding(5)
-                .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 5))
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(DS.Theme.border, lineWidth: 1))
-
-                Text("min")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(DS.Theme.textTertiary)
-
-                Button("Log") {
-                    let val = Double(durationInputs[rule.id] ?? "") ?? 0
-                    if val > 0 {
-                        onLogReceipt(rule, .duration, val, nil)
-                        durationInputs[rule.id] = nil
-                    }
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(DS.Theme.amber)
+                Text("\(Int(current))/\(Int(rule.targetValue)) min")
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                    .foregroundStyle(done ? ringColor : DS.Theme.textSecondary)
             }
 
         case .artifact:
+            // Daily Photo upload
             Button {
                 pickPhoto(for: rule)
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Image(systemName: done ? "photo.fill.on.rectangle.fill" : "camera.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(done ? ringColor : DS.Theme.textMuted)
+                        .font(.system(size: 11.5))
+                    Text(done ? "Photo Logged" : "Upload Photo")
+                        .font(.system(size: 10.5, weight: .semibold))
                     if done {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .black))
-                            .foregroundStyle(ringColor)
+                            .font(.system(size: 8.5, weight: .black))
                     }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .foregroundStyle(done ? ringColor : DS.Theme.textPrimary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(
+                PlutoGlassButtonStyle(
+                    shape: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                    tint: done ? ringColor.opacity(0.3) : nil,
+                    isProminent: done
+                )
+            )
         }
     }
 

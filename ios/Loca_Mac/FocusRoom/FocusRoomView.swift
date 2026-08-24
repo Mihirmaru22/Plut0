@@ -29,6 +29,7 @@ struct FocusRoomView: View {
     @State private var showNavDrawer: Bool = false
     @State private var hoveredCapsuleMode: String? = nil
     @Namespace private var glassPillNamespace
+    @Namespace private var pomodoroModeNamespace
     @AppStorage("mac_today_submode") private var todaySubmode: String = "Plan"
     @State private var isFullscreen: Bool = false
 
@@ -389,130 +390,57 @@ struct FocusRoomView: View {
                                 .foregroundStyle(.white)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                    .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(showGoalsPanel ? Color.blue.opacity(0.8) : Color.white.opacity(0.15), lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(
+                    PlutoGlassButtonStyle(
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        tint: showGoalsPanel ? Color.blue : nil,
+                        isProminent: showGoalsPanel
+                    )
+                )
             }
 
             Spacer()
 
-            // Top-Center: Apple Liquid Glass Capsule Switcher [ Plan | List | Time ]
-            HStack(spacing: 3) {
-                ForEach(["Plan", "List", "Time"], id: \.self) { m in
-                    let isSelected = todaySubmode == m
-                    let isHovered = hoveredCapsuleMode == m
+            // Top-Center: Apple Liquid Glass Segmented Switcher [ Plan | List | Time ]
+            PlutoGlassSegmentedPicker(
+                selection: $todaySubmode,
+                items: ["Plan", "List", "Time"],
+                namespace: glassPillNamespace
+            ) { m, isSelected in
+                HStack(spacing: 5) {
+                    Image(systemName: m == "Plan" ? "calendar.day.timeline.left" : (m == "List" ? "checklist.checked" : "timer.circle.fill"))
+                        .font(.system(size: 10.5, weight: isSelected ? .bold : .semibold))
+                        .symbolEffect(.bounce, value: isSelected)
 
-                    Button {
-                        guard todaySubmode != m else { return }
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                            todaySubmode = m
-                        }
-                        PlutoSoundEngine.shared.play(.tabSwitch)
-                        Haptics.impact(.light)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: m == "Plan" ? "calendar.day.timeline.left" : (m == "List" ? "checklist.checked" : "timer.circle.fill"))
-                                .font(.system(size: 10.5, weight: isSelected ? .bold : .semibold))
-                                .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white : Color.white.opacity(0.65)))
+                    Text(m)
+                        .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
 
-                            Text(m)
-                                .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
-                                .foregroundStyle(isSelected ? Color.white : (isHovered ? Color.white : Color.white.opacity(0.65)))
-
-                            if m == "Plan" && scheduledTodoCount > 0 {
-                                Text("\(scheduledTodoCount)")
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(
-                                        Capsule()
-                                            .fill(isSelected ? Color.white.opacity(0.22) : Color.white.opacity(0.08))
-                                    )
-                            } else if m == "List" && openTodoCount > 0 {
-                                Text("\(openTodoCount)")
-                                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                                    .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(
-                                        Capsule()
-                                            .fill(isSelected ? Color.white.opacity(0.22) : Color.white.opacity(0.08))
-                                    )
-                            }
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .contentShape(Capsule())
-                        .background {
-                            if isSelected {
-                                ZStack {
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color.white.opacity(0.32),
-                                                    Color.white.opacity(0.18)
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                    Capsule()
-                                        .stroke(
-                                            LinearGradient(
-                                                stops: [
-                                                    .init(color: Color.white.opacity(0.65), location: 0.0),
-                                                    .init(color: Color.cyan.opacity(0.22), location: 0.3),
-                                                    .init(color: Color(red: 0.9, green: 0.4, blue: 0.9).opacity(0.18), location: 0.65),
-                                                    .init(color: Color.white.opacity(0.10), location: 1.0)
-                                                ],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 0.85
-                                        )
-                                }
-                                .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 1.5)
-                                .matchedGeometryEffect(id: "activeFocusGlassPill", in: glassPillNamespace)
-                            } else if isHovered {
+                    if m == "Plan" && scheduledTodoCount > 0 {
+                        Text("\(scheduledTodoCount)")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(
                                 Capsule()
-                                    .fill(Color.white.opacity(0.08))
-                            }
-                        }
+                                    .fill(isSelected ? Color.white.opacity(0.22) : Color.white.opacity(0.08))
+                            )
+                    } else if m == "List" && openTodoCount > 0 {
+                        Text("\(openTodoCount)")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.60))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? Color.white.opacity(0.22) : Color.white.opacity(0.08))
+                            )
                     }
-                    .buttonStyle(.plain)
-                    .onHover { hovering in
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            hoveredCapsuleMode = hovering ? m : nil
-                        }
-                        if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                    }
-                    .keyboardShortcut(KeyEquivalent(Character(m == "Plan" ? "1" : (m == "List" ? "2" : "3"))), modifiers: .command)
-                    .help("\(m) ⌘\(m == "Plan" ? "1" : (m == "List" ? "2" : "3"))")
                 }
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.65))
             }
-            .padding(3)
-            .background(
-                ZStack {
-                    Capsule()
-                        .fill(Color.black.opacity(0.65))
-                        .background(.ultraThinMaterial, in: Capsule())
-                    Capsule()
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.22), Color.white.opacity(0.04)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 0.75
-                        )
-                }
-            )
+            .keyboardShortcut(KeyEquivalent(Character(todaySubmode == "Plan" ? "1" : (todaySubmode == "List" ? "2" : "3"))), modifiers: .command)
 
             Spacer()
 
@@ -532,15 +460,15 @@ struct FocusRoomView: View {
                     Image(systemName: "quote.bubble.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(showQuoteCard ? Color.blue : Color.white.opacity(0.15), lineWidth: showQuoteCard ? 2 : 1)
-                        )
+                        .frame(width: 16, height: 16)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(
+                    PlutoGlassButtonStyle(
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        tint: showQuoteCard ? Color.blue : nil,
+                        isProminent: showQuoteCard
+                    )
+                )
                 .help("Toggle Motivational Quote")
 
                 topIconButton(icon: "chart.bar.fill", panel: .stats)
@@ -548,7 +476,11 @@ struct FocusRoomView: View {
                 // Fullscreen / Exit Button
                 Button {
                     #if os(macOS)
-                    NSApp.keyWindow?.toggleFullScreen(nil)
+                    DispatchQueue.main.async {
+                        if let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first {
+                            window.toggleFullScreen(nil)
+                        }
+                    }
                     #else
                     dismiss()
                     #endif
@@ -557,12 +489,15 @@ struct FocusRoomView: View {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        .frame(width: 16, height: 16)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(
+                    PlutoGlassButtonStyle(
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        tint: nil,
+                        isProminent: false
+                    )
+                )
                 .help("Toggle Fullscreen")
             }
         }
@@ -584,15 +519,15 @@ struct FocusRoomView: View {
             Image(systemName: icon)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isActive ? Color.blue : Color.white.opacity(0.15), lineWidth: isActive ? 2 : 1)
-                )
+                .frame(width: 16, height: 16)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            PlutoGlassButtonStyle(
+                shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                tint: isActive ? Color.blue : nil,
+                isProminent: isActive
+            )
+        )
     }
 
     // MARK: - Big Pomodoro Modal Popup
@@ -603,10 +538,20 @@ struct FocusRoomView: View {
             HStack {
                 HStack(spacing: 6) {
                     Image(systemName: "timer")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(timerVM.mode.themeColor)
+                    Text("Flow Studio")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }
 
-                    Text("POMODORO")
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.orange)
+                    Text("\(timerVM.completedRounds) completed")
                         .font(.system(size: 11, weight: .heavy, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.9))
                 }
@@ -621,7 +566,7 @@ struct FocusRoomView: View {
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.6))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
                 .help(timerVM.isMuted ? "Unmute Bell" : "Mute Bell")
 
                 Button {
@@ -633,44 +578,29 @@ struct FocusRoomView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white.opacity(0.6))
-                        .frame(width: 20, height: 20)
+                        .frame(width: 14, height: 14)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plutoGlassCircle)
             }
 
             // Mode Segmented Control: [ Focus | Short Break | Long Break ]
-            HStack(spacing: 4) {
-                ForEach(PomodoroMode.allCases) { m in
-                    let isSelected = timerVM.mode == m
-                    Button {
-                        timerVM.setMode(m)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: m.icon)
-                                .font(.system(size: 9, weight: .bold))
-                            Text(m.rawValue)
-                                .font(.system(size: 10, weight: isSelected ? .bold : .medium))
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 5)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            isSelected
-                                ? m.themeColor.opacity(0.35)
-                                : Color.white.opacity(0.04),
-                            in: RoundedRectangle(cornerRadius: 6)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(isSelected ? m.themeColor.opacity(0.8) : Color.white.opacity(0.08), lineWidth: 0.8)
-                        )
-                        .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
+            PlutoGlassSegmentedPicker(
+                selection: Binding(
+                    get: { timerVM.mode },
+                    set: { timerVM.setMode($0) }
+                ),
+                items: PomodoroMode.allCases,
+                namespace: pomodoroModeNamespace
+            ) { m, isSelected in
+                HStack(spacing: 4) {
+                    Image(systemName: m.icon)
+                        .font(.system(size: 9.5, weight: .bold))
+                        .symbolEffect(.bounce, value: isSelected)
+                    Text(m.rawValue)
+                        .font(.system(size: 10.5, weight: isSelected ? .bold : .medium))
                 }
+                .foregroundStyle(isSelected ? Color.white : Color.white.opacity(0.65))
             }
-            .padding(2)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
 
             // Big Countdown Time Display with Quick Adjust
             VStack(spacing: 6) {
