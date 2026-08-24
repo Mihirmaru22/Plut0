@@ -39,10 +39,9 @@ struct PlutoQuickActionHUD: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.accentColor)
 
-                Text("PLUTO QUICK HUD")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                Text("Pluto Quick HUD")
+                    .font(.system(size: 11.5, weight: .bold))
                     .foregroundStyle(DS.Color.textPrimary)
-                    .tracking(1.0)
 
                 Spacer()
 
@@ -112,10 +111,9 @@ struct PlutoQuickActionHUD: View {
             // Quick Habit Check-ins
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("ONE-TAP HABIT LOGGING")
-                        .font(.system(size: 9, weight: .bold))
+                    Text("One-Tap Habit Logging")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
-                        .tracking(0.6)
 
                     Spacer()
 

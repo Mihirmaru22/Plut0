@@ -879,8 +879,8 @@ struct FocusRoomView: View {
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(Color.accentColor)
 
-                            Text("PLUTO STUDIO")
-                                .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                            Text("Pluto Studio")
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(Color.white)
                         }
 
@@ -910,8 +910,8 @@ struct FocusRoomView: View {
 
                             // SECTION 1: TODAY PILLARS (Plan ⌘1, List ⌘2, Time ⌘3)
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("TODAY PILLARS")
-                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                Text("Today Pillars")
+                                    .font(.system(size: 10.5, weight: .bold))
                                     .foregroundStyle(Color.white.opacity(0.45))
                                     .padding(.horizontal, 12)
 
@@ -967,8 +967,8 @@ struct FocusRoomView: View {
 
                             // SECTION 2: WORKSPACE PILLARS
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("WORKSPACE")
-                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                Text("Workspace")
+                                    .font(.system(size: 10.5, weight: .bold))
                                     .foregroundStyle(Color.white.opacity(0.45))
                                     .padding(.horizontal, 12)
 

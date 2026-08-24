@@ -1037,10 +1037,9 @@ extension MacDayPlannerColumn {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(DS.Theme.amber)
 
-                    Text("DAY HORIZON")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    Text("Day Horizon")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(DS.Theme.textTertiary)
-                        .tracking(1.0)
                 }
 
                 Spacer()

@@ -13,10 +13,9 @@ struct MacAuditContentColumn: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("STRATEGIC HORIZONS")
-                    .font(.system(size: 11, weight: .bold))
+                Text("Strategic Horizons")
+                    .font(.system(size: 11.5, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.6)
                 Spacer()
             }
             .padding(.horizontal, DS.Space.md)

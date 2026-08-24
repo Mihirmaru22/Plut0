@@ -288,8 +288,8 @@ struct MacAuditView: View {
 
             // 1. Goal Title Field
             VStack(alignment: .leading, spacing: 6) {
-                Text("STRATEGIC OBJECTIVE TITLE")
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                Text("Strategic Objective Title")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
 
                 TextField("e.g. Ship PLUTO Version 5.0 Release", text: $newGoalTitle)
@@ -299,8 +299,8 @@ struct MacAuditView: View {
 
             // 2. Custom Project / Domain Tag Field
             VStack(alignment: .leading, spacing: 8) {
-                Text("CUSTOM WORK CATEGORY / PROJECT TAG")
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                Text("Custom Work Category / Project Tag")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
 
                 TextField("Type any custom tag (e.g. ENGINEERING, PRODUCT, CLIENT ALPHA)", text: $newGoalCustomTag)
@@ -339,8 +339,8 @@ struct MacAuditView: View {
 
             // 3. Horizon Timeframe Selector (Standardized 28pt Chips)
             VStack(alignment: .leading, spacing: 8) {
-                Text("HORIZON TIMEFRAME")
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                Text("Horizon Timeframe")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
 
                 HStack(spacing: 6) {
@@ -379,16 +379,16 @@ struct MacAuditView: View {
             // 4. Target Deadline & Execution Habit
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("TARGET DEADLINE")
-                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    Text("Target Deadline")
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
                     TextField("e.g. October 2026", text: $newGoalTargetDate)
                         .textFieldStyle(.roundedBorder)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("EXECUTION HABIT")
-                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    Text("Execution Habit")
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
                     TextField("e.g. Deep Work 90m", text: $newGoalEngineHabit)
                         .textFieldStyle(.roundedBorder)
@@ -604,10 +604,9 @@ struct MacAuditView: View {
             // Milestone Stages & Checkpoints Box
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("MILESTONE STAGES & CHECKPOINTS:")
-                        .font(.system(size: 9, weight: .bold))
+                    Text("Milestone Stages & Checkpoints:")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
-                        .tracking(0.6)
 
                     Spacer()
 

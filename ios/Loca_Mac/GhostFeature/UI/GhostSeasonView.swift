@@ -81,10 +81,9 @@ public struct GhostSeasonView: View {
                         Image(systemName: "mountain.2.fill")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(DS.Theme.amber)
-                        Text("120-DAY ELEVATION ASCENT RIDGE")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        Text("120-Day Elevation Ascent Ridge")
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(DS.Theme.amber)
-                            .tracking(1.2)
                         Spacer()
                         Text("Dec 31 Summit Peak")
                             .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -165,8 +164,8 @@ public struct GhostSeasonView: View {
                     Text("\(Int(progressFraction * 100))%")
                         .font(.system(size: 16, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.white)
-                    Text("DONE")
-                        .font(.system(size: 7.5, weight: .black, design: .monospaced))
+                    Text("Done")
+                        .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(DS.Theme.textTertiary)
                 }
             }
@@ -217,11 +216,11 @@ public struct GhostSeasonView: View {
                 .overlay(Circle().stroke(DS.Theme.amber.opacity(0.3), lineWidth: 1))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("SOVEREIGN RANK")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    Text("Sovereign Rank")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(DS.Theme.textTertiary)
-                    Text(streakStatus.rank.rawValue.uppercased())
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    Text(streakStatus.rank.rawValue)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.white)
                 }
             }
@@ -314,10 +313,9 @@ public struct GhostSeasonView: View {
                 Image(systemName: "chart.bar.xaxis")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
-                Text("WEEKLY THREE-RING CONSISTENCY BREAKDOWN")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                Text("Weekly Three-Ring Consistency Breakdown")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
-                    .tracking(1.2)
 
                 Spacer()
 

@@ -169,10 +169,9 @@ private struct Life1BlueprintPrinciplesView: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 11))
                             .foregroundStyle(DS.Color.textSecondary)
-                        Text("PERSONAL NORTH STAR MANIFESTO")
-                            .font(.system(size: 10, weight: .bold))
+                        Text("Personal North Star Manifesto")
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(DS.Color.textTertiary)
-                            .tracking(0.8)
                     }
 
                     Spacer()
@@ -230,10 +229,9 @@ private struct Life1BlueprintPrinciplesView: View {
 
             // 6 Core Principles Bento Grid
             VStack(alignment: .leading, spacing: DS.Space.md) {
-                Text("GUIDING LIFE PRINCIPLES & MAXIMS")
-                    .font(.system(size: 10, weight: .bold))
+                Text("Guiding Life Principles & Maxims")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.8)
 
                 LazyVGrid(
                     columns: [GridItem(.adaptive(minimum: 280, maximum: 440), spacing: DS.Space.md)],
@@ -247,10 +245,9 @@ private struct Life1BlueprintPrinciplesView: View {
 
             // Daily Non-Negotiables Rulebook
             VStack(alignment: .leading, spacing: DS.Space.md) {
-                Text("PERSONAL NON-NEGOTIABLES & CODES")
-                    .font(.system(size: 10, weight: .bold))
+                Text("Personal Non-Negotiables & Codes")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.8)
 
                 VStack(spacing: 0) {
                     ForEach(Array(Self.defaultRules.enumerated()), id: \.element.id) { idx, rule in
@@ -403,10 +400,9 @@ private struct Life2MasterBucketListView: View {
             VStack(alignment: .leading, spacing: DS.Space.md) {
                 HStack(spacing: DS.Space.xl) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("MASTER BUCKET LIST")
-                            .font(.system(size: 9, weight: .bold))
+                        Text("Master Bucket List")
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(DS.Color.textTertiary)
-                            .tracking(0.8)
 
                         HStack(alignment: .lastTextBaseline, spacing: 8) {
                             Text("\(achievedCount) of \(bucketItems.count)")
@@ -919,10 +915,9 @@ private struct Life3LifeErasChronologyView: View {
 
             // Life Eras & Chapters Timeline
             VStack(alignment: .leading, spacing: DS.Space.sm) {
-                Text("LIFE CHAPTERS & DEFINED ERAS")
-                    .font(.system(size: 10, weight: .bold))
+                Text("Life Chapters & Defined Eras")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.8)
 
                 VStack(spacing: DS.Space.md) {
                     ForEach(Self.sampleEras) { era in
@@ -1020,10 +1015,9 @@ private struct Life4SelfMasteryAuditsView: View {
             VStack(alignment: .leading, spacing: DS.Space.lg) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("WEEKLY LIFE AUDIT & CALIBRATION")
-                            .font(.system(size: 10, weight: .bold))
+                        Text("Weekly Life Audit & Calibration")
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(DS.Color.textTertiary)
-                            .tracking(0.8)
 
                         Text("Self-Mastery Calibration")
                             .font(.system(size: 18, weight: .bold))
@@ -1082,10 +1076,9 @@ private struct Life4SelfMasteryAuditsView: View {
 
             // Mental Models & Wisdom Vault
             VStack(alignment: .leading, spacing: DS.Space.sm) {
-                Text("MENTAL MODELS & WISDOM VAULT")
-                    .font(.system(size: 10, weight: .bold))
+                Text("Mental Models & Wisdom Vault")
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(DS.Color.textTertiary)
-                    .tracking(0.8)
 
                 VStack(spacing: DS.Space.md) {
                     ForEach(Self.mentalModels) { model in

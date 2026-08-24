@@ -72,10 +72,9 @@ struct MountaineerTrophyCabinetModal: View {
                     Image(systemName: "trophy.fill")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color.yellow)
-                    Text("MOUNTAINEER TROPHY CABINET")
+                    Text("Mountaineer Trophy Cabinet")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(DS.Color.textPrimary)
-                        .tracking(0.8)
                 }
 
                 Spacer()
@@ -404,8 +403,8 @@ struct MountaineerTrophyCabinetModal: View {
 
             if !badge.contributingTreks.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("CONTRIBUTING EXPEDITIONS:")
-                        .font(.system(size: 9, weight: .bold))
+                    Text("Contributing Expeditions:")
+                        .font(.system(size: 9.5, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
 
                     ForEach(badge.contributingTreks, id: \.self) { trekName in

@@ -28,10 +28,9 @@ struct MacVaultLockView: View {
                 .overlay(Circle().stroke(DS.Color.border.opacity(0.6), lineWidth: 1))
 
                 VStack(spacing: 4) {
-                    Text("SECURE ENCLAVE PROTECTED")
-                        .font(.system(size: 10, weight: .bold))
+                    Text("Secure Enclave Protected")
+                        .font(.system(size: 10.5, weight: .bold))
                         .foregroundStyle(DS.Color.textTertiary)
-                        .tracking(1.0)
 
                     Text(sectionTitle)
                         .font(.system(size: 20, weight: .bold))

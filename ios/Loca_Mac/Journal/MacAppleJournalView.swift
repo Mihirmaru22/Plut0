@@ -1147,8 +1147,8 @@ struct AppleJournalEditorCanvas: View {
                         // Apple Reflection Prompt Starters (Shows if entry is fresh/empty)
                         if note.text.isEmpty && note.title.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("REFLECTION PROMPTS")
-                                    .font(.system(size: 9, weight: .bold))
+                                Text("Reflection Prompts")
+                                    .font(.system(size: 9.5, weight: .bold))
                                     .foregroundStyle(DS.Color.textTertiary)
 
                                 ScrollView(.horizontal, showsIndicators: false) {

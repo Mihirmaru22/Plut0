@@ -507,15 +507,15 @@ private struct List2GroupedSectionsView: View {
         VStack(alignment: .leading, spacing: 14) {
 
             if !highPriority.isEmpty {
-                glassPriorityGroup(title: "HIGH PRIORITY", icon: "flame.fill", color: .red, tasks: highPriority)
+                glassPriorityGroup(title: "High Priority", icon: "flame.fill", color: .red, tasks: highPriority)
             }
 
             if !medPriority.isEmpty {
-                glassPriorityGroup(title: "MEDIUM PRIORITY", icon: "bolt.fill", color: .orange, tasks: medPriority)
+                glassPriorityGroup(title: "Medium Priority", icon: "bolt.fill", color: .orange, tasks: medPriority)
             }
 
             if !lowPriority.isEmpty {
-                glassPriorityGroup(title: "STANDARD & INBOX", icon: "tray.full.fill", color: DS.Theme.amber, tasks: lowPriority)
+                glassPriorityGroup(title: "Standard & Inbox", icon: "tray.full.fill", color: DS.Theme.amber, tasks: lowPriority)
             }
 
             if !doneItems.isEmpty {

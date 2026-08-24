@@ -265,9 +265,8 @@ struct MacDetailPlaceholder: View {
 
                 // Guided Actions
                 VStack(spacing: 8) {
-                    Text("SHORTCUTS & COMMANDS")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(0.6)
+                    Text("Shortcuts & Commands")
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.45))
                         .frame(maxWidth: .infinity, alignment: .leading)
 

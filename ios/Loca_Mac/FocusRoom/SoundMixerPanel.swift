@@ -19,8 +19,8 @@ struct SoundMixerPanel: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.accentColor)
 
-                    Text("SOUND CONSOLE")
-                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    Text("Sound Console")
+                        .font(.system(size: 11.5, weight: .bold))
                         .foregroundStyle(.white)
                 }
 
@@ -33,8 +33,8 @@ struct SoundMixerPanel: View {
                     HStack(spacing: 4) {
                         Image(systemName: soundVM.isAllPaused ? "play.fill" : "pause.fill")
                             .font(.system(size: 10, weight: .bold))
-                        Text(soundVM.isAllPaused ? "RESUME" : "MUTE ALL")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        Text(soundVM.isAllPaused ? "Resume" : "Mute All")
+                            .font(.system(size: 10, weight: .semibold))
                     }
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 8)
@@ -58,8 +58,8 @@ struct SoundMixerPanel: View {
 
             // Quick Atmospheric Preset Switcher
             VStack(alignment: .leading, spacing: 6) {
-                Text("FOCUS PRESETS")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                Text("Focus Presets")
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.white.opacity(0.45))
 
                 ScrollView(.horizontal, showsIndicators: false) {

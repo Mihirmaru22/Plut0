@@ -30,10 +30,9 @@ public struct GhostProtocolBoardView: View {
                         Image(systemName: "checklist.checked")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
-                        Text("DAILY PROTOCOL BOARD")
-                            .font(.system(size: 10, weight: .bold))
+                        Text("Daily Protocol Board")
+                            .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(Color.white.opacity(0.6))
-                            .tracking(1.2)
                     }
                     Text("Proof of Discipline")
                         .font(.system(size: 16, weight: .bold))
@@ -73,10 +72,9 @@ public struct GhostProtocolBoardView: View {
                 Image(systemName: phase.icon)
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(phaseAccentColor(phase))
-                Text(phase.title.uppercased())
-                    .font(.system(size: 10, weight: .bold))
+                Text(phase.title)
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.white.opacity(0.6))
-                    .tracking(1.0)
             }
             .padding(.leading, 2)
 

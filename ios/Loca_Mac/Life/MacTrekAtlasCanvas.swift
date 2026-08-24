@@ -312,10 +312,9 @@ struct MacTrekAtlasCanvas: View {
                     Image(systemName: "mountain.2.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(DS.Theme.amber)
-                    Text("PEAK DIRECTORY")
-                        .font(.system(size: 11, weight: .bold))
+                    Text("Peak Directory")
+                        .font(.system(size: 11.5, weight: .bold))
                         .foregroundStyle(Color.white)
-                        .tracking(0.6)
 
                     Text("(\(filteredTreks.count))")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))

@@ -414,10 +414,9 @@ public struct GhostDashboardView: View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("DAY LEDGER • DAY \(cell.dayIndex)")
-                        .font(.system(size: 10, weight: .bold))
+                    Text("Day Ledger • Day \(cell.dayIndex)")
+                        .font(.system(size: 10.5, weight: .bold))
                         .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 1.0))
-                        .tracking(1.0)
                     Text(cell.dateString)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color.white)

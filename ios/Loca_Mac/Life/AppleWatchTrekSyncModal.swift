@@ -49,10 +49,9 @@ struct AppleWatchTrekSyncModal: View {
                     // Workouts List
                     VStack(alignment: .leading, spacing: DS.Space.md) {
                         HStack {
-                            Text("DETECTED APPLE WATCH WORKOUTS")
-                                .font(.system(size: 11, weight: .bold))
+                            Text("Detected Apple Watch Workouts")
+                                .font(.system(size: 11.5, weight: .bold))
                                 .foregroundStyle(DS.Color.textTertiary)
-                                .tracking(0.6)
                             Spacer()
                             Text("\(syncEngine.detectedWorkouts.count) Workouts Found")
                                 .font(DS.Text.caption)
@@ -107,10 +106,9 @@ struct AppleWatchTrekSyncModal: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("APPLE WATCH & HEALTHKIT EXPEDITION SYNC")
+                    Text("Apple Watch & HealthKit Expedition Sync")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(DS.Color.textPrimary)
-                        .tracking(0.6)
                     Text("Auto-import heart rate telemetry, calories, and actual vertical ascent")
                         .font(DS.Text.caption)
                         .foregroundStyle(DS.Color.textTertiary)
