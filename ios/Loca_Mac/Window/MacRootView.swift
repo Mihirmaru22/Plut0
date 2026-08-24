@@ -48,21 +48,12 @@ struct MacRootView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(MacSection.allCases) { section in
-                Button {
-                    selectedSection = section
-                } label: {
-                    Label(section.rawValue, systemImage: section.systemImage)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.plain)
-                .contentShape(Rectangle())
-            }
-            .navigationTitle("Pluto")
+            MacSidebarView(selection: $selectedSection)
         } detail: {
             sectionContent
         }
         .navigationSplitViewStyle(.balanced)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Quick actions", systemImage: "circle.grid.2x2.fill") {
