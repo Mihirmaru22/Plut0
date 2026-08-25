@@ -526,6 +526,35 @@ public final class LocaAppKitTextView: NSTextView {
     public var currentPreset: TypographyPreset = .standard
     public var onSlashRequested: ((CGPoint) -> Void)?
     
+    // MARK: - Responder-Chain Action Entry Points
+    
+    @objc public func toggleChecklistItem(_ sender: Any?) {
+        let isFirst = (self.window?.firstResponder == self)
+        print("▶ toggleChecklistItem called — isFirstResponder: \(isFirst), selectedRange: \(self.selectedRange())")
+        toggleChecklistOnCurrentParagraph()
+    }
+    
+    public func toggleChecklistOnCurrentParagraph() {
+        guard let textStorage = self.textStorage else { return }
+        let selectedRange = self.selectedRange()
+        let defaultFont = currentPreset.font(for: .body)
+        let newRange = RichTextTypography.toggleChecklistOnCurrentParagraph(
+            in: textStorage,
+            selectedRange: selectedRange,
+            defaultFont: defaultFont
+        )
+        self.setSelectedRange(newRange)
+        self.didChangeText()
+        self.setNeedsDisplay(self.bounds)
+    }
+    
+    public override func responds(to aSelector: Selector!) -> Bool {
+        if aSelector == #selector(toggleChecklistItem(_:)) {
+            return true
+        }
+        return super.responds(to: aSelector)
+    }
+    
     // MARK: - Drag & Drop Operations (Images & Files from Finder)
     
     public override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {

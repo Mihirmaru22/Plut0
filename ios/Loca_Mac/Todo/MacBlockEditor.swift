@@ -116,7 +116,7 @@ struct MacBlockEditor: View {
                 }
 
                 formatButton(title: "Checklist", icon: "checkmark.square", isActive: controller.activeParagraphStyle == .checklist) {
-                    controller.applyParagraphStyle(.checklist, preset: .standard)
+                    NSApp.sendAction(#selector(LocaAppKitTextView.toggleChecklistItem(_:)), to: nil, from: nil)
                 }
 
                 formatButton(title: "Bullet", icon: "list.bullet", isActive: controller.activeParagraphStyle == .bulletedList) {
