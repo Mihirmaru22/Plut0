@@ -60,9 +60,7 @@ struct MacLifeView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
-            .background(.ultraThinMaterial)
-            .background(DS.Theme.surface)
-            .background(PlutoAmbientGlowView(accent: Color(red: 0.18, green: 0.82, blue: 0.35)))
+            .background(DS.Theme.sidebar)
 
             Divider().opacity(0.12)
 
@@ -84,8 +82,7 @@ struct MacLifeView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(.ultraThinMaterial)
-        .background(DS.Theme.canvas)
+        .background(DS.Theme.sidebar)
     }
 }
 

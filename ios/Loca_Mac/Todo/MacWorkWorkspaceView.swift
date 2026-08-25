@@ -94,7 +94,7 @@ struct MacWorkWorkspaceView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.black.opacity(0.4).background(.ultraThinMaterial))
+            .background(DS.Theme.sidebar)
             
             Divider().opacity(0.25)
             
@@ -287,6 +287,6 @@ struct MacWorkWorkspaceView: View {
         }
         .padding(20)
         .frame(width: 360, height: 190)
-        .background(Color.black.opacity(0.85).background(.ultraThinMaterial))
+        .background(DS.Theme.sidebar)
     }
 }

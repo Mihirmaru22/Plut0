@@ -210,7 +210,7 @@ public struct NotesNavigatorView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+            .background(DS.Theme.sidebar)
         }
     }
 }

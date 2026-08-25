@@ -725,10 +725,7 @@ struct FocusRoomView: View {
         }
         .padding(16)
         .frame(width: 310)
-        .background(
-            Color.black.opacity(0.80)
-                .background(.ultraThinMaterial)
-        )
+        .background(DS.Theme.sidebar)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.16), lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 24, x: 0, y: 10)
@@ -791,7 +788,7 @@ struct FocusRoomView: View {
             ZStack(alignment: .leading) {
                 // Dimmed Backdrop Overlay (tap outside to dismiss)
                 Color.black.opacity(0.45)
-                    .background(.ultraThinMaterial.opacity(0.4))
+                    .background(DS.Theme.sidebar)
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -950,13 +947,7 @@ struct FocusRoomView: View {
                 }
                 .frame(width: 275)
                 .frame(maxHeight: .infinity)
-                .background(
-                    ZStack {
-                        Color.black.opacity(0.82)
-                        RoundedRectangle(cornerRadius: 0)
-                            .fill(.ultraThinMaterial)
-                    }
-                )
+                .background(DS.Theme.sidebar)
                 .overlay(
                     Rectangle()
                         .stroke(

@@ -18,13 +18,13 @@ extension DS {
 
         // MARK: - Canvas & Surfaces (Unified Column 1 Sidebar Tone across all columns)
 
-        /// Sidebar background tone.
-        public static let sidebar = SwiftUI.Color(red: 0.045, green: 0.048, blue: 0.056).opacity(0.50)
+        /// Sidebar background tone (Single source of truth for ALL column backgrounds).
+        public static let sidebar = SwiftUI.Color(white: 0.07).opacity(0.95)
 
-        /// Deepest background canvas (Matched exactly to Column 1).
+        /// Deepest background canvas (Single source of truth).
         public static let canvas = sidebar
 
-        /// Content column surface (Matched exactly to Column 1).
+        /// Content column surface (Single source of truth).
         public static let surface = sidebar
 
         /// Elevated card fill.

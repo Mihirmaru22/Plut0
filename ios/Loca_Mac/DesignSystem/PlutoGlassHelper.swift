@@ -310,7 +310,7 @@ public struct PlutoWindowAccessor: NSViewRepresentable {
         DispatchQueue.main.async {
             if let window = view.window {
                 window.isOpaque = false
-                window.backgroundColor = .clear
+                window.backgroundColor = NSColor(white: 0.07, alpha: 0.95)
                 window.styleMask.insert(.fullSizeContentView)
                 window.titlebarAppearsTransparent = true
                 window.titleVisibility = .hidden
