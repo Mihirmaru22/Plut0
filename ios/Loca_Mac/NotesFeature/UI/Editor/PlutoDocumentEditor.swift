@@ -260,7 +260,7 @@ public struct PlutoDocumentEditor: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
-                        .background(Color(red: 0.10, green: 0.09, blue: 0.14).opacity(0.95))
+                        .background(DS.Theme.sidebar)
                         .onHover { isHeaderHovered = $0 }
                         .transition(.move(edge: .top).combined(with: .opacity))
                         
@@ -289,12 +289,12 @@ public struct PlutoDocumentEditor: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.vertical, 6)
-                        .background(Color(red: 0.08, green: 0.07, blue: 0.12).opacity(0.9))
+                        .background(DS.Theme.sidebar)
                         .onHover { isFooterHovered = $0 }
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .background(Color(red: 0.09, green: 0.08, blue: 0.13))
+                .background(DS.Theme.sidebar)
                 .animation(.easeInOut(duration: 0.15), value: state.isFocused)
                 .animation(.easeInOut(duration: 0.15), value: isHeaderHovered)
                 .animation(.easeInOut(duration: 0.15), value: isFooterHovered)

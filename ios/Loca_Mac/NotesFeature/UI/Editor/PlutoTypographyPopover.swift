@@ -69,7 +69,7 @@ public struct PlutoTypographyPopover: View {
             .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
         }
         .padding(8)
-        .background(Color(red: 0.16, green: 0.15, blue: 0.22))
+        .background(DS.Theme.sidebar)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
     

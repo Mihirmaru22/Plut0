@@ -34,7 +34,7 @@ struct MacJournalDetailColumn: View {
                         Text("Choose an entry from the list or click New Entry.")
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.08, green: 0.07, blue: 0.12))
+                    .background(DS.Theme.sidebar)
                 }
             case .analyse:
                 MacJournalAnalyse(selectedDate: selectedDate)
@@ -67,7 +67,7 @@ struct MacJournalDetailColumn: View {
         }
         .padding(.horizontal, DS.Space.lg)
         .padding(.vertical, DS.Space.md)
-        .background(DS.Color.background)
+        .background(DS.Theme.sidebar)
     }
 
     // MARK: - Date Navigation Row

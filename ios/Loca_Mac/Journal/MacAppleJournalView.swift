@@ -707,8 +707,7 @@ struct AppleJournalEntriesList: View {
                 }
             }
         }
-        .background(.ultraThinMaterial)
-        .background(DS.Theme.surface)
+        .background(DS.Theme.sidebar)
         .onAppear {
             if selectedNote == nil, let first = activeNotes.first {
                 selectedNote = first
@@ -961,7 +960,7 @@ struct AppleJournalEditorCanvas: View {
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: RoundedRectangle(cornerRadius: 6))
+                        .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 6))
                     }
                     .buttonStyle(.plain)
                     .popover(isPresented: $showDatePopover) {
@@ -1038,7 +1037,7 @@ struct AppleJournalEditorCanvas: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Capsule())
+                    .background(DS.Theme.card, in: Capsule())
                     .overlay(Capsule().stroke(DS.Color.border.opacity(0.3), lineWidth: 1))
 
                     Spacer()
@@ -1056,7 +1055,7 @@ struct AppleJournalEditorCanvas: View {
                             .foregroundStyle(DS.Color.textPrimary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Capsule())
+                            .background(DS.Theme.card, in: Capsule())
                         }
                         .buttonStyle(.plain)
                         .popover(isPresented: $showFormattingPopover) {
@@ -1073,7 +1072,7 @@ struct AppleJournalEditorCanvas: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(note.isBookmarked ? Color.yellow : DS.Color.textSecondary)
                                 .padding(7)
-                                .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: Circle())
+                                .background(DS.Theme.card, in: Circle())
                         }
                         .buttonStyle(.plain)
                         .help(note.isBookmarked ? "Remove Bookmark" : "Bookmark Entry")
@@ -1102,7 +1101,7 @@ struct AppleJournalEditorCanvas: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .background(Color(red: 0.10, green: 0.09, blue: 0.14))
+                .background(DS.Theme.sidebar)
 
                 Divider()
 
@@ -1154,7 +1153,7 @@ struct AppleJournalEditorCanvas: View {
                                                     .foregroundStyle(Color(red: 0.78, green: 0.75, blue: 0.98))
                                                     .padding(.horizontal, 10)
                                                     .padding(.vertical, 6)
-                                                    .background(Color(red: 0.18, green: 0.17, blue: 0.26), in: Capsule())
+                                                    .background(DS.Theme.card, in: Capsule())
                                             }
                                             .buttonStyle(.plain)
                                         }
@@ -1331,7 +1330,7 @@ struct AppleJournalEditorCanvas: View {
                                 .buttonStyle(.plain)
                             }
                             .padding(14)
-                            .background(Color(red: 0.16, green: 0.15, blue: 0.22), in: RoundedRectangle(cornerRadius: 10))
+                            .background(DS.Theme.card, in: RoundedRectangle(cornerRadius: 10))
                         }
                     }
                     .padding(24)
@@ -1349,11 +1348,10 @@ struct AppleJournalEditorCanvas: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 6)
-                .background(DS.Theme.surface)
+                .background(DS.Theme.sidebar)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.ultraThinMaterial)
-            .background(DS.Theme.canvas)
+            .background(DS.Theme.sidebar)
             .sheet(item: $previewImageURL) { url in
                 JournalPhotoPreviewModal(url: url)
             }
@@ -1392,7 +1390,7 @@ struct AppleJournalEditorCanvas: View {
                     }
                 )
                 .frame(width: 230)
-                .background(Color(red: 0.12, green: 0.11, blue: 0.17))
+                .background(DS.Theme.sidebar)
             }
         }
         .onDisappear {
@@ -1566,7 +1564,7 @@ private struct AppleJournalMapCard: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(red: 0.14, green: 0.13, blue: 0.20))
+            .background(DS.Theme.sidebar)
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
@@ -1623,7 +1621,7 @@ private struct JournalPhotoPreviewModal: View {
             Spacer()
         }
         .frame(width: 640, height: 560)
-        .background(Color(red: 0.10, green: 0.09, blue: 0.14))
+        .background(DS.Theme.sidebar)
     }
 }
 
@@ -1820,7 +1818,7 @@ private struct AppleJournalAudioStudioDrawer: View {
                         .font(.system(size: 14))
                         .foregroundStyle(DS.Color.textSecondary)
                         .padding(8)
-                        .background(Color(red: 0.18, green: 0.17, blue: 0.25), in: Circle())
+                        .background(DS.Theme.card, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Transcribe Audio")
@@ -1875,7 +1873,7 @@ private struct AppleJournalAudioStudioDrawer: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(DS.Color.textSecondary)
                         .padding(8)
-                        .background(Color(red: 0.18, green: 0.17, blue: 0.25), in: Circle())
+                        .background(DS.Theme.card, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Attach to Journal Note")
@@ -2127,13 +2125,13 @@ struct MacAppleJournalView: View {
         HStack(spacing: 0) {
             MacJournalContentColumn(selectedRow: $selectedRow, selectedNote: $selectedNote)
                 .frame(minWidth: 280, idealWidth: 320, maxWidth: 360)
-                .background(Color(nsColor: NSColor(red: 0.08, green: 0.08, blue: 0.10, alpha: 1.0)))
+                .background(DS.Theme.sidebar)
 
             Divider().opacity(0.3)
 
             MacJournalDetailColumn(selectedRow: $selectedRow, selectedNote: $selectedNote)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DS.Color.background)
+                .background(DS.Theme.sidebar)
         }
     }
 }

@@ -115,7 +115,7 @@ public struct DocumentEditorView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
-                        .background(Color(nsColor: .windowBackgroundColor).opacity(0.35))
+                        .background(DS.Theme.sidebar)
                         .onHover { isToolbarHovered = $0 }
                         .transition(.move(edge: .top).combined(with: .opacity))
                         
@@ -133,7 +133,7 @@ public struct DocumentEditorView: View {
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .background(Color(nsColor: .textBackgroundColor))
+                .background(DS.Theme.sidebar)
                 .animation(.easeInOut(duration: 0.15), value: state.isFocused)
                 .animation(.easeInOut(duration: 0.15), value: isToolbarHovered)
             } else {

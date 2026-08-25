@@ -63,6 +63,7 @@ public struct NotesCanvasView: View {
             editorColumn
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .background(DS.Theme.sidebar)
         .overlay {
             if isQuickSwitcherPresented {
                 QuickSwitcherView(
